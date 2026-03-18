@@ -51,14 +51,19 @@ function Navbar() {
             </span>
           </Link>
           <div className="flex items-center gap-9">
-            {["Shop All", "Weddings", "Occasions", "Our Story"].map((item) => (
+            {[
+              { label: "Shop All",  href: "/products" },
+              { label: "Weddings",  href: "/products?style=Classic+Luxe" },
+              { label: "Occasions", href: "/products?occasion=Birthday" },
+              { label: "Our Story", href: "#our-heritage" },
+            ].map((item) => (
               <Link
-                key={item}
-                href="#"
+                key={item.label}
+                href={item.href}
                 className="text-[#2d2a26] text-[14px] font-medium tracking-[0.35px] hover:text-[#d0bb95] transition-colors"
                 style={{ fontFamily: "var(--font-inter)" }}
               >
-                {item}
+                {item.label}
               </Link>
             ))}
           </div>
