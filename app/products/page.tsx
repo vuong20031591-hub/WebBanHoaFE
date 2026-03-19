@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
+import { Suspense, useEffect, useState, useCallback } from "react";
 import {
   ShoppingCart,
   User,
@@ -35,9 +35,16 @@ interface Product {
   id: number;
   name: string;
   price: number;
-  occasion: string;
-  style: string;
+  categoryId?: number;
+  categoryName?: string;
+  description?: string;
   image: string;
+}
+
+interface Category {
+  id: number;
+  name: string;
+  description?: string;
 }
 
 interface PageData {
@@ -45,23 +52,13 @@ interface PageData {
   totalPages: number;
   totalElements: number;
   number: number;
-  last: boolean;
-  first: boolean;
+  last?: boolean;
+  first?: boolean;
 }
 
-/* ─────────────────────────────────────────────
-   Mock data (thay bằng API thật sau)
-───────────────────────────────────────────── */
-const ALL_PRODUCTS: Product[] = [
-  { id: 1, name: "Ethereal Blush",   price: 98,  occasion: "Birthday",    style: "Minimalist",    image: IMG_P1 },
-  { id: 2, name: "Sunset Whisper",   price: 98,  occasion: "Anniversary", style: "Classic Luxe",  image: IMG_P2 },
-  { id: 3, name: "Morning Dew",      price: 98,  occasion: "Sympathy",    style: "Wild & Organic", image: IMG_P3 },
-  { id: 4, name: "Pure Grace",       price: 120, occasion: "Birthday",    style: "Classic Luxe",  image: IMG_P4 },
-  { id: 5, name: "Pastel Dream",     price: 85,  occasion: "Just Because", style: "Minimalist",   image: IMG_P5 },
-  { id: 6, name: "Rosewood Charm",   price: 110, occasion: "Anniversary", style: "Wild & Organic", image: IMG_P6 },
-];
-
 const PAGE_SIZE = 6;
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
+const IMAGE_FALLBACKS = [IMG_P1, IMG_P2, IMG_P3, IMG_P4, IMG_P5, IMG_P6];
 
 /* ─────────────────────────────────────────────
    Navbar (dùng chung style với Homepage)
@@ -83,8 +80,8 @@ function Navbar() {
           <div className="flex items-center gap-9">
             {[
               { label: "Shop All", href: "/products" },
-              { label: "Weddings", href: "/products?style=Classic+Luxe" },
-              { label: "Occasions", href: "/products?occasion=Birthday" },
+              { label: "Weddings", href: "/products?name=Wedding" },
+              { label: "Occasions", href: "/products?name=Birthday" },
               { label: "Our Story", href: "/#our-heritage" },
             ].map((item) => (
               <Link
@@ -186,81 +183,61 @@ function ProductCard({ product }: { product: Product }) {
    Sidebar Filter
 ───────────────────────────────────────────── */
 interface SidebarProps {
-  occasion: string;
-  style: string;
+  name: string;
+  categoryId: string;
+  categories: Category[];
   minPrice: string;
   maxPrice: string;
   onChange: (key: string, value: string) => void;
 }
 
-const OCCASIONS = ["Birthday", "Anniversary", "Sympathy", "Just Because"];
-const STYLES = ["Minimalist", "Wild & Organic", "Classic Luxe"];
-
-function Sidebar({ occasion, style, minPrice, maxPrice, onChange }: SidebarProps) {
+function Sidebar({ name, categoryId, categories, minPrice, maxPrice, onChange }: SidebarProps) {
   const divider = <div className="border-t border-[rgba(45,42,38,0.1)] my-4" />;
 
   return (
     <aside className="w-[224px] shrink-0">
-      {/* OCCASION */}
+      {/* SEARCH */}
       <p
         className="text-[#2d2a26] text-[16px] font-bold tracking-[3px] mb-4"
         style={{ fontFamily: "var(--font-noto-serif)" }}
       >
-        OCCASION
+        NAME
       </p>
       {divider}
-      <div className="flex flex-col gap-3">
-        {OCCASIONS.map((o) => (
-          <label key={o} className="flex items-center gap-3 cursor-pointer group">
-            <div
-              onClick={() => onChange("occasion", occasion === o ? "" : o)}
-              className={`w-4 h-4 rounded-full border-2 flex items-center justify-center cursor-pointer transition-colors shrink-0 ${
-                occasion === o
-                  ? "border-[#d0bb95] bg-[#d0bb95]"
-                  : "border-[#9ca3af] group-hover:border-[#d0bb95]"
-              }`}
-            >
-              {occasion === o && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
-            </div>
-            <span
-              className="text-[#5c6b5e] text-[16px] leading-[1.4]"
-              style={{ fontFamily: "var(--font-inter)" }}
-            >
-              {o}
-            </span>
-          </label>
-        ))}
+      <div className="h-10 bg-[rgba(156,163,175,0.2)] rounded flex items-center px-3">
+        <Search className="w-3.5 h-3.5 text-[#9ca3af] mr-2 shrink-0" />
+        <input
+          type="text"
+          placeholder="Search by name"
+          value={name}
+          onChange={(e) => onChange("name", e.target.value)}
+          className="w-full bg-transparent text-[#5c6b5e] text-[14px] outline-none placeholder-[#9ca3af]"
+          style={{ fontFamily: "var(--font-inter)" }}
+        />
       </div>
 
-      {/* STYLE */}
+      {/* CATEGORY */}
       <p
         className="text-[#2d2a26] text-[16px] font-bold tracking-[3px] mt-8 mb-4"
         style={{ fontFamily: "var(--font-noto-serif)" }}
       >
-        STYLE
+        CATEGORY
       </p>
       {divider}
-      <div className="flex flex-col gap-3">
-        {STYLES.map((s) => (
-          <label key={s} className="flex items-center gap-3 cursor-pointer group">
-            <div
-              onClick={() => onChange("style", style === s ? "" : s)}
-              className={`w-4 h-4 rounded-full border-2 flex items-center justify-center cursor-pointer transition-colors shrink-0 ${
-                style === s
-                  ? "border-[#d0bb95] bg-[#d0bb95]"
-                  : "border-[#9ca3af] group-hover:border-[#d0bb95]"
-              }`}
-            >
-              {style === s && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
-            </div>
-            <span
-              className="text-[#5c6b5e] text-[16px] leading-[1.4]"
-              style={{ fontFamily: "var(--font-inter)" }}
-            >
-              {s}
-            </span>
-          </label>
-        ))}
+      <div className="h-10 bg-[rgba(156,163,175,0.2)] rounded flex items-center px-3">
+        <select
+          value={categoryId}
+          onChange={(e) => onChange("categoryId", e.target.value)}
+          className="w-full bg-transparent text-[#5c6b5e] text-[14px] outline-none"
+          style={{ fontFamily: "var(--font-inter)" }}
+        >
+          <option value="">All categories</option>
+          {categories.map((category) => (
+            <option key={category.id} value={String(category.id)}>
+              {category.name}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* PRICE */}
@@ -413,79 +390,156 @@ function Footer() {
 /* ─────────────────────────────────────────────
    Page
 ───────────────────────────────────────────── */
-export default function ProductsPage() {
+function ProductsPageContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const searchParamsString = searchParams.toString();
 
   const [pageData, setPageData] = useState<PageData | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [filters, setFilters] = useState({
-    occasion: searchParams.get("occasion") || "",
-    style: searchParams.get("style") || "",
+    name: searchParams.get("name") || "",
+    categoryId: searchParams.get("categoryId") || "",
     minPrice: searchParams.get("minPrice") || "",
     maxPrice: searchParams.get("maxPrice") || "",
   });
+  const [nameInput, setNameInput] = useState(searchParams.get("name") || "");
+
+  useEffect(() => {
+    const nextFilters = {
+      name: searchParams.get("name") || "",
+      categoryId: searchParams.get("categoryId") || "",
+      minPrice: searchParams.get("minPrice") || "",
+      maxPrice: searchParams.get("maxPrice") || "",
+    };
+    setFilters(nextFilters);
+    setNameInput(nextFilters.name);
+  }, [searchParamsString, searchParams]);
 
   /* Sync filter state → URL params */
   const applyFilters = useCallback(
     (newFilters: typeof filters) => {
       const p = new URLSearchParams();
-      if (newFilters.occasion) p.set("occasion", newFilters.occasion);
-      if (newFilters.style) p.set("style", newFilters.style);
+      if (newFilters.name) p.set("name", newFilters.name);
+      if (newFilters.categoryId) p.set("categoryId", newFilters.categoryId);
       if (newFilters.minPrice) p.set("minPrice", newFilters.minPrice);
       if (newFilters.maxPrice) p.set("maxPrice", newFilters.maxPrice);
       p.set("page", "0");
+      p.set("size", String(PAGE_SIZE));
       router.push(`${pathname}?${p.toString()}`);
     },
     [pathname, router]
   );
 
   const handleFilterChange = (key: string, value: string) => {
-    const updated = { ...filters, [key]: value };
+    if (key === "name") {
+      setNameInput(value);
+      return;
+    }
+
+    const updated = { ...filters, [key]: value } as typeof filters;
     setFilters(updated);
     applyFilters(updated);
   };
 
-  /* Fetch / filter mock data */
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (nameInput === filters.name) {
+        return;
+      }
+      const updated = { ...filters, name: nameInput };
+      setFilters(updated);
+      applyFilters(updated);
+    }, 300);
+
+    return () => clearTimeout(timeout);
+  }, [nameInput, filters, applyFilters]);
+
+  const normalizeProduct = (apiProduct: {
+    id: number;
+    name: string;
+    price: number;
+    image?: string;
+    imageUrl?: string;
+    categoryId?: number;
+    categoryName?: string;
+    description?: string;
+  }): Product => {
+    const fallbackImage = IMAGE_FALLBACKS[apiProduct.id % IMAGE_FALLBACKS.length];
+    return {
+      id: apiProduct.id,
+      name: apiProduct.name,
+      price: Number(apiProduct.price),
+      image: apiProduct.image || apiProduct.imageUrl || fallbackImage,
+      categoryId: apiProduct.categoryId,
+      categoryName: apiProduct.categoryName,
+      description: apiProduct.description,
+    };
+  };
+
+  /* Fetch products from BE API */
   const fetchProducts = useCallback(async () => {
     setIsLoading(true);
-    await new Promise((r) => setTimeout(r, 300));
+    setError(null);
 
-    const params = new URLSearchParams(searchParamsString);
-    const fOccasion = params.get("occasion") || "";
-    const fStyle = params.get("style") || "";
-    const fMin = Number(params.get("minPrice")) || 0;
-    const fMax = Number(params.get("maxPrice")) || Number.MAX_SAFE_INTEGER;
-    const currentPage = Number(params.get("page")) || 0;
+    try {
+      const params = new URLSearchParams(searchParamsString);
+      if (!params.get("page")) params.set("page", "0");
+      if (!params.get("size")) params.set("size", String(PAGE_SIZE));
 
-    const filtered = ALL_PRODUCTS.filter((p) => {
-      const matchOccasion = !fOccasion || p.occasion === fOccasion;
-      const matchStyle = !fStyle || p.style === fStyle;
-      const matchPrice = p.price >= fMin && p.price <= fMax;
-      return matchOccasion && matchStyle && matchPrice;
-    });
+      const response = await fetch(`${API_BASE_URL}/api/products/search?${params.toString()}`);
 
-    const totalElements = filtered.length;
-    const totalPages = Math.ceil(totalElements / PAGE_SIZE) || 1;
-    const start = currentPage * PAGE_SIZE;
+      if (!response.ok) {
+        throw new Error(`API /api/products/search lỗi: ${response.status}`);
+      }
 
-    setPageData({
-      content: filtered.slice(start, start + PAGE_SIZE),
-      totalPages,
-      totalElements,
-      number: currentPage,
-      first: currentPage === 0,
-      last: currentPage >= totalPages - 1,
-    });
-    setIsLoading(false);
+      const data: PageData = await response.json();
+      setPageData({
+        ...data,
+        first: data.first ?? data.number === 0,
+        last: data.last ?? data.number >= data.totalPages - 1,
+        content: (data.content || []).map(normalizeProduct),
+      });
+    } catch (fetchError) {
+      const message = fetchError instanceof Error ? fetchError.message : "Không thể tải sản phẩm";
+      setError(message);
+      setPageData({
+        content: [],
+        totalPages: 1,
+        totalElements: 0,
+        number: 0,
+        first: true,
+        last: true,
+      });
+    } finally {
+      setIsLoading(false);
+    }
   }, [searchParamsString]);
+
+  const fetchCategories = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/categories`);
+      if (!response.ok) {
+        throw new Error("Không tải được danh mục");
+      }
+      const data: Category[] = await response.json();
+      setCategories(data);
+    } catch {
+      setCategories([]);
+    }
+  }, []);
 
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
+
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
 
   return (
     <div className="bg-[#f7f3ed] min-h-screen">
@@ -519,8 +573,9 @@ export default function ProductsPage() {
       <div className="max-w-[1280px] mx-auto px-[54px] py-14 flex gap-16">
         {/* Sidebar */}
         <Sidebar
-          occasion={filters.occasion}
-          style={filters.style}
+          name={nameInput}
+          categoryId={filters.categoryId}
+          categories={categories}
           minPrice={filters.minPrice}
           maxPrice={filters.maxPrice}
           onChange={handleFilterChange}
@@ -533,6 +588,16 @@ export default function ProductsPage() {
               {[1, 2, 3, 4, 5, 6].map((i) => (
                 <div key={i} className="w-[329px] h-[542px] bg-white/40 rounded-[32px] animate-pulse" />
               ))}
+            </div>
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center h-96 gap-3 text-center">
+              <PackageSearch className="w-12 h-12 text-[#d0bb95]" />
+              <p className="text-[#5c6b5e] text-[18px] font-light" style={{ fontFamily: "var(--font-noto-serif)" }}>
+                Không thể tải dữ liệu từ API
+              </p>
+              <p className="text-[#7a8780] text-[14px]" style={{ fontFamily: "var(--font-inter)" }}>
+                {error}
+              </p>
             </div>
           ) : !pageData || pageData.content.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-96 gap-4">
@@ -619,5 +684,13 @@ export default function ProductsPage() {
       {/* ── Footer ── */}
       <Footer />
     </div>
+  );
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={<div className="bg-[#f7f3ed] min-h-screen" />}>
+      <ProductsPageContent />
+    </Suspense>
   );
 }
