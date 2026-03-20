@@ -60,6 +60,33 @@ const PAGE_SIZE = 6;
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").replace(/\/$/, "");
 const IMAGE_FALLBACKS = [IMG_P1, IMG_P2, IMG_P3, IMG_P4, IMG_P5, IMG_P6];
 
+const LEGACY_CATEGORY_BY_NAME: Record<string, string> = {
+  wedding: "2",
+  birthday: "3",
+};
+
+function normalizeLegacyFilters(rawFilters: {
+  name: string;
+  categoryId: string;
+  minPrice: string;
+  maxPrice: string;
+}) {
+  if (rawFilters.categoryId) {
+    return rawFilters;
+  }
+
+  const mappedCategoryId = LEGACY_CATEGORY_BY_NAME[rawFilters.name.trim().toLowerCase()];
+  if (!mappedCategoryId) {
+    return rawFilters;
+  }
+
+  return {
+    ...rawFilters,
+    name: "",
+    categoryId: mappedCategoryId,
+  };
+}
+
 /* ─────────────────────────────────────────────
    Navbar (dùng chung style với Homepage)
 ───────────────────────────────────────────── */
@@ -401,21 +428,23 @@ function ProductsPageContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [filters, setFilters] = useState({
-    name: searchParams.get("name") || "",
-    categoryId: searchParams.get("categoryId") || "",
-    minPrice: searchParams.get("minPrice") || "",
-    maxPrice: searchParams.get("maxPrice") || "",
-  });
-  const [nameInput, setNameInput] = useState(searchParams.get("name") || "");
-
-  useEffect(() => {
-    const nextFilters = {
+  const [filters, setFilters] = useState(
+    normalizeLegacyFilters({
       name: searchParams.get("name") || "",
       categoryId: searchParams.get("categoryId") || "",
       minPrice: searchParams.get("minPrice") || "",
       maxPrice: searchParams.get("maxPrice") || "",
-    };
+    })
+  );
+  const [nameInput, setNameInput] = useState(filters.name);
+
+  useEffect(() => {
+    const nextFilters = normalizeLegacyFilters({
+      name: searchParams.get("name") || "",
+      categoryId: searchParams.get("categoryId") || "",
+      minPrice: searchParams.get("minPrice") || "",
+      maxPrice: searchParams.get("maxPrice") || "",
+    });
     setFilters(nextFilters);
     setNameInput(nextFilters.name);
   }, [searchParamsString, searchParams]);
@@ -492,6 +521,14 @@ function ProductsPageContent() {
 
     try {
       const params = new URLSearchParams(searchParamsString);
+
+      const legacyName = (params.get("name") || "").trim().toLowerCase();
+      const mappedLegacyCategoryId = LEGACY_CATEGORY_BY_NAME[legacyName];
+      if (!params.get("categoryId") && mappedLegacyCategoryId) {
+        params.set("categoryId", mappedLegacyCategoryId);
+        params.delete("name");
+      }
+
       if (!params.get("page")) params.set("page", "0");
       if (!params.get("size")) params.set("size", String(PAGE_SIZE));
 
