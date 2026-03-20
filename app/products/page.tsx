@@ -57,7 +57,7 @@ interface PageData {
 }
 
 const PAGE_SIZE = 6;
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").replace(/\/$/, "");
 const IMAGE_FALLBACKS = [IMG_P1, IMG_P2, IMG_P3, IMG_P4, IMG_P5, IMG_P6];
 
 /* ─────────────────────────────────────────────
@@ -80,8 +80,8 @@ function Navbar() {
           <div className="flex items-center gap-9">
             {[
               { label: "Shop All", href: "/products" },
-              { label: "Weddings", href: "/products?name=Wedding" },
-              { label: "Occasions", href: "/products?name=Birthday" },
+              { label: "Weddings", href: "/products?categoryId=2" },
+              { label: "Occasions", href: "/products?categoryId=3" },
               { label: "Our Story", href: "/#our-heritage" },
             ].map((item) => (
               <Link
@@ -470,11 +470,15 @@ function ProductsPageContent() {
     description?: string;
   }): Product => {
     const fallbackImage = IMAGE_FALLBACKS[apiProduct.id % IMAGE_FALLBACKS.length];
+    const rawImage = (apiProduct.image || apiProduct.imageUrl || "").trim();
+    const isHttpImage = /^https?:\/\//i.test(rawImage);
+    const isRootRelativeImage = rawImage.startsWith("/");
+
     return {
       id: apiProduct.id,
       name: apiProduct.name,
       price: Number(apiProduct.price),
-      image: apiProduct.image || apiProduct.imageUrl || fallbackImage,
+      image: isHttpImage || isRootRelativeImage ? rawImage : fallbackImage,
       categoryId: apiProduct.categoryId,
       categoryName: apiProduct.categoryName,
       description: apiProduct.description,
