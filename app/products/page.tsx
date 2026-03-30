@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { Suspense, useEffect, useState, useCallback } from "react";
+import { Suspense, useEffect, useState, useCallback, useMemo } from "react";
 import {
   ShoppingCart,
   User,
@@ -17,36 +17,17 @@ import {
   Facebook,
   PackageSearch,
 } from "lucide-react";
-
-/* ─────────────────────────────────────────────
-   Asset URLs từ Figma MCP
-───────────────────────────────────────────── */
-const IMG_P1 = "https://www.figma.com/api/mcp/asset/6dc9572c-6c1b-4558-975e-60c50eaf59ea";
-const IMG_P2 = "https://www.figma.com/api/mcp/asset/6fa53fcd-6101-449b-af87-4c1d5242fed8";
-const IMG_P3 = "https://www.figma.com/api/mcp/asset/695d3726-f8ff-41f9-a4ce-45350697110c";
-const IMG_P4 = "https://www.figma.com/api/mcp/asset/c4e419a2-149a-4620-96ce-75cb9c5d0e24";
-const IMG_P5 = "https://www.figma.com/api/mcp/asset/0f3cad03-51e6-4c1f-ae98-09366f302d1c";
-const IMG_P6 = "https://www.figma.com/api/mcp/asset/1d3abb28-128d-4a5b-b94a-a750d4ebb00e";
+import {
+  MOCK_CATEGORIES,
+  filterProducts,
+  paginateProducts,
+  type Product,
+  type Category,
+} from "@/lib/mockData";
 
 /* ─────────────────────────────────────────────
    Types
 ───────────────────────────────────────────── */
-interface Product {
-  id: number;
-  name: string;
-  price: number;
-  categoryId?: number;
-  categoryName?: string;
-  description?: string;
-  image: string;
-}
-
-interface Category {
-  id: number;
-  name: string;
-  description?: string;
-}
-
 interface PageData {
   content: Product[];
   totalPages: number;
@@ -57,35 +38,6 @@ interface PageData {
 }
 
 const PAGE_SIZE = 6;
-const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").replace(/\/$/, "");
-const IMAGE_FALLBACKS = [IMG_P1, IMG_P2, IMG_P3, IMG_P4, IMG_P5, IMG_P6];
-
-const LEGACY_CATEGORY_BY_NAME: Record<string, string> = {
-  wedding: "2",
-  birthday: "3",
-};
-
-function normalizeLegacyFilters(rawFilters: {
-  name: string;
-  categoryId: string;
-  minPrice: string;
-  maxPrice: string;
-}) {
-  if (rawFilters.categoryId) {
-    return rawFilters;
-  }
-
-  const mappedCategoryId = LEGACY_CATEGORY_BY_NAME[rawFilters.name.trim().toLowerCase()];
-  if (!mappedCategoryId) {
-    return rawFilters;
-  }
-
-  return {
-    ...rawFilters,
-    name: "",
-    categoryId: mappedCategoryId,
-  };
-}
 
 /* ─────────────────────────────────────────────
    Navbar (dùng chung style với Homepage)
@@ -156,26 +108,26 @@ function ProductCard({ product }: { product: Product }) {
   return (
     <div className="bg-[rgba(255,255,255,0.4)] backdrop-blur-sm rounded-[32px] overflow-hidden w-[329px] shadow-[inset_0px_0.8px_0px_0px_rgba(255,255,255,0.6),inset_0px_-0.8px_0px_0px_rgba(255,255,255,0.6)]">
       {/* Image */}
-      <div className="relative mx-[20.8px] mt-[20.8px] h-[360px]">
+      <Link href={`/products/${product.id}`} className="block relative mx-[20.8px] mt-[20.8px] h-[360px]">
         <div className="relative w-full h-full rounded-tl-[200px] rounded-tr-[200px] rounded-bl-[20px] rounded-br-[20px] overflow-hidden shadow-sm bg-[#f7f3ed]">
           <Image
             src={product.image}
             alt={product.name}
             fill
             sizes="288px"
-            className="object-cover"
+            className="object-cover hover:scale-105 transition-transform duration-500"
           />
         </div>
         {/* Favorite */}
         <button
-          onClick={() => setLiked(!liked)}
+          onClick={(e) => { e.preventDefault(); setLiked(!liked); }}
           className="absolute top-5 right-3 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm hover:scale-110 transition-transform"
         >
           <Heart
             className={`w-5 h-5 transition-colors ${liked ? "fill-rose-400 text-rose-400" : "text-[#5c6b5e]"}`}
           />
         </button>
-      </div>
+      </Link>
 
       {/* Info */}
       <div className="mx-[20.8px] mt-3 pb-[20.8px]">
@@ -423,30 +375,25 @@ function ProductsPageContent() {
   const searchParams = useSearchParams();
   const searchParamsString = searchParams.toString();
 
-  const [pageData, setPageData] = useState<PageData | null>(null);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const categories: Category[] = MOCK_CATEGORIES;
 
-  const [filters, setFilters] = useState(
-    normalizeLegacyFilters({
-      name: searchParams.get("name") || "",
-      categoryId: searchParams.get("categoryId") || "",
-      minPrice: searchParams.get("minPrice") || "",
-      maxPrice: searchParams.get("maxPrice") || "",
-    })
-  );
+  const [filters, setFilters] = useState({
+    name: searchParams.get("name") || "",
+    categoryId: searchParams.get("categoryId") || "",
+    minPrice: searchParams.get("minPrice") || "",
+    maxPrice: searchParams.get("maxPrice") || "",
+  });
   const [nameInput, setNameInput] = useState(filters.name);
 
   useEffect(() => {
-    const nextFilters = normalizeLegacyFilters({
+    const next = {
       name: searchParams.get("name") || "",
       categoryId: searchParams.get("categoryId") || "",
       minPrice: searchParams.get("minPrice") || "",
       maxPrice: searchParams.get("maxPrice") || "",
-    });
-    setFilters(nextFilters);
-    setNameInput(nextFilters.name);
+    };
+    setFilters(next);
+    setNameInput(next.name);
   }, [searchParamsString, searchParams]);
 
   /* Sync filter state → URL params */
@@ -458,7 +405,6 @@ function ProductsPageContent() {
       if (newFilters.minPrice) p.set("minPrice", newFilters.minPrice);
       if (newFilters.maxPrice) p.set("maxPrice", newFilters.maxPrice);
       p.set("page", "0");
-      p.set("size", String(PAGE_SIZE));
       router.push(`${pathname}?${p.toString()}`);
     },
     [pathname, router]
@@ -469,118 +415,26 @@ function ProductsPageContent() {
       setNameInput(value);
       return;
     }
-
-    const updated = { ...filters, [key]: value } as typeof filters;
+    const updated = { ...filters, [key]: value };
     setFilters(updated);
     applyFilters(updated);
   };
 
+  /* Debounce name search */
   useEffect(() => {
     const timeout = setTimeout(() => {
-      if (nameInput === filters.name) {
-        return;
-      }
+      if (nameInput === filters.name) return;
       const updated = { ...filters, name: nameInput };
       setFilters(updated);
       applyFilters(updated);
     }, 300);
-
     return () => clearTimeout(timeout);
   }, [nameInput, filters, applyFilters]);
 
-  const normalizeProduct = (apiProduct: {
-    id: number;
-    name: string;
-    price: number;
-    image?: string;
-    imageUrl?: string;
-    categoryId?: number;
-    categoryName?: string;
-    description?: string;
-  }): Product => {
-    const fallbackImage = IMAGE_FALLBACKS[apiProduct.id % IMAGE_FALLBACKS.length];
-    const rawImage = (apiProduct.image || apiProduct.imageUrl || "").trim();
-    const isHttpImage = /^https?:\/\//i.test(rawImage);
-    const isRootRelativeImage = rawImage.startsWith("/");
-
-    return {
-      id: apiProduct.id,
-      name: apiProduct.name,
-      price: Number(apiProduct.price),
-      image: isHttpImage || isRootRelativeImage ? rawImage : fallbackImage,
-      categoryId: apiProduct.categoryId,
-      categoryName: apiProduct.categoryName,
-      description: apiProduct.description,
-    };
-  };
-
-  /* Fetch products from BE API */
-  const fetchProducts = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const params = new URLSearchParams(searchParamsString);
-
-      const legacyName = (params.get("name") || "").trim().toLowerCase();
-      const mappedLegacyCategoryId = LEGACY_CATEGORY_BY_NAME[legacyName];
-      if (!params.get("categoryId") && mappedLegacyCategoryId) {
-        params.set("categoryId", mappedLegacyCategoryId);
-        params.delete("name");
-      }
-
-      if (!params.get("page")) params.set("page", "0");
-      if (!params.get("size")) params.set("size", String(PAGE_SIZE));
-
-      const response = await fetch(`${API_BASE_URL}/api/products/search?${params.toString()}`);
-
-      if (!response.ok) {
-        throw new Error(`API /api/products/search lỗi: ${response.status}`);
-      }
-
-      const data: PageData = await response.json();
-      setPageData({
-        ...data,
-        first: data.first ?? data.number === 0,
-        last: data.last ?? data.number >= data.totalPages - 1,
-        content: (data.content || []).map(normalizeProduct),
-      });
-    } catch (fetchError) {
-      const message = fetchError instanceof Error ? fetchError.message : "Không thể tải sản phẩm";
-      setError(message);
-      setPageData({
-        content: [],
-        totalPages: 1,
-        totalElements: 0,
-        number: 0,
-        first: true,
-        last: true,
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [searchParamsString]);
-
-  const fetchCategories = useCallback(async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/categories`);
-      if (!response.ok) {
-        throw new Error("Không tải được danh mục");
-      }
-      const data: Category[] = await response.json();
-      setCategories(data);
-    } catch {
-      setCategories([]);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
-
-  useEffect(() => {
-    fetchCategories();
-  }, [fetchCategories]);
+  /* ── Compute page data from mock ── */
+  const currentPage = Number(searchParams.get("page") || "0");
+  const filtered = filterProducts(filters);
+  const pageData: PageData = paginateProducts(filtered, currentPage, PAGE_SIZE);
 
   return (
     <div className="bg-[#f7f3ed] min-h-screen">
@@ -624,23 +478,7 @@ function ProductsPageContent() {
 
         {/* Product grid */}
         <div className="flex-1">
-          {isLoading ? (
-            <div className="grid grid-cols-3 gap-6">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="w-[329px] h-[542px] bg-white/40 rounded-[32px] animate-pulse" />
-              ))}
-            </div>
-          ) : error ? (
-            <div className="flex flex-col items-center justify-center h-96 gap-3 text-center">
-              <PackageSearch className="w-12 h-12 text-[#d0bb95]" />
-              <p className="text-[#5c6b5e] text-[18px] font-light" style={{ fontFamily: "var(--font-noto-serif)" }}>
-                Không thể tải dữ liệu từ API
-              </p>
-              <p className="text-[#7a8780] text-[14px]" style={{ fontFamily: "var(--font-inter)" }}>
-                {error}
-              </p>
-            </div>
-          ) : !pageData || pageData.content.length === 0 ? (
+          {pageData.content.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-96 gap-4">
               <PackageSearch className="w-12 h-12 text-[#d0bb95]" />
               <p
