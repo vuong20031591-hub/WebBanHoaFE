@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import {
   Cormorant_Garamond,
   Inter,
+  Montserrat,
   Noto_Serif,
   Pinyon_Script,
 } from "next/font/google";
@@ -32,6 +33,12 @@ const pinyonScript = Pinyon_Script({
   weight: "400",
 });
 
+const montserrat = Montserrat({
+  variable: "--font-montserrat",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+});
+
 export const metadata: Metadata = {
   title: "Floral Boutique - Artistry in Every Petal",
   description: "Experience the elegance of premium floral arrangements, hand-crafted for life's most beautiful moments.",
@@ -45,7 +52,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${inter.variable} ${notoSerif.variable} ${cormorantGaramond.variable} ${pinyonScript.variable} antialiased`}
+        className={`${inter.variable} ${notoSerif.variable} ${cormorantGaramond.variable} ${pinyonScript.variable} ${montserrat.variable} antialiased`}
       >
         {process.env.NODE_ENV === "development" && (
           <Script
