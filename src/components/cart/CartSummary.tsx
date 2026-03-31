@@ -1,3 +1,6 @@
+"use client";
+
+import { useRouter } from "next/navigation";
 import { formatCurrency } from "./constants";
 
 interface CartSummaryProps {
@@ -15,6 +18,12 @@ export function CartSummary({
   subtotal,
   total,
 }: CartSummaryProps) {
+  const router = useRouter();
+
+  const handleCheckout = () => {
+    router.push("/checkout");
+  };
+
   return (
     <aside className="xl:sticky xl:top-[112px]">
       <div className="overflow-hidden border border-[#f3f0ec] bg-white px-10 py-10">
@@ -97,6 +106,7 @@ export function CartSummary({
             <button
               type="button"
               disabled={!hasItems}
+              onClick={handleCheckout}
               className="mt-10 w-full bg-[var(--color-cart-warm)] px-6 py-5 text-center text-[11px] uppercase leading-[16.5px] tracking-[2.2px] text-white transition hover:bg-[#775f51] disabled:cursor-not-allowed disabled:opacity-45"
               style={{ fontFamily: "var(--font-inter)" }}
             >
