@@ -1,9 +1,10 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useSyncExternalStore, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChatLive, Footer, Navbar } from "@/components/layout";
 import { useCartStore } from "@/lib/cart";
+import type { PaymentMethod as PaymentMethodType } from "@/lib/checkout/types";
 import { Breadcrumb } from "./Breadcrumb";
 import { DeliveryForm } from "./DeliveryForm";
 import { PersonalNote } from "./PersonalNote";
@@ -22,6 +23,8 @@ function subscribeToCartHydration(onStoreChange: () => void) {
 
 export function CheckoutPageContent() {
   const router = useRouter();
+  const [selectedPaymentMethod, setSelectedPaymentMethod] =
+    useState<PaymentMethodType>("qr");
   
   const hydrated = useSyncExternalStore(
     subscribeToCartHydration,
@@ -33,6 +36,11 @@ export function CheckoutPageContent() {
   const displayItems = hydrated ? items : [];
 
   const handlePlaceOrder = () => {
+    if (selectedPaymentMethod === "qr") {
+      router.push("/checkout/qr");
+      return;
+    }
+
     router.push("/checkout/complete");
   };
 
@@ -65,7 +73,10 @@ export function CheckoutPageContent() {
             <div className="space-y-16">
               <DeliveryForm />
               <PersonalNote />
-              <PaymentMethod />
+              <PaymentMethod
+                value={selectedPaymentMethod}
+                onSelect={setSelectedPaymentMethod}
+              />
             </div>
 
             <div>
