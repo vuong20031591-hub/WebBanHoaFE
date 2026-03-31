@@ -77,8 +77,8 @@ export function CompleteSidebar({
         </section>
 
         <div className="mt-10 space-y-4">
-          <a
-            href="#order-summary"
+          <Link
+            href="/checkout/tracking"
             className="flex h-[68px] w-full items-center justify-center gap-3 rounded-full bg-[#8a6d5d] text-white transition hover:bg-[#775f51]"
           >
             <span
@@ -88,7 +88,7 @@ export function CompleteSidebar({
               Order Tracking
             </span>
             <MapPinned className="h-5 w-5" strokeWidth={2.1} />
-          </a>
+          </Link>
           <Link
             href="/products"
             className="flex h-14 items-center justify-center rounded-full text-[11px] font-bold uppercase leading-[16.5px] tracking-[2.2px] text-[#2c2825] transition hover:bg-[rgba(138,109,93,0.06)]"
