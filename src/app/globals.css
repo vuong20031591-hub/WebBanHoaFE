@@ -19,6 +19,7 @@
   --font-serif: var(--font-noto-serif);
   --font-display: var(--font-cormorant);
   --font-script: var(--font-pinyon);
+  --font-elegant-sans: var(--font-montserrat);
 
   /* Floral Boutique color tokens */
   --color-gold: #d0bb95;

@@ -33,7 +33,7 @@ export function CheckoutPageContent() {
   const displayItems = hydrated ? items : [];
 
   const handlePlaceOrder = () => {
-    console.log("Order placed");
+    router.push("/checkout/complete");
   };
 
   return (
