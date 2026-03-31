@@ -49,9 +49,12 @@ export function Navbar() {
           >
             <ShoppingCart className="w-5 h-5 text-[#2d2a26]" />
           </Link>
-          <button className="w-9 h-9 flex items-center justify-center hover:bg-[#f1eeea] rounded-full transition-colors">
+          <Link
+            href="/profile"
+            className="w-9 h-9 flex items-center justify-center hover:bg-[#f1eeea] rounded-full transition-colors"
+          >
             <User className="w-5 h-5 text-[#2d2a26]" />
-          </button>
+          </Link>
         </div>
       </div>
     </nav>
