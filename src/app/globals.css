@@ -3,6 +3,13 @@
 :root {
   --background: #ffffff;
   --foreground: #2d2a26;
+  --color-cart-background: #f9f6f2;
+  --color-cart-ink: #3a3532;
+  --color-cart-warm: #8a6d5d;
+  --color-cart-gold: #c9a694;
+  --color-cart-border: #e5e1da;
+  --color-cart-paper: #fdfbf7;
+  --color-cart-danger: #a32b2b;
 }
 
 @theme inline {
@@ -10,6 +17,8 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter);
   --font-serif: var(--font-noto-serif);
+  --font-display: var(--font-cormorant);
+  --font-script: var(--font-pinyon);
 
   /* Floral Boutique color tokens */
   --color-gold: #d0bb95;

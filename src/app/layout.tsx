@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
-import { Inter, Noto_Serif } from "next/font/google";
+import {
+  Cormorant_Garamond,
+  Inter,
+  Noto_Serif,
+  Pinyon_Script,
+} from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 
@@ -15,6 +20,18 @@ const notoSerif = Noto_Serif({
   weight: ["300", "400", "500", "700"],
 });
 
+const cormorantGaramond = Cormorant_Garamond({
+  variable: "--font-cormorant",
+  subsets: ["latin"],
+  weight: ["300", "400", "500"],
+});
+
+const pinyonScript = Pinyon_Script({
+  variable: "--font-pinyon",
+  subsets: ["latin"],
+  weight: "400",
+});
+
 export const metadata: Metadata = {
   title: "Floral Boutique - Artistry in Every Petal",
   description: "Experience the elegance of premium floral arrangements, hand-crafted for life's most beautiful moments.",
@@ -27,8 +44,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} ${notoSerif.variable} antialiased`}>
-        {process.env.NODE_ENV === 'development' && (
+      <body
+        className={`${inter.variable} ${notoSerif.variable} ${cormorantGaramond.variable} ${pinyonScript.variable} antialiased`}
+      >
+        {process.env.NODE_ENV === "development" && (
           <Script
             src="//unpkg.com/react-grab/dist/index.global.js"
             crossOrigin="anonymous"

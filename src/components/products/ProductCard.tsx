@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Heart, Plus } from "lucide-react";
 import { Product } from "@/lib/products";
+import { createCartItem, useCartStore } from "@/lib/cart";
 
 interface ProductCardProps {
   product: Product;
@@ -10,6 +11,16 @@ interface ProductCardProps {
 
 export function ProductCard({ product }: ProductCardProps) {
   const [liked, setLiked] = useState(false);
+  const addItem = useCartStore((state) => state.addItem);
+  const cartQuantity = useCartStore((state) =>
+    state.items
+      .filter((item) => item.productId === product.id)
+      .reduce((sum, item) => sum + item.quantity, 0)
+  );
+
+  const handleAddToCart = () => {
+    addItem(createCartItem(product));
+  };
 
   return (
     <div className="bg-[rgba(255,255,255,0.4)] backdrop-blur-sm rounded-[32px] overflow-hidden w-[329px] shadow-[inset_0px_0.8px_0px_0px_rgba(255,255,255,0.6),inset_0px_-0.8px_0px_0px_rgba(255,255,255,0.6)]">
@@ -47,12 +58,14 @@ export function ProductCard({ product }: ProductCardProps) {
           ${product.price.toFixed(2)}
         </p>
         <button
+          type="button"
+          onClick={handleAddToCart}
           className="mt-4 w-full h-[54px] flex items-center justify-center gap-2 rounded-[12px] border border-[rgba(208,187,149,0.3)] hover:bg-[rgba(208,187,149,0.08)] transition-colors"
           style={{ fontFamily: "var(--font-inter)" }}
         >
           <Plus className="w-5 h-5 text-[#d0bb95]" />
           <span className="text-[#d0bb95] text-[12px] font-bold tracking-[1.2px] uppercase">
-            Move to Cart
+            {cartQuantity > 0 ? `In Cart (${cartQuantity})` : "Move to Cart"}
           </span>
         </button>
       </div>

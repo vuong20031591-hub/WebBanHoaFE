@@ -44,7 +44,7 @@ export function Navbar() {
             </span>
           </div>
           <Link
-            href="/products"
+            href="/cart"
             className="w-10 h-10 flex items-center justify-center hover:bg-[#f1eeea] rounded-full transition-colors"
           >
             <ShoppingCart className="w-5 h-5 text-[#2d2a26]" />

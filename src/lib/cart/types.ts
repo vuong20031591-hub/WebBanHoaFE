@@ -1,3 +1,8 @@
+export interface CartNote {
+  message: string;
+  signature: string;
+}
+
 export interface CartItem {
   productId: number;
   productName: string;
@@ -12,9 +17,16 @@ export interface CartItem {
 
 export interface CartState {
   items: CartItem[];
+  note: CartNote | null;
   addItem: (item: CartItem) => void;
-  removeItem: (productId: number) => void;
-  updateQuantity: (productId: number, quantity: number) => void;
+  removeItem: (productId: number, size: CartItem["size"]) => void;
+  updateQuantity: (
+    productId: number,
+    size: CartItem["size"],
+    quantity: number
+  ) => void;
+  setNote: (note: CartNote) => void;
+  clearNote: () => void;
   clearCart: () => void;
   getTotal: () => number;
   getItemCount: () => number;
