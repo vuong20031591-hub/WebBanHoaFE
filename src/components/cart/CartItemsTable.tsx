@@ -2,9 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Minus, Plus, ShoppingBag } from "lucide-react";
-import { CartItem } from "@/lib/cart";
-import { formatCurrency, getCartItemVariant } from "./constants";
+import { Minus, Plus, ShoppingBag, AlertCircle, RefreshCw } from "lucide-react";
+import { CartItem, useCartStore } from "@/lib/cart";
+import { formatCurrency } from "@/lib/currency";
+import { getCartItemVariant } from "./constants";
 
 interface CartItemsTableProps {
   isHydrating: boolean;
@@ -12,6 +13,7 @@ interface CartItemsTableProps {
   onDecrease: (item: CartItem) => void;
   onIncrease: (item: CartItem) => void;
   onRemove: (item: CartItem) => void;
+  onRetry?: (productId: number) => void;
 }
 
 function LoadingRows() {
@@ -46,7 +48,10 @@ export function CartItemsTable({
   onDecrease,
   onIncrease,
   onRemove,
+  onRetry,
 }: CartItemsTableProps) {
+  const getSyncEntry = useCartStore((state) => state.getSyncEntry);
+
   return (
     <section className="overflow-hidden bg-transparent">
       <div className="hidden border-b border-[#e5e1da] pb-6 md:grid md:grid-cols-[1fr_128px_110px] md:gap-6">
@@ -102,9 +107,14 @@ export function CartItemsTable({
           </div>
         ) : (
           <div>
-            {items.map((item, index) => (
+            {items.map((item, index) => {
+              const syncEntry = getSyncEntry(item.productId);
+              const syncStatus = syncEntry?.syncStatus;
+              const hasError = syncStatus === "error";
+
+              return (
               <article
-                key={`${item.productId}-${item.size}`}
+                key={item.localId}
                 className={`grid gap-6 py-8 md:grid-cols-[1fr_128px_110px] md:items-center ${
                   index < items.length - 1 ? "border-b border-[rgba(229,225,218,0.5)]" : ""
                 }`}
@@ -132,6 +142,25 @@ export function CartItemsTable({
                     >
                       {getCartItemVariant(item)}
                     </p>
+                    {hasError && (
+                      <div className="flex items-center gap-2 mt-1">
+                        <AlertCircle className="h-3 w-3 text-red-500" />
+                        <span className="text-[10px] text-red-500" style={{ fontFamily: "var(--font-inter)" }}>
+                          Sync failed
+                        </span>
+                        {onRetry && (
+                          <button
+                            type="button"
+                            onClick={() => onRetry(item.productId)}
+                            className="text-[9px] uppercase tracking-[0.9px] text-[var(--color-cart-gold)] hover:text-[var(--color-cart-warm)] flex items-center gap-1"
+                            style={{ fontFamily: "var(--font-inter)" }}
+                          >
+                            <RefreshCw className="h-3 w-3" />
+                            Retry
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center justify-between gap-4 md:justify-center">
@@ -189,7 +218,8 @@ export function CartItemsTable({
                   </button>
                 </div>
               </article>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

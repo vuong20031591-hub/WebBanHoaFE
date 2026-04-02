@@ -1,5 +1,10 @@
+import { Suspense } from "react";
 import { TrackingPageContent } from "@/components/checkout";
 
 export default function CheckoutTrackingPage() {
-  return <TrackingPageContent />;
+  return (
+    <Suspense fallback={null}>
+      <TrackingPageContent />
+    </Suspense>
+  );
 }

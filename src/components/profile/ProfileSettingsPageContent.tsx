@@ -1,41 +1,31 @@
+import Link from "next/link";
 import { ChatLive, Footer, Navbar } from "@/components/layout";
-import { profileSettingsPage } from "@/lib/profile/data";
-import { ProfileSettingsForm } from "./ProfileSettingsForm";
-import { ProfileSettingsSidebar } from "./ProfileSettingsSidebar";
 
 export function ProfileSettingsPageContent() {
   return (
     <div className="min-h-screen bg-[#fcfaf7]">
       <Navbar />
       <main className="pb-24 pt-16 lg:pt-16">
-        <div className="mx-auto max-w-[1285px] px-4 sm:px-6 lg:px-10">
-          <header className="max-w-[1185px]">
+        <div className="mx-auto max-w-[980px] px-4 sm:px-6 lg:px-10">
+          <div className="rounded-[40px] bg-white px-10 py-10 text-center shadow-[0_24px_60px_rgba(138,109,93,0.08)]">
             <h1
               className="text-[40px] font-light leading-none tracking-[-1.2px] text-[#2d2a26] lg:text-[48px]"
               style={{ fontFamily: "var(--font-noto-serif)" }}
             >
-              {profileSettingsPage.title}
+              Account Settings unavailable
             </h1>
-            <p className="mt-2 text-[14px] font-light leading-5 text-[#5c6b5e]">
-              {profileSettingsPage.subtitle}
+            <p className="mx-auto mt-4 max-w-[560px] text-[14px] leading-6 text-[#5c6b5e]">
+              FE mock account settings data has been removed. This page will be
+              restored when BE exposes real profile/account APIs.
             </p>
-          </header>
-
-          <div className="mt-12 grid gap-8 xl:grid-cols-[248px_minmax(0,1fr)] xl:gap-16">
-            <ProfileSettingsSidebar
-              navigation={profileSettingsPage.navigation}
-              rewards={profileSettingsPage.rewards}
-            />
-            <ProfileSettingsForm
-              accountInfo={profileSettingsPage.accountInfo}
-              communicationTitle={profileSettingsPage.communicationTitle}
-              communicationSubtitle={profileSettingsPage.communicationSubtitle}
-              communicationPreferences={
-                profileSettingsPage.communicationPreferences
-              }
-              cancelLabel={profileSettingsPage.cancelLabel}
-              saveLabel={profileSettingsPage.saveLabel}
-            />
+            <div className="mt-8">
+              <Link
+                href="/profile"
+                className="inline-flex min-h-[52px] items-center justify-center rounded-[12px] bg-[#d0bb95] px-8 text-[14px] font-medium text-white transition-colors hover:bg-[#c2a571]"
+              >
+                Back to Orders
+              </Link>
+            </div>
           </div>
         </div>
       </main>

@@ -1,5 +1,10 @@
+import { Suspense } from "react";
 import { QrPaymentPageContent } from "@/components/checkout";
 
 export default function CheckoutQrPage() {
-  return <QrPaymentPageContent />;
+  return (
+    <Suspense fallback={null}>
+      <QrPaymentPageContent />
+    </Suspense>
+  );
 }

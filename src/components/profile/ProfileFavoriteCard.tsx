@@ -22,6 +22,7 @@ export function ProfileFavoriteCard({ item }: ProfileFavoriteCardProps) {
       productImage: item.image,
       price: item.price,
       quantity: DEFAULT_CART_QUANTITY,
+      availableStock: null,
       size: DEFAULT_CART_SIZE,
     });
   };

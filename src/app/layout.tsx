@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import {
   Cormorant_Garamond,
   Inter,
@@ -8,6 +9,7 @@ import {
 } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
+import { AuthProvider } from "@/src/contexts";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -47,7 +49,7 @@ export const metadata: Metadata = {
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: ReactNode;
 }>) {
   return (
     <html lang="en">
@@ -61,7 +63,7 @@ export default function RootLayout({
             strategy="beforeInteractive"
           />
         )}
-        {children}
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );

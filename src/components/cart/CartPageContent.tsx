@@ -1,13 +1,17 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { ChatLive, Footer, Navbar } from "@/components/layout";
-import { CartItem, CartNote, useCartStore } from "@/lib/cart";
+import { CartItem, CartNote, useCartStore, cartSyncEngine } from "@/lib/cart";
+import { productsApi } from "@/lib/api";
+import { mapProductDTOsToProducts } from "@/lib/mappers";
 import { CartItemsTable } from "./CartItemsTable";
 import { CartNoteCard } from "./CartNoteCard";
 import { CartRecommendations } from "./CartRecommendations";
 import { CartSummary } from "./CartSummary";
-import { CART_RECOMMENDATIONS, SHIPPING_FEE } from "./constants";
+import { CartRecommendation } from "./constants";
+
+const EMPTY_ITEMS: CartItem[] = [];
 
 function subscribeToCartHydration(onStoreChange: () => void) {
   const unsubscribeStart = useCartStore.persist.onHydrate(onStoreChange);
@@ -21,41 +25,85 @@ function subscribeToCartHydration(onStoreChange: () => void) {
 }
 
 export function CartPageContent() {
+  const [recommendations, setRecommendations] = useState<CartRecommendation[]>([]);
   const hydrated = useSyncExternalStore(
     subscribeToCartHydration,
     () => useCartStore.persist.hasHydrated(),
     () => false
   );
-  const items = useCartStore((state) => state.items);
+  const variants = useCartStore((state) => state.variants);
   const note = useCartStore((state) => state.note);
   const updateQuantity = useCartStore((state) => state.updateQuantity);
   const removeItem = useCartStore((state) => state.removeItem);
   const setNote = useCartStore((state) => state.setNote);
   const clearNote = useCartStore((state) => state.clearNote);
 
-  const displayItems = hydrated ? items : [];
+  const displayItems = hydrated ? variants : EMPTY_ITEMS;
   const hasItems = displayItems.length > 0;
   const subtotal = displayItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
   );
-  const shipping = hasItems ? SHIPPING_FEE : 0;
-  const total = subtotal + shipping;
+  const total = subtotal;
+
+  useEffect(() => {
+    let active = true;
+
+    const loadRecommendations = async () => {
+      try {
+        const excludedProductIds = new Set(
+          displayItems.map((item) => item.productId)
+        );
+        const data = await productsApi.search({ size: 6 });
+
+        if (!active) {
+          return;
+        }
+
+        const nextRecommendations = mapProductDTOsToProducts(data.content)
+          .filter((product) => !excludedProductIds.has(product.id))
+          .slice(0, 3)
+          .map((product) => ({
+            id: product.id,
+            href: `/products/${product.id}`,
+            image: product.image,
+            name: product.name,
+            price: product.price,
+          }));
+
+        setRecommendations(nextRecommendations);
+      } catch {
+        if (active) {
+          setRecommendations([]);
+        }
+      }
+    };
+
+    loadRecommendations();
+
+    return () => {
+      active = false;
+    };
+  }, [displayItems]);
 
   const handleDecrease = (item: CartItem) => {
-    updateQuantity(item.productId, item.size, item.quantity - 1);
+    updateQuantity(item.localId, item.quantity - 1);
   };
 
   const handleIncrease = (item: CartItem) => {
-    updateQuantity(item.productId, item.size, item.quantity + 1);
+    updateQuantity(item.localId, item.quantity + 1);
   };
 
   const handleRemove = (item: CartItem) => {
-    removeItem(item.productId, item.size);
+    removeItem(item.localId);
   };
 
   const handleSaveNote = (nextNote: CartNote) => {
     setNote(nextNote);
+  };
+
+  const handleRetry = (productId: number) => {
+    cartSyncEngine.retryProduct(productId);
   };
 
   return (
@@ -81,6 +129,7 @@ export function CartPageContent() {
                   onDecrease={handleDecrease}
                   onIncrease={handleIncrease}
                   onRemove={handleRemove}
+                  onRetry={handleRetry}
                 />
                 {hasItems ? (
                   <CartNoteCard
@@ -93,12 +142,11 @@ export function CartPageContent() {
               <CartSummary
                 hasItems={hasItems}
                 isHydrating={!hydrated}
-                shipping={shipping}
                 subtotal={subtotal}
                 total={total}
               />
             </div>
-            <CartRecommendations recommendations={CART_RECOMMENDATIONS} />
+            <CartRecommendations recommendations={recommendations} />
           </div>
         </section>
       </main>

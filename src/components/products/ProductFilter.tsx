@@ -73,7 +73,7 @@ export function ProductFilter({
       {divider}
       <div className="flex items-center gap-2">
         <div className="flex-1 h-10 bg-[rgba(156,163,175,0.2)] rounded flex items-center px-3">
-          <span className="text-[#9ca3af] text-[14px] mr-1" style={{ fontFamily: "var(--font-inter)" }}>$</span>
+          <span className="text-[#9ca3af] text-[14px] mr-1" style={{ fontFamily: "var(--font-inter)" }}>₫</span>
           <input
             type="number"
             placeholder="0"
@@ -85,10 +85,10 @@ export function ProductFilter({
         </div>
         <span className="text-[rgba(92,107,94,0.4)] text-[28px] font-thin">-</span>
         <div className="flex-1 h-10 bg-[rgba(156,163,175,0.2)] rounded flex items-center px-3">
-          <span className="text-[#9ca3af] text-[14px] mr-1" style={{ fontFamily: "var(--font-inter)" }}>$</span>
+          <span className="text-[#9ca3af] text-[14px] mr-1" style={{ fontFamily: "var(--font-inter)" }}>₫</span>
           <input
             type="number"
-            placeholder="500"
+            placeholder="500000"
             value={maxPrice}
             onChange={(e) => onChange("maxPrice", e.target.value)}
             className="w-full bg-transparent text-[#9ca3af] text-[14px] outline-none"

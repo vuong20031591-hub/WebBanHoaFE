@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import { CartNote } from "@/lib/cart";
-import { PREVIEW_NOTE } from "./constants";
+import { createEmptyNote } from "./constants";
 
 interface CartNoteCardProps {
   note: CartNote | null;
@@ -17,15 +17,10 @@ export function CartNoteCard({
   onSave,
 }: CartNoteCardProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [draft, setDraft] = useState<CartNote>({
-    message: "",
-    signature: "",
-  });
-
-  const displayNote = note ?? PREVIEW_NOTE;
+  const [draft, setDraft] = useState<CartNote>(createEmptyNote());
 
   const handleCancel = () => {
-    setDraft({ message: "", signature: "" });
+    setDraft(createEmptyNote());
     setIsEditing(false);
   };
 
@@ -40,8 +35,8 @@ export function CartNoteCard({
     }
 
     onSave({
-      message: nextMessage || PREVIEW_NOTE.message,
-      signature: nextSignature || PREVIEW_NOTE.signature,
+      message: nextMessage,
+      signature: nextSignature,
     });
     setIsEditing(false);
   };
@@ -132,18 +127,38 @@ export function CartNoteCard({
             </div>
           ) : (
             <div className="mt-10 max-w-[448px]">
-              <p
-                className="whitespace-pre-line text-[36px] leading-[58.5px] text-[#4a4542]"
-                style={{ fontFamily: "var(--font-pinyon)" }}
-              >
-                {displayNote.message}
-              </p>
-              <p
-                className="mt-6 text-[36px] leading-[40px] text-[#4a4542]"
-                style={{ fontFamily: "var(--font-pinyon)" }}
-              >
-                {displayNote.signature}
-              </p>
+              {note ? (
+                <>
+                  <p
+                    className="whitespace-pre-line text-[36px] leading-[58.5px] text-[#4a4542]"
+                    style={{ fontFamily: "var(--font-pinyon)" }}
+                  >
+                    {note.message}
+                  </p>
+                  <p
+                    className="mt-6 text-[36px] leading-[40px] text-[#4a4542]"
+                    style={{ fontFamily: "var(--font-pinyon)" }}
+                  >
+                    {note.signature}
+                  </p>
+                </>
+              ) : (
+                <div className="space-y-3">
+                  <p
+                    className="text-[28px] leading-[1.2] text-[#4a4542]"
+                    style={{ fontFamily: "var(--font-cormorant)" }}
+                  >
+                    No personal note yet
+                  </p>
+                  <p
+                    className="text-[14px] leading-7 text-[rgba(74,69,66,0.72)]"
+                    style={{ fontFamily: "var(--font-inter)" }}
+                  >
+                    Add a note here if you want to keep a personal message in
+                    your local cart before checkout.
+                  </p>
+                </div>
+              )}
               <button
                 type="button"
                 onClick={handleStartEditing}

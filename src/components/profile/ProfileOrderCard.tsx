@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ProfileOrder } from "@/lib/profile/types";
+import { formatCurrency } from "@/lib/currency";
 
 interface ProfileOrderCardProps {
   order: ProfileOrder;
@@ -40,10 +41,7 @@ export function ProfileOrderCard({ order }: ProfileOrderCardProps) {
             className="text-[18px] font-light leading-7 text-[#2d2a26]"
             style={{ fontFamily: "var(--font-noto-serif)" }}
           >
-            {new Intl.NumberFormat("en-US", {
-              style: "currency",
-              currency: "USD",
-            }).format(order.price)}
+            {formatCurrency(order.price)}
           </p>
           <Link
             href={order.href}

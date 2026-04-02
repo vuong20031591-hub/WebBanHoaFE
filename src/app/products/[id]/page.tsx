@@ -3,16 +3,22 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { Suspense, useState } from "react";
-import { CalendarDays, Leaf, MessageCircle, PackageSearch, ShieldCheck, Truck, X } from "lucide-react";
+import { Suspense, useEffect, useState } from "react";
+import {
+  CalendarDays,
+  Leaf,
+  MessageCircle,
+  PackageSearch,
+  ShieldCheck,
+  Truck,
+  X,
+} from "lucide-react";
 import { createCartItem, useCartStore } from "@/lib/cart";
+import { formatCurrency } from "@/lib/currency";
+import { isApiError, productsApi } from "@/lib/api";
+import { mapProductDTOsToProducts, mapProductDetailDTOToProduct } from "@/lib/mappers";
 import { Navbar, Footer } from "@/components/layout";
-import { Product, ProductRepository, ProductService } from "@/lib/products";
-
-const IMG_THUMB_1 = "/images/birthday.png";
-const IMG_THUMB_2 = "/images/anniversary.png";
-const IMG_THUMB_3 = "/images/sympathy.png";
-const IMG_THUMB_4 = "/images/gallery-photo.png";
+import { Product } from "@/lib/products";
 
 const RIBBONS = [
   { label: "Red", bg: "#e8305e" },
@@ -44,7 +50,7 @@ function RelatedProductCard({ product }: { product: Product }) {
           className="text-[#9a8c81] text-[11px] font-medium tracking-[1.1px] uppercase text-center"
           style={{ fontFamily: "var(--font-inter)" }}
         >
-          ${product.price.toFixed(2)}
+          {formatCurrency(product.price)}
         </p>
       </div>
     </Link>
@@ -55,37 +61,109 @@ function ProductDetailContent() {
   const params = useParams();
   const id = Number(params?.id);
   const addItem = useCartStore((state) => state.addItem);
-  const product = ProductRepository.getById(id) ?? null;
-  const related = product ? ProductService.getRelated(id, 4) : [];
-  const images = product
-    ? [product.image, IMG_THUMB_1, IMG_THUMB_2, IMG_THUMB_3]
-    : [IMG_THUMB_1, IMG_THUMB_2, IMG_THUMB_3, IMG_THUMB_4];
-
+  const [product, setProduct] = useState<Product | null>(null);
+  const [related, setRelated] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeImg, setActiveImg] = useState(0);
-  const [selectedSize, setSelectedSize] = useState<
-    "classic" | "deluxe" | "grand"
-  >("deluxe");
+  const [selectedSize, setSelectedSize] = useState<"classic" | "deluxe" | "grand">("deluxe");
   const [selectedRibbon, setSelectedRibbon] = useState(0);
   const [deliveryDate, setDeliveryDate] = useState("");
   const [giftNote, setGiftNote] = useState("");
 
+  useEffect(() => {
+    if (!Number.isFinite(id)) {
+      setLoading(false);
+      setProduct(null);
+      return;
+    }
+
+    let active = true;
+
+    const loadProduct = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const productDetail = await productsApi.getById(id);
+        const mappedProduct = mapProductDetailDTOToProduct(productDetail);
+
+        if (!active) {
+          return;
+        }
+
+        setProduct(mappedProduct);
+        setActiveImg(0);
+
+        const relatedResponse = await productsApi.search({
+          categoryId: productDetail.categoryId,
+          size: 5,
+        });
+
+        if (!active) {
+          return;
+        }
+
+        setRelated(
+          mapProductDTOsToProducts(relatedResponse.content)
+            .filter((item) => item.id !== id)
+            .slice(0, 4)
+        );
+      } catch (fetchError) {
+        if (!active) {
+          return;
+        }
+
+        setProduct(null);
+        setRelated([]);
+        setError(
+          isApiError(fetchError) && fetchError.status !== 404
+            ? fetchError.message
+            : null
+        );
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadProduct();
+
+    return () => {
+      active = false;
+    };
+  }, [id]);
+
   const cartQuantity = useCartStore((state) =>
-    state.items
+    state.variants
       .filter((item) => item.productId === id && item.size === selectedSize)
       .reduce((sum, item) => sum + item.quantity, 0)
   );
+
+  if (loading) {
+    return (
+      <div className="bg-[#f9f7f2] min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-1 px-[80px] py-12">
+          <div className="mx-auto max-w-[1280px] h-[720px] rounded-[40px] bg-white/60 animate-pulse" />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   if (!product) {
     return (
       <div className="bg-[#f9f7f2] min-h-screen flex flex-col">
         <Navbar />
-        <main className="flex-1 flex flex-col items-center justify-center gap-4">
+        <main className="flex-1 flex flex-col items-center justify-center gap-4 px-8 text-center">
           <PackageSearch className="w-12 h-12 text-[#d0bb95]" />
           <p
             className="text-[#5c6b5e] text-[18px] font-light"
             style={{ fontFamily: "var(--font-noto-serif)" }}
           >
-            Product not found
+            {error ?? "Product not found"}
           </p>
           <Link
             href="/products"
@@ -100,6 +178,8 @@ function ProductDetailContent() {
     );
   }
 
+  const images = [product.image];
+
   const handleAddToCart = () => {
     addItem(
       createCartItem(product, {
@@ -107,6 +187,7 @@ function ProductDetailContent() {
         giftNote: giftNote.trim() || undefined,
         ribbon: RIBBONS[selectedRibbon]?.label,
         size: selectedSize,
+        availableStock: product.stockQuantity ?? null,
       })
     );
   };
@@ -155,10 +236,10 @@ function ProductDetailContent() {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 {images.map((src, index) => (
                   <button
-                    key={index}
+                    key={src}
                     type="button"
                     onClick={() => setActiveImg(index)}
                     className={`relative rounded-tl-[1000px] rounded-tr-[1000px] overflow-hidden border-2 transition-all ${
@@ -166,13 +247,13 @@ function ProductDetailContent() {
                         ? "border-[#2d2a26]"
                         : "border-[rgba(255,255,255,0.4)] hover:border-[rgba(45,42,38,0.3)]"
                     }`}
-                    style={{ paddingBottom: "100%" }}
+                    style={{ paddingBottom: "36%" }}
                   >
                     <Image
                       src={src}
                       alt={`View ${index + 1}`}
                       fill
-                      sizes="120px"
+                      sizes="520px"
                       className="object-cover"
                     />
                   </button>
@@ -195,13 +276,13 @@ function ProductDetailContent() {
                   className="text-[#2d2a26] text-[24px] font-light tracking-[-0.6px]"
                   style={{ fontFamily: "var(--font-inter)" }}
                 >
-                  ${product.price.toFixed(2)}
+                  {formatCurrency(product.price)}
                 </span>
                 <span
                   className="text-[#9a8c81] text-[10px] tracking-[1px] uppercase"
                   style={{ fontFamily: "var(--font-inter)" }}
                 >
-                  Inclusive of tax
+                  Cập nhật từ cửa hàng
                 </span>
               </div>
 
@@ -297,7 +378,7 @@ function ProductDetailContent() {
                       className="text-[#9a8c81] text-[9px] tracking-[0.9px] uppercase"
                       style={{ fontFamily: "var(--font-inter)" }}
                     >
-                      Artisan Card
+                      Personalization
                     </p>
                   </div>
                   <div className="relative">
@@ -349,7 +430,7 @@ function ProductDetailContent() {
                         className="text-[#9a8c81] text-[10px] font-medium tracking-[1px] uppercase"
                         style={{ fontFamily: "var(--font-inter)" }}
                       >
-                        Hand-Delivered
+                        Store Delivery
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -358,7 +439,7 @@ function ProductDetailContent() {
                         className="text-[#9a8c81] text-[10px] font-medium tracking-[1px] uppercase"
                         style={{ fontFamily: "var(--font-inter)" }}
                       >
-                        7-Day Freshness
+                        Real Stock
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -376,31 +457,33 @@ function ProductDetailContent() {
             </div>
           </div>
 
-          <div className="border-t border-[rgba(45,42,38,0.05)] pt-20 flex flex-col gap-16">
-            <div className="flex items-center justify-between px-4">
-              <h2
-                className="text-[#2d2a26] text-[36px] font-light leading-[40px]"
-                style={{ fontFamily: "var(--font-noto-serif)" }}
-              >
-                You may also like
-              </h2>
-              <Link
-                href="/products"
-                className="text-[#9a8c81] text-[11px] tracking-[2.2px] uppercase border-b border-[#9a8c81] pb-1 hover:text-[#2d2a26] hover:border-[#2d2a26] transition-colors"
-                style={{ fontFamily: "var(--font-inter)" }}
-              >
-                View All
-              </Link>
+          {related.length > 0 ? (
+            <div className="border-t border-[rgba(45,42,38,0.05)] pt-20 flex flex-col gap-16">
+              <div className="flex items-center justify-between px-4">
+                <h2
+                  className="text-[#2d2a26] text-[36px] font-light leading-[40px]"
+                  style={{ fontFamily: "var(--font-noto-serif)" }}
+                >
+                  Similar products
+                </h2>
+                <Link
+                  href="/products"
+                  className="text-[#9a8c81] text-[11px] tracking-[2.2px] uppercase border-b border-[#9a8c81] pb-1 hover:text-[#2d2a26] hover:border-[#2d2a26] transition-colors"
+                  style={{ fontFamily: "var(--font-inter)" }}
+                >
+                  View All
+                </Link>
+              </div>
+              <div className="grid grid-cols-4 gap-12">
+                {related.map((relatedProduct) => (
+                  <RelatedProductCard
+                    key={relatedProduct.id}
+                    product={relatedProduct}
+                  />
+                ))}
+              </div>
             </div>
-            <div className="grid grid-cols-4 gap-12">
-              {related.map((relatedProduct) => (
-                <RelatedProductCard
-                  key={relatedProduct.id}
-                  product={relatedProduct}
-                />
-              ))}
-            </div>
-          </div>
+          ) : null}
         </div>
       </main>
       <Footer />
