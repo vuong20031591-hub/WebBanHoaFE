@@ -1,1 +1,0 @@
-export { CartPageContent } from "./CartPageContent";
