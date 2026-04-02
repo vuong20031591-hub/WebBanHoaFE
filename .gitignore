@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Kiro MCP settings (contains API keys)
+.kiro/settings/mcp.json
+
+# VS Code Local History
+.history/
