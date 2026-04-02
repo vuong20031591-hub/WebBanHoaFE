@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Heart, Plus } from "lucide-react";
 import { Product } from "@/lib/products";
 import { createCartItem, useCartStore } from "@/lib/cart";
+import { formatCurrency } from "@/lib/currency";
 
 interface ProductCardProps {
   product: Product;
@@ -13,13 +14,15 @@ export function ProductCard({ product }: ProductCardProps) {
   const [liked, setLiked] = useState(false);
   const addItem = useCartStore((state) => state.addItem);
   const cartQuantity = useCartStore((state) =>
-    state.items
+    state.variants
       .filter((item) => item.productId === product.id)
       .reduce((sum, item) => sum + item.quantity, 0)
   );
 
   const handleAddToCart = () => {
-    addItem(createCartItem(product));
+    addItem(createCartItem(product, { 
+      availableStock: product.stockQuantity ?? null 
+    }));
   };
 
   return (
@@ -55,7 +58,7 @@ export function ProductCard({ product }: ProductCardProps) {
           className="text-[#5c6b5e] text-[18px] font-light leading-[28px] text-center mt-1"
           style={{ fontFamily: "var(--font-noto-serif)" }}
         >
-          ${product.price.toFixed(2)}
+          {formatCurrency(product.price)}
         </p>
         <button
           type="button"

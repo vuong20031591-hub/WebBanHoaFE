@@ -1,22 +1,22 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { formatCurrency } from "./constants";
+import { formatCurrency } from "@/lib/currency";
 
 interface CartSummaryProps {
   hasItems: boolean;
   isHydrating: boolean;
-  shipping: number;
   subtotal: number;
   total: number;
+  isCheckingOut?: boolean;
 }
 
 export function CartSummary({
   hasItems,
   isHydrating,
-  shipping,
   subtotal,
   total,
+  isCheckingOut = false,
 }: CartSummaryProps) {
   const router = useRouter();
 
@@ -60,34 +60,6 @@ export function CartSummary({
                   {formatCurrency(subtotal)}
                 </span>
               </div>
-              <div className="flex items-start justify-between gap-4">
-                <span
-                  className="pt-0.5 text-[12px] uppercase leading-[16px] tracking-[1.2px] text-[rgba(138,109,93,0.6)]"
-                  style={{ fontFamily: "var(--font-inter)" }}
-                >
-                  Shipping
-                </span>
-                <span
-                  className="text-[14px] leading-[20px] tracking-[0.35px] text-[var(--color-cart-ink)]"
-                  style={{ fontFamily: "var(--font-inter)" }}
-                >
-                  {formatCurrency(shipping)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <span
-                  className="text-[12px] uppercase leading-[16px] tracking-[1.2px] text-[rgba(138,109,93,0.6)]"
-                  style={{ fontFamily: "var(--font-inter)" }}
-                >
-                  Gift Wrap
-                </span>
-                <span
-                  className="text-[12px] uppercase leading-[16px] tracking-[1.2px] text-[var(--color-cart-gold)]"
-                  style={{ fontFamily: "var(--font-inter)" }}
-                >
-                  {hasItems ? "Complimentary" : "Unavailable"}
-                </span>
-              </div>
               <div className="flex items-end justify-between gap-4 border-t border-[#f3f0ec] pt-6">
                 <span
                   className="pb-1 text-[20px] leading-[28px] text-[var(--color-cart-ink)]"
@@ -105,12 +77,12 @@ export function CartSummary({
             </div>
             <button
               type="button"
-              disabled={!hasItems}
+              disabled={!hasItems || isCheckingOut}
               onClick={handleCheckout}
               className="mt-10 w-full bg-[var(--color-cart-warm)] px-6 py-5 text-center text-[11px] uppercase leading-[16.5px] tracking-[2.2px] text-white transition hover:bg-[#775f51] disabled:cursor-not-allowed disabled:opacity-45"
               style={{ fontFamily: "var(--font-inter)" }}
             >
-              Secure Checkout
+              {isCheckingOut ? "Redirecting..." : "Secure Checkout"}
             </button>
             <p
               className="mt-6 text-center text-[10px] leading-[20px] text-[rgba(138,109,93,0.5)]"

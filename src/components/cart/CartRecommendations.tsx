@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import { CartRecommendation, formatCurrency } from "./constants";
+import { formatCurrency } from "@/lib/currency";
+import { CartRecommendation } from "./constants";
 
 interface CartRecommendationsProps {
   recommendations: CartRecommendation[];
@@ -9,6 +10,10 @@ interface CartRecommendationsProps {
 export function CartRecommendations({
   recommendations,
 }: CartRecommendationsProps) {
+  if (recommendations.length === 0) {
+    return null;
+  }
+
   return (
     <section className="mt-20 border-t border-[var(--color-cart-border)] pt-20">
       <div className="flex justify-center">

@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
 import {
   Flower2,
   Mail,
@@ -11,6 +12,7 @@ import {
   EyeOff,
 } from "lucide-react";
 import { Navbar, Footer } from "@/components/layout";
+import { useAuth } from "@/src/contexts/AuthContext";
 
 /* ─────────────────────────────────────────────
    Asset URLs từ Figma MCP
@@ -48,15 +50,40 @@ function GoogleIcon() {
 /* ─────────────────────────────────────────────
    Sign In Form
 ───────────────────────────────────────────── */
-function SignInForm() {
+function SignInFormContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { signIn } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    const message = searchParams.get("message");
+    if (message) {
+      setSuccessMessage(message);
+    }
+  }, [searchParams]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: integrate with auth API
+    setError("");
+    setSuccessMessage("");
+
+    setLoading(true);
+    try {
+      await signIn({ email, password }, rememberMe);
+      router.push("/");
+    } catch (err) {
+      const error = err as { response?: { data?: { message?: string } }; message?: string };
+      setError(error.response?.data?.message || error.message || "Login failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -81,6 +108,17 @@ function SignInForm() {
       </h1>
 
       <form onSubmit={handleSubmit} className="w-full flex flex-col gap-5">
+        {successMessage && (
+          <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-green-600 text-sm">
+            {successMessage}
+          </div>
+        )}
+        {error && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+            {error}
+          </div>
+        )}
+
         {/* Email */}
         <div className="flex flex-col gap-1.5">
           <label
@@ -185,10 +223,11 @@ function SignInForm() {
         {/* Sign In Button */}
         <button
           type="submit"
-          className="w-full h-12 bg-[#d0bb95] text-white text-[15px] font-normal rounded-[14px] shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)] hover:bg-[#c2a571] transition-colors mt-1"
+          disabled={loading}
+          className="w-full h-12 bg-[#d0bb95] text-white text-[15px] font-normal rounded-[14px] shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)] hover:bg-[#c2a571] transition-colors mt-1 disabled:opacity-50 disabled:cursor-not-allowed"
           style={{ fontFamily: "var(--font-inter)" }}
         >
-          Sign In
+          {loading ? "Signing In..." : "Sign In"}
         </button>
       </form>
 
@@ -241,6 +280,14 @@ function SignInForm() {
         </Link>
       </p>
     </div>
+  );
+}
+
+function SignInForm() {
+  return (
+    <Suspense fallback={<div className="flex flex-col items-center w-full"><div className="animate-pulse">Loading...</div></div>}>
+      <SignInFormContent />
+    </Suspense>
   );
 }
 

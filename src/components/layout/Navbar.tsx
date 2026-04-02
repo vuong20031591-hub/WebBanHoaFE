@@ -18,8 +18,8 @@ export function Navbar() {
           <div className="flex items-center gap-9">
             {[
               { label: "Shop All", href: "/products" },
-              { label: "Weddings", href: "/products?style=Classic+Luxe" },
-              { label: "Occasions", href: "/products?occasion=Birthday" },
+              { label: "Categories", href: "/products" },
+              { label: "Latest", href: "/products" },
               { label: "Our Story", href: "#our-heritage" },
             ].map((item) => (
               <Link

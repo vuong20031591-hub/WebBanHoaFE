@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Flower2,
   Mail,
@@ -13,6 +14,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { Navbar, Footer } from "@/components/layout";
+import { useAuth } from "@/src/contexts/AuthContext";
 
 /* ─────────────────────────────────────────────
    Asset URLs từ Figma MCP
@@ -51,6 +53,8 @@ function GoogleIcon() {
    Sign Up Form
 ───────────────────────────────────────────── */
 function SignUpForm() {
+  const router = useRouter();
+  const { signUp } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [fullName, setFullName] = useState("");
@@ -58,10 +62,33 @@ function SignUpForm() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: integrate with auth API
+    setError("");
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await signUp({ email, password, fullName, phone });
+      router.push("/signin?message=Account created successfully");
+    } catch (err) {
+      const error = err as { response?: { data?: { message?: string } }; message?: string };
+      setError(error.response?.data?.message || error.message || "Registration failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -86,6 +113,12 @@ function SignUpForm() {
       </h1>
 
       <form onSubmit={handleSubmit} className="w-full flex flex-col gap-5">
+        {error && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+            {error}
+          </div>
+        )}
+
         {/* Full Name */}
         <div className="flex flex-col gap-1.5">
           <label
@@ -226,10 +259,11 @@ function SignUpForm() {
         {/* Create Account Button */}
         <button
           type="submit"
-          className="w-full h-12 bg-[#d0bb95] text-white text-[15px] font-normal rounded-[14px] shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)] hover:bg-[#c2a571] transition-colors mt-3"
+          disabled={loading}
+          className="w-full h-12 bg-[#d0bb95] text-white text-[15px] font-normal rounded-[14px] shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)] hover:bg-[#c2a571] transition-colors mt-3 disabled:opacity-50 disabled:cursor-not-allowed"
           style={{ fontFamily: "var(--font-inter)" }}
         >
-          Create Account
+          {loading ? "Creating Account..." : "Create Account"}
         </button>
       </form>
 
