@@ -23,7 +23,7 @@ export default function OurStoryPage() {
                     </div>
                     <div className="relative h-[500px] md:h-[838px] rounded-2xl overflow-hidden">
                         <Image
-                            src="https://images.unsplash.com/photo-1519378058457-4c29a0a2efac?w=1200&q=80"
+                            src="/images/our-story/hero.jpg"
                             alt="Large elegant flower arrangement"
                             fill
                             className="object-cover"
@@ -66,7 +66,7 @@ export default function OurStoryPage() {
                     {/* Large image */}
                     <div className="md:col-span-2 relative h-[600px] rounded-2xl overflow-hidden">
                         <Image
-                            src="https://images.unsplash.com/photo-1464983953574-0892a716854b?w=1200&q=80"
+                            src="/images/our-story/atelier-studio.jpg"
                             alt="Floral studio process"
                             fill
                             className="object-cover"
@@ -76,7 +76,7 @@ export default function OurStoryPage() {
                     <div className="flex flex-col gap-6">
                         <div className="relative h-[350px] rounded-2xl overflow-hidden">
                             <Image
-                                src="https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?w=600&q=80"
+                                src="/images/our-story/hand-craft.jpg"
                                 alt="Hand crafting process"
                                 fill
                                 className="object-cover"
@@ -103,7 +103,7 @@ export default function OurStoryPage() {
                     <div className="relative h-[597px]">
                         <div className="relative h-full w-full max-w-[448px] rounded-2xl overflow-hidden">
                             <Image
-                                src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=800&q=80"
+                                src="/images/our-story/founder-portrait.jpg"
                                 alt="Minh Quân Portrait"
                                 fill
                                 className="object-cover"
@@ -184,7 +184,7 @@ export default function OurStoryPage() {
                     <div className="grid grid-cols-2 gap-4">
                         <div className="relative h-full min-h-[528px] rounded-2xl overflow-hidden">
                             <Image
-                                src="https://images.unsplash.com/photo-1501004318641-b39e6451bec6?w=600&q=80"
+                                src="/images/our-story/eco-packaging.jpg"
                                 alt="Eco-friendly packaging"
                                 fill
                                 className="object-cover"
@@ -193,7 +193,7 @@ export default function OurStoryPage() {
                         <div className="flex flex-col gap-4">
                             <div className="relative h-[256px] rounded-2xl overflow-hidden">
                                 <Image
-                                    src="https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80"
+                                    src="/images/our-story/local-flowers.jpg"
                                     alt="Locally sourced flowers"
                                     fill
                                     className="object-cover"
@@ -201,7 +201,7 @@ export default function OurStoryPage() {
                             </div>
                             <div className="relative h-[256px] rounded-2xl overflow-hidden">
                                 <Image
-                                    src="https://images.unsplash.com/photo-1444021465936-c6ca81d39b84?w=600&q=80"
+                                    src="/images/our-story/sustainability.jpg"
                                     alt="Sustainability detail"
                                     fill
                                     className="object-cover"
