@@ -67,6 +67,7 @@ export default function OurStoryPage() {
                     <div className="md:col-span-2 relative h-[600px] rounded-2xl overflow-hidden">
                         <Image
                             src="/images/our-story/atelier-studio.jpg"
+  
                             alt="Floral studio process"
                             fill
                             className="object-cover"
@@ -76,7 +77,9 @@ export default function OurStoryPage() {
                     <div className="flex flex-col gap-6">
                         <div className="relative h-[350px] rounded-2xl overflow-hidden">
                             <Image
+
                                 src="/images/our-story/hand-craft.jpg"
+
                                 alt="Hand crafting process"
                                 fill
                                 className="object-cover"
@@ -193,7 +196,9 @@ export default function OurStoryPage() {
                         <div className="flex flex-col gap-4">
                             <div className="relative h-[256px] rounded-2xl overflow-hidden">
                                 <Image
+
                                     src="/images/our-story/local-flowers.jpg"
+
                                     alt="Locally sourced flowers"
                                     fill
                                     className="object-cover"
