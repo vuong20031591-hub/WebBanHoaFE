@@ -23,7 +23,7 @@ export default function OurStoryPage() {
                     </div>
                     <div className="relative h-[500px] md:h-[838px] rounded-2xl overflow-hidden">
                         <Image
-                            src="https://picsum.photos/seed/floral-hero/1200/838"
+                            src="/images/our-story/hero.jpg"
                             alt="Large elegant flower arrangement"
                             fill
                             className="object-cover"
@@ -66,7 +66,8 @@ export default function OurStoryPage() {
                     {/* Large image */}
                     <div className="md:col-span-2 relative h-[600px] rounded-2xl overflow-hidden">
                         <Image
-                            src="https://picsum.photos/seed/atelier-studio/1200/600"
+                            src="/images/our-story/atelier-studio.jpg"
+  
                             alt="Floral studio process"
                             fill
                             className="object-cover"
@@ -76,7 +77,9 @@ export default function OurStoryPage() {
                     <div className="flex flex-col gap-6">
                         <div className="relative h-[350px] rounded-2xl overflow-hidden">
                             <Image
-                                src="https://picsum.photos/seed/hand-craft/600/350"
+
+                                src="/images/our-story/hand-craft.jpg"
+
                                 alt="Hand crafting process"
                                 fill
                                 className="object-cover"
@@ -103,7 +106,7 @@ export default function OurStoryPage() {
                     <div className="relative h-[597px]">
                         <div className="relative h-full w-full max-w-[448px] rounded-2xl overflow-hidden">
                             <Image
-                                src="https://picsum.photos/seed/founder-portrait/800/597"
+                                src="/images/our-story/founder-portrait.jpg"
                                 alt="Minh Quân Portrait"
                                 fill
                                 className="object-cover"
@@ -184,7 +187,7 @@ export default function OurStoryPage() {
                     <div className="grid grid-cols-2 gap-4">
                         <div className="relative h-full min-h-[528px] rounded-2xl overflow-hidden">
                             <Image
-                                src="https://picsum.photos/seed/eco-packaging/600/528"
+                                src="/images/our-story/eco-packaging.jpg"
                                 alt="Eco-friendly packaging"
                                 fill
                                 className="object-cover"
@@ -193,7 +196,9 @@ export default function OurStoryPage() {
                         <div className="flex flex-col gap-4">
                             <div className="relative h-[256px] rounded-2xl overflow-hidden">
                                 <Image
-                                    src="https://picsum.photos/seed/local-flowers/600/256"
+
+                                    src="/images/our-story/local-flowers.jpg"
+
                                     alt="Locally sourced flowers"
                                     fill
                                     className="object-cover"
@@ -201,7 +206,7 @@ export default function OurStoryPage() {
                             </div>
                             <div className="relative h-[256px] rounded-2xl overflow-hidden">
                                 <Image
-                                    src="https://picsum.photos/seed/sustainability/600/256"
+                                    src="/images/our-story/sustainability.jpg"
                                     alt="Sustainability detail"
                                     fill
                                     className="object-cover"
