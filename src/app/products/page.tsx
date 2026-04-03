@@ -1,12 +1,18 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { PackageSearch } from "lucide-react";
 import { Product } from "@/lib/products";
 import { Category } from "@/lib/categories";
 import { categoriesApi, isApiError, productsApi } from "@/lib/api";
-import { mapCategoryDTOsToCategories, mapProductDTOsToProducts } from "@/lib/mappers";
+import {
+  DEFAULT_PRODUCT_IMAGE,
+  mapCategoryDTOsToCategories,
+  mapProductDTOToProduct,
+  mapProductDTOsToProducts,
+} from "@/lib/mappers";
 import { ProductCard, ProductFilter } from "@/components/products";
 import { Navbar, Footer } from "@/components/layout";
 import { ContactSection } from "@/components/home";
@@ -40,7 +46,13 @@ function ProductsPageContent() {
   const [nameInput, setNameInput] = useState("");
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
+  const [isLoadingCategoryCovers, setIsLoadingCategoryCovers] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [categoryCoverById, setCategoryCoverById] = useState<Record<number, string>>({});
+  const viewMode = searchParams.get("view") || "";
+  const sortMode = searchParams.get("sort") || "";
+  const isCategoriesView = viewMode === "categories";
+  const isLatestView = sortMode === "latest";
 
   const filters = useMemo(
     () => ({
@@ -55,6 +67,38 @@ function ProductsPageContent() {
   useEffect(() => {
     setNameInput(filters.name);
   }, [filters.name]);
+
+  const selectedCategoryName = useMemo(() => {
+    if (!filters.categoryId) {
+      return "";
+    }
+
+    const matchedCategory = categories.find(
+      (category) => String(category.id) === filters.categoryId
+    );
+
+    return matchedCategory?.name ?? "";
+  }, [categories, filters.categoryId]);
+
+  const showCategoryLanding = isCategoriesView && !filters.categoryId;
+
+  const headingTitle = selectedCategoryName
+    ? selectedCategoryName
+    : showCategoryLanding
+      ? "All Categories"
+      : isCategoriesView
+        ? "Categories"
+      : isLatestView
+        ? "Latest Products"
+        : "All Products";
+
+  const headingDescription = showCategoryLanding
+    ? "Explore our curated collections, tailored to suit every occasion and style."
+    : isCategoriesView
+      ? "Browse floral collections by category and pick the perfect arrangement."
+    : isLatestView
+      ? "Fresh arrivals curated for this week, ready to brighten every moment."
+      : "Designed to breathe life into every corner of your home with organic textures and timeless grace.";
 
   useEffect(() => {
     let active = true;
@@ -87,9 +131,67 @@ function ProductsPageContent() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!isCategoriesView || categories.length === 0) {
+      setCategoryCoverById({});
+      return;
+    }
+
+    let active = true;
+
+    const loadCategoryCovers = async () => {
+      setIsLoadingCategoryCovers(true);
+
+      try {
+        const coverEntries = await Promise.all(
+          categories.map(async (category) => {
+            try {
+              const response = await productsApi.search({
+                categoryId: category.id,
+                page: 0,
+                size: 1,
+                sort: "id,desc",
+              });
+              const firstProduct = response.content[0];
+              const image = firstProduct
+                ? mapProductDTOToProduct(firstProduct).image
+                : DEFAULT_PRODUCT_IMAGE;
+              return [category.id, image] as const;
+            } catch {
+              return [category.id, DEFAULT_PRODUCT_IMAGE] as const;
+            }
+          })
+        );
+
+        if (!active) {
+          return;
+        }
+
+        setCategoryCoverById(Object.fromEntries(coverEntries));
+      } finally {
+        if (active) {
+          setIsLoadingCategoryCovers(false);
+        }
+      }
+    };
+
+    loadCategoryCovers();
+
+    return () => {
+      active = false;
+    };
+  }, [categories, isCategoriesView]);
+
   const currentPage = Math.max(0, Number(searchParams.get("page") || "0") || 0);
 
   useEffect(() => {
+    if (showCategoryLanding) {
+      setIsLoadingProducts(false);
+      setError(null);
+      setPageData(EMPTY_PAGE_STATE);
+      return;
+    }
+
     let active = true;
 
     const loadProducts = async () => {
@@ -102,6 +204,7 @@ function ProductsPageContent() {
           categoryId: filters.categoryId ? Number(filters.categoryId) : undefined,
           minPrice: filters.minPrice ? Number(filters.minPrice) : undefined,
           maxPrice: filters.maxPrice ? Number(filters.maxPrice) : undefined,
+          sort: isLatestView ? "id,desc" : undefined,
           page: currentPage,
           size: PAGE_SIZE,
         });
@@ -144,7 +247,51 @@ function ProductsPageContent() {
     return () => {
       active = false;
     };
-  }, [currentPage, filters.categoryId, filters.maxPrice, filters.minPrice, filters.name]);
+  }, [
+    currentPage,
+    filters.categoryId,
+    filters.maxPrice,
+    filters.minPrice,
+    filters.name,
+    isLatestView,
+    showCategoryLanding,
+  ]);
+
+  const buildParams = useCallback(
+    (nextFilters: {
+      name: string;
+      categoryId: string;
+      minPrice: string;
+      maxPrice: string;
+    }) => {
+      const params = new URLSearchParams();
+
+      if (nextFilters.name) {
+        params.set("name", nextFilters.name);
+      }
+      if (nextFilters.categoryId) {
+        params.set("categoryId", nextFilters.categoryId);
+      }
+      if (nextFilters.minPrice) {
+        params.set("minPrice", nextFilters.minPrice);
+      }
+      if (nextFilters.maxPrice) {
+        params.set("maxPrice", nextFilters.maxPrice);
+      }
+
+      if (viewMode) {
+        params.set("view", viewMode);
+      }
+
+      if (sortMode) {
+        params.set("sort", sortMode);
+      }
+
+      params.set("page", "0");
+      return params;
+    },
+    [sortMode, viewMode]
+  );
 
   const handleFilterChange = (key: string, value: string) => {
     if (key === "name") {
@@ -152,23 +299,8 @@ function ProductsPageContent() {
       return;
     }
 
-    const params = new URLSearchParams();
     const nextFilters = { ...filters, [key]: value };
-
-    if (nextFilters.name) {
-      params.set("name", nextFilters.name);
-    }
-    if (nextFilters.categoryId) {
-      params.set("categoryId", nextFilters.categoryId);
-    }
-    if (nextFilters.minPrice) {
-      params.set("minPrice", nextFilters.minPrice);
-    }
-    if (nextFilters.maxPrice) {
-      params.set("maxPrice", nextFilters.maxPrice);
-    }
-
-    params.set("page", "0");
+    const params = buildParams(nextFilters);
     router.push(`${pathname}?${params.toString()}`);
   };
 
@@ -178,22 +310,12 @@ function ProductsPageContent() {
     }
 
     const timeoutId = window.setTimeout(() => {
-      const params = new URLSearchParams();
-
-      if (nameInput) {
-        params.set("name", nameInput);
-      }
-      if (filters.categoryId) {
-        params.set("categoryId", filters.categoryId);
-      }
-      if (filters.minPrice) {
-        params.set("minPrice", filters.minPrice);
-      }
-      if (filters.maxPrice) {
-        params.set("maxPrice", filters.maxPrice);
-      }
-
-      params.set("page", "0");
+      const params = buildParams({
+        name: nameInput,
+        categoryId: filters.categoryId,
+        minPrice: filters.minPrice,
+        maxPrice: filters.maxPrice,
+      });
       router.push(`${pathname}?${params.toString()}`);
     }, 300);
 
@@ -208,6 +330,7 @@ function ProductsPageContent() {
     nameInput,
     pathname,
     router,
+    buildParams,
   ]);
 
   const handlePageChange = (page: number) => {
@@ -232,106 +355,206 @@ function ProductsPageContent() {
             className="text-black text-[72px] font-light leading-[72px] tracking-[4px]"
             style={{ fontFamily: "var(--font-noto-serif)" }}
           >
-            All Products
+            {headingTitle}
           </h1>
           <p
             className="text-[rgba(92,107,94,0.8)] text-[18px] font-light leading-[29.25px] mt-3 max-w-[580px]"
             style={{ fontFamily: "var(--font-inter)" }}
           >
-            Designed to breathe life into every corner of your home with organic
-            textures and timeless grace.
+            {headingDescription}
           </p>
         </div>
       </div>
 
-      <div className="max-w-[1280px] mx-auto px-[54px] py-14 flex gap-16">
-        <ProductFilter
-          name={nameInput}
-          categoryId={filters.categoryId}
-          categories={isLoadingCategories ? [] : categories}
-          minPrice={filters.minPrice}
-          maxPrice={filters.maxPrice}
-          onChange={handleFilterChange}
-        />
+      <div className="max-w-[1280px] mx-auto px-[54px] py-14">
+        {showCategoryLanding ? (
+          <div className="flex gap-16">
+            <ProductFilter
+              name={nameInput}
+              categoryId={filters.categoryId}
+              categories={isLoadingCategories ? [] : categories}
+              minPrice={filters.minPrice}
+              maxPrice={filters.maxPrice}
+              onChange={handleFilterChange}
+            />
 
-        <div className="flex-1">
-          {error ? (
-            <div className="flex flex-col items-center justify-center h-96 gap-4 rounded-[32px] bg-white/50 px-8 text-center">
-              <PackageSearch className="w-12 h-12 text-[#d0bb95]" />
-              <p
-                className="text-[#2d2a26] text-[24px] font-light"
-                style={{ fontFamily: "var(--font-noto-serif)" }}
-              >
-                Unable to load products
-              </p>
-              <p className="max-w-[440px] text-[14px] leading-6 text-[#5c6b5e]">
-                {error}
-              </p>
-            </div>
-          ) : isLoadingProducts ? (
-            <div className="grid grid-cols-3 gap-6">
-              {Array.from({ length: PAGE_SIZE }, (_, index) => (
-                <div
-                  key={index}
-                  className="h-[520px] rounded-[32px] bg-white/50 animate-pulse"
-                />
-              ))}
-            </div>
-          ) : pageData.content.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-96 gap-4">
-              <PackageSearch className="w-12 h-12 text-[#d0bb95]" />
-              <p
-                className="text-[#5c6b5e] text-[18px] font-light"
-                style={{ fontFamily: "var(--font-noto-serif)" }}
-              >
-                No arrangements found
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-3 gap-6">
-                {pageData.content.map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
-
-              {pageData.totalPages > 1 && (
-                <div className="mt-10 flex items-center justify-center gap-3">
-                  <button
-                    disabled={pageData.first}
-                    onClick={() => handlePageChange(pageData.number - 1)}
-                    className="w-10 h-10 rounded-full border border-[rgba(208,187,149,0.3)] text-[#d0bb95] hover:bg-[rgba(208,187,149,0.1)] transition-colors disabled:opacity-30 flex items-center justify-center"
-                    style={{ fontFamily: "var(--font-inter)" }}
-                  >
-                    ‹
-                  </button>
-                  {Array.from({ length: pageData.totalPages }, (_, index) => (
-                    <button
+            <div className="flex-1">
+              {isLoadingCategories || isLoadingCategoryCovers ? (
+                <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                  {Array.from({ length: 6 }, (_, index) => (
+                    <div
                       key={index}
-                      onClick={() => handlePageChange(index)}
-                      className={`w-10 h-10 rounded-full text-[14px] font-medium transition-colors ${
-                        pageData.number === index
-                          ? "bg-[#d0bb95] text-white"
-                          : "border border-[rgba(208,187,149,0.3)] text-[#d0bb95] hover:bg-[rgba(208,187,149,0.1)]"
-                      }`}
-                      style={{ fontFamily: "var(--font-inter)" }}
+                      className="h-[270px] rounded-[18px] border border-white/40 bg-white/55 animate-pulse"
+                    />
+                  ))}
+                </div>
+              ) : categories.length === 0 ? (
+                <div className="flex h-[280px] items-center justify-center rounded-[24px] bg-white/55">
+                  <p className="text-[14px] text-[#7b7268]">No categories available right now.</p>
+                </div>
+              ) : (
+                <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                  {categories.map((category) => (
+                    <button
+                      key={category.id}
+                      type="button"
+                      onClick={() => handleFilterChange("categoryId", String(category.id))}
+                      className="group rounded-[18px] border border-white/50 bg-white/70 px-4 pb-4 pt-3 text-center transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_30px_rgba(91,74,54,0.12)]"
                     >
-                      {index + 1}
+                      <div className="relative mx-auto h-[200px] w-[170px] overflow-hidden rounded-[110px_110px_14px_14px] bg-[#ebe5de]">
+                        <Image
+                          src={categoryCoverById[category.id] ?? DEFAULT_PRODUCT_IMAGE}
+                          alt={category.name}
+                          fill
+                          sizes="170px"
+                          className="object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
+                      </div>
+                      <p
+                        className="mt-3 text-[13px] text-[#4b433a]"
+                        style={{ fontFamily: "var(--font-noto-serif)" }}
+                      >
+                        {category.name}
+                      </p>
                     </button>
                   ))}
-                  <button
-                    disabled={pageData.last}
-                    onClick={() => handlePageChange(pageData.number + 1)}
-                    className="w-10 h-10 rounded-full border border-[rgba(208,187,149,0.3)] text-[#d0bb95] hover:bg-[rgba(208,187,149,0.1)] transition-colors disabled:opacity-30 flex items-center justify-center"
-                    style={{ fontFamily: "var(--font-inter)" }}
-                  >
-                    ›
-                  </button>
                 </div>
               )}
-            </>
-          )}
-        </div>
+            </div>
+          </div>
+        ) : (
+          <div className="flex gap-16">
+            <ProductFilter
+              name={nameInput}
+              categoryId={filters.categoryId}
+              categories={isLoadingCategories ? [] : categories}
+              minPrice={filters.minPrice}
+              maxPrice={filters.maxPrice}
+              onChange={handleFilterChange}
+            />
+
+            <div className="flex-1">
+              {isCategoriesView && categories.length > 0 && (
+                <div className="mb-8 rounded-[24px] border border-[rgba(208,187,149,0.3)] bg-white/60 px-5 py-4">
+                  <p
+                    className="mb-3 text-[12px] font-semibold uppercase tracking-[1.6px] text-[#6f655a]"
+                    style={{ fontFamily: "var(--font-inter)" }}
+                  >
+                    Browse Categories
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleFilterChange("categoryId", "")}
+                      className={`rounded-full px-4 py-2 text-[13px] transition-colors ${
+                        !filters.categoryId
+                          ? "bg-[#8d6030] text-white"
+                          : "bg-[#f1ede7] text-[#5f5548] hover:bg-[#e9e2d9]"
+                      }`}
+                    >
+                      All categories
+                    </button>
+                    {categories.map((category) => {
+                      const isActive = filters.categoryId === String(category.id);
+
+                      return (
+                        <button
+                          key={category.id}
+                          type="button"
+                          onClick={() => handleFilterChange("categoryId", String(category.id))}
+                          className={`rounded-full px-4 py-2 text-[13px] transition-colors ${
+                            isActive
+                              ? "bg-[#8d6030] text-white"
+                              : "bg-[#f1ede7] text-[#5f5548] hover:bg-[#e9e2d9]"
+                          }`}
+                        >
+                          {category.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {error ? (
+                <div className="flex flex-col items-center justify-center h-96 gap-4 rounded-[32px] bg-white/50 px-8 text-center">
+                  <PackageSearch className="w-12 h-12 text-[#d0bb95]" />
+                  <p
+                    className="text-[#2d2a26] text-[24px] font-light"
+                    style={{ fontFamily: "var(--font-noto-serif)" }}
+                  >
+                    Unable to load products
+                  </p>
+                  <p className="max-w-[440px] text-[14px] leading-6 text-[#5c6b5e]">
+                    {error}
+                  </p>
+                </div>
+              ) : isLoadingProducts ? (
+                <div className="grid grid-cols-3 gap-6">
+                  {Array.from({ length: PAGE_SIZE }, (_, index) => (
+                    <div
+                      key={index}
+                      className="h-[520px] rounded-[32px] bg-white/50 animate-pulse"
+                    />
+                  ))}
+                </div>
+              ) : pageData.content.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-96 gap-4">
+                  <PackageSearch className="w-12 h-12 text-[#d0bb95]" />
+                  <p
+                    className="text-[#5c6b5e] text-[18px] font-light"
+                    style={{ fontFamily: "var(--font-noto-serif)" }}
+                  >
+                    No arrangements found
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-3 gap-6">
+                    {pageData.content.map((product) => (
+                      <ProductCard key={product.id} product={product} />
+                    ))}
+                  </div>
+
+                  {pageData.totalPages > 1 && (
+                    <div className="mt-10 flex items-center justify-center gap-3">
+                      <button
+                        disabled={pageData.first}
+                        onClick={() => handlePageChange(pageData.number - 1)}
+                        className="w-10 h-10 rounded-full border border-[rgba(208,187,149,0.3)] text-[#d0bb95] hover:bg-[rgba(208,187,149,0.1)] transition-colors disabled:opacity-30 flex items-center justify-center"
+                        style={{ fontFamily: "var(--font-inter)" }}
+                      >
+                        ‹
+                      </button>
+                      {Array.from({ length: pageData.totalPages }, (_, index) => (
+                        <button
+                          key={index}
+                          onClick={() => handlePageChange(index)}
+                          className={`w-10 h-10 rounded-full text-[14px] font-medium transition-colors ${
+                            pageData.number === index
+                              ? "bg-[#d0bb95] text-white"
+                              : "border border-[rgba(208,187,149,0.3)] text-[#d0bb95] hover:bg-[rgba(208,187,149,0.1)]"
+                          }`}
+                          style={{ fontFamily: "var(--font-inter)" }}
+                        >
+                          {index + 1}
+                        </button>
+                      ))}
+                      <button
+                        disabled={pageData.last}
+                        onClick={() => handlePageChange(pageData.number + 1)}
+                        className="w-10 h-10 rounded-full border border-[rgba(208,187,149,0.3)] text-[#d0bb95] hover:bg-[rgba(208,187,149,0.1)] transition-colors disabled:opacity-30 flex items-center justify-center"
+                        style={{ fontFamily: "var(--font-inter)" }}
+                      >
+                        ›
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       <ContactSection />

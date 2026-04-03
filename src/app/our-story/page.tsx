@@ -1,221 +1,234 @@
 import Image from "next/image";
 import Link from "next/link";
+import {
+  Flower2,
+  HeartHandshake,
+  Leaf,
+  Recycle,
+  Sparkles,
+} from "lucide-react";
+import { Footer, Navbar } from "@/components/layout";
+
+const HERO_IMAGE = "/images/hero-main.png";
+const STORY_IMAGE_LEFT = "/images/birthday.png";
+const STORY_IMAGE_RIGHT = "/images/gallery-photo.png";
+const FOUNDER_IMAGE = "/images/process-step-2.png";
+const VALUE_IMAGE_1 = "/images/anniversary.png";
+const VALUE_IMAGE_2 = "/images/sympathy.png";
 
 export default function OurStoryPage() {
-    return (
-        <main className="bg-white min-h-screen">
-            {/* Hero Section */}
-            <section className="pt-32 pb-16 px-12 max-w-7xl mx-auto">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-                    <div className="space-y-8">
-                        <h1 className="font-[family-name:var(--font-noto-serif)] text-[72px] leading-tight font-normal text-[#1b1c1a]">
-                            <span className="text-[#d0bb95]">Our Story:</span>
-                            <br />
-                            Artistry in
-                            <br />
-                            Every Petal
-                        </h1>
-                        <p className="font-[family-name:var(--font-inter)] text-lg text-[#4f4444] leading-[29.25px] max-w-md">
-                            Founded on the belief that flowers are more than
-                            decoration—they are a language of emotion, a tactile connection
-                            to the seasons, and a form of living art.
-                        </p>
-                    </div>
-                    <div className="relative h-[500px] md:h-[838px] rounded-2xl overflow-hidden">
-                        <Image
-                            src="/images/our-story/hero.jpg"
-                            alt="Large elegant flower arrangement"
-                            fill
-                            className="object-cover"
-                            priority
-                        />
-                    </div>
-                </div>
-            </section>
+  return (
+    <div className="min-h-screen bg-[#f7f3ed]">
+      <Navbar />
 
-            {/* Philosophy Section */}
-            <section className="py-32 px-12 bg-[#f5f3ef]">
-                <div className="max-w-4xl mx-auto text-center space-y-10">
-                    <p className="font-[family-name:var(--font-inter)] text-sm tracking-[4.2px] uppercase text-[#52634c]">
-                        Our Philosophy
-                    </p>
-                    <h2 className="font-[family-name:var(--font-noto-serif)] text-5xl font-normal text-[#1b1c1a] leading-[48px]">
-                        Dedicated to sustainability and the
-                        <br />
-                        profound emotional power of the
-                        <br />
-                        botanical world.
-                    </h2>
-                    <div className="space-y-6 font-[family-name:var(--font-inter)] text-lg font-light italic text-[#4f4444] leading-[29.25px]">
-                        <p>
-                            &ldquo;We believe that a boutique should be an atelier of the senses. Our practice is rooted in the quiet
-                            observation of nature&apos;s perfect asymmetries. Each stem is chosen not just for its beauty, but for its
-                            integrity.&rdquo;
-                        </p>
-                        <p>
-                            At Floral Boutique, luxury is defined by the luxury of time—the time it takes to hand-select locally
-                            grown blooms and the time spent composing each unique arrangement with an artist&apos;s precision.
-                        </p>
-                    </div>
-                </div>
-            </section>
+      <main>
+        <section className="px-4 pb-18 pt-16 md:px-8 lg:px-12">
+          <div className="mx-auto max-w-[1200px]">
+            <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_460px]">
+              <div>
+                <p
+                  className="text-[10px] font-semibold uppercase tracking-[2.2px] text-[#b39a7b]"
+                  style={{ fontFamily: "var(--font-inter)" }}
+                >
+                  Our Journey
+                </p>
+                <h1
+                  className="mt-4 max-w-[560px] text-[46px] leading-[0.96] text-[#2d2a26] md:text-[56px] lg:text-[64px]"
+                  style={{ fontFamily: "var(--font-noto-serif)" }}
+                >
+                  Our Story:
+                  <br />
+                  Artistry in
+                  <br />
+                  Every Petal
+                </h1>
+                <p className="mt-5 max-w-[520px] text-[15px] leading-7 text-[#6b6259]">
+                  Founded with a love for floral craftsmanship, we transform
+                  everyday stems into heartfelt experiences for weddings,
+                  celebrations, and quiet moments of gratitude.
+                </p>
+              </div>
 
-            {/* The Atelier Section */}
-            <section className="py-16 px-12 max-w-7xl mx-auto">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-                    {/* Large image */}
-                    <div className="md:col-span-2 relative h-[600px] rounded-2xl overflow-hidden">
-                        <Image
-                            src="/images/our-story/atelier-studio.jpg"
-  
-                            alt="Floral studio process"
-                            fill
-                            className="object-cover"
-                        />
-                    </div>
-                    {/* Right column */}
-                    <div className="flex flex-col gap-6">
-                        <div className="relative h-[350px] rounded-2xl overflow-hidden">
-                            <Image
+              <div className="relative mx-auto h-[360px] w-[360px] rounded-full bg-[#ebe6df] md:h-[420px] md:w-[420px]">
+                <Image
+                  src={HERO_IMAGE}
+                  alt="Floral Boutique hero bouquet"
+                  fill
+                  sizes="420px"
+                  className="rounded-full object-cover p-4"
+                  priority
+                />
+              </div>
+            </div>
+          </div>
+        </section>
 
-                                src="/images/our-story/hand-craft.jpg"
+        <section className="bg-[#f1ede7] px-4 py-16 md:px-8">
+          <div className="mx-auto max-w-[980px] text-center">
+            <p
+              className="mx-auto max-w-[760px] text-[34px] leading-[1.18] text-[#2d2a26]"
+              style={{ fontFamily: "var(--font-noto-serif)" }}
+            >
+              Dedicated to sustainability and the profound emotional power of the
+              botanical world.
+            </p>
+            <p className="mx-auto mt-5 max-w-[700px] text-[14px] leading-7 text-[#7b7168]">
+              We source fresh flowers from trusted farms, minimize waste in
+              every process, and craft each arrangement with intention so every
+              delivery feels personal.
+            </p>
+          </div>
+        </section>
 
-                                alt="Hand crafting process"
-                                fill
-                                className="object-cover"
-                            />
-                        </div>
-                        <div className="bg-white rounded-xl p-8 shadow-sm">
-                            <h3 className="font-[family-name:var(--font-noto-serif)] text-2xl font-normal text-[#1b1c1a] mb-4">
-                                The Atelier
-                            </h3>
-                            <p className="font-[family-name:var(--font-inter)] text-base text-[#4f4444] leading-[26px]">
-                                Every bouquet is born in our sun-drenched studio, where we treat petals
-                                like pigments. It is a space of continuous discovery, where traditional techniques
-                                meet contemporary botanical design.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </section>
+        <section className="px-4 py-18 md:px-8">
+          <div className="mx-auto grid max-w-[1200px] gap-6 lg:grid-cols-[1.3fr_0.9fr]">
+            <div className="relative min-h-[330px] overflow-hidden rounded-[28px]">
+              <Image
+                src={STORY_IMAGE_LEFT}
+                alt="Crafted floral collection"
+                fill
+                sizes="(max-width: 1024px) 100vw, 66vw"
+                className="object-cover"
+              />
+            </div>
 
-            {/* Our Founder Section */}
-            <section className="py-32 px-12 bg-white">
-                <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
-                    {/* Portrait */}
-                    <div className="relative h-[597px]">
-                        <div className="relative h-full w-full max-w-[448px] rounded-2xl overflow-hidden">
-                            <Image
-                                src="/images/our-story/founder-portrait.jpg"
-                                alt="Minh Quân Portrait"
-                                fill
-                                className="object-cover"
-                            />
-                        </div>
-                        {/* Badge */}
-                        <div className="absolute bottom-10 right-0 bg-[#7d562d] rounded-xl p-6">
-                            <svg width="26" height="18" viewBox="0 0 26 18" fill="none">
-                                <path d="M1 9h24M13 1l8 8-8 8" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                        </div>
-                    </div>
-                    {/* Bio */}
-                    <div className="space-y-8">
-                        <p className="font-[family-name:var(--font-inter)] text-sm tracking-[4.2px] uppercase text-[#52634c]">
-                            The Visionary
-                        </p>
-                        <h2 className="font-[family-name:var(--font-noto-serif)] text-5xl font-normal text-[#1b1c1a] leading-[48px]">
-                            Minh Quân
-                        </h2>
-                        <blockquote className="font-[family-name:var(--font-noto-serif)] text-xl text-[#7d562d] leading-[32.5px]">
-                            &ldquo;Flowers speak where words fail. My mission is to curate
-                            moments of stillness and wonder through the botanical arts.&rdquo;
-                        </blockquote>
-                        <p className="font-[family-name:var(--font-inter)] text-lg text-[#4f4444] leading-[29.25px]">
-                            With over fifteen years of experience in both classical European
-                            floristry and traditional Eastern minimalist design, Minh Quân
-                            brings a unique global perspective to every creation. His work
-                            has been featured in leading design journals for its architectural
-                            integrity and emotional depth.
-                        </p>
-                        <Link
-                            href="/products"
-                            className="inline-block bg-[#2d2a26] text-white font-[family-name:var(--font-inter)] text-base tracking-[0.4px] px-10 py-4 rounded-full hover:bg-[#2d2a26]/80 transition-colors"
-                        >
-                            View His Portfolio
-                        </Link>
-                    </div>
-                </div>
-            </section>
+            <div className="grid gap-6">
+              <div className="relative min-h-[165px] overflow-hidden rounded-[28px]">
+                <Image
+                  src={STORY_IMAGE_RIGHT}
+                  alt="Atelier workflow"
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 34vw"
+                  className="object-cover"
+                />
+              </div>
+              <article className="rounded-[28px] border border-[#e3d9cd] bg-white/80 p-6">
+                <p
+                  className="text-[20px] text-[#2d2a26]"
+                  style={{ fontFamily: "var(--font-noto-serif)" }}
+                >
+                  The Atelier
+                </p>
+                <p className="mt-3 text-[13px] leading-6 text-[#70665d]">
+                  Every bouquet is handcrafted by our floral artists in a calm
+                  studio environment where balance, color, and storytelling come
+                  first.
+                </p>
+              </article>
+            </div>
+          </div>
+        </section>
 
-            {/* Sustainability Commitment Section */}
-            <section className="py-16 px-12 max-w-7xl mx-auto">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
-                    {/* Text card */}
-                    <div className="bg-[#f5f3ef] rounded-xl p-12 flex flex-col justify-center space-y-8">
-                        <div className="flex items-center gap-4">
-                            <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
-                                <path d="M13 2C7 2 2 7 2 13s5 11 11 11 11-5 11-11S19 2 13 2zm0 4c2 0 4 1 5 3-2 0-4 1-5 3-1-2-3-3-5-3 1-2 3-3 5-3zm0 14c-4 0-7-3-7-7 2 0 4 1 5 3h4c1-2 3-3 5-3 0 4-3 7-7 7z" fill="#52634c" />
-                            </svg>
-                            <h3 className="font-[family-name:var(--font-noto-serif)] text-3xl font-normal text-[#1b1c1a]">
-                                Earth-Kind Artistry
-                            </h3>
-                        </div>
-                        <p className="font-[family-name:var(--font-inter)] text-lg text-[#4f4444] leading-[29.25px]">
-                            Our commitment to the planet is woven into every stem. We source 90% of our blooms from local,
-                            family-owned farms that practice regenerative agriculture, reducing our carbon footprint while
-                            supporting our community.
-                        </p>
-                        <ul className="space-y-5">
-                            {[
-                                "100% Compostable & Recyclable Packaging",
-                                "Zero-Plastic Floral Mechanics",
-                                "Seasonal Sourcing Calendar",
-                            ].map((item) => (
-                                <li key={item} className="flex items-center gap-4">
-                                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                                        <path d="M4 10l4 4 8-8" stroke="#52634c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                    </svg>
-                                    <span className="font-[family-name:var(--font-inter)] text-base text-[#1b1c1a]">
-                                        {item}
-                                    </span>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                    {/* Image grid */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="relative h-full min-h-[528px] rounded-2xl overflow-hidden">
-                            <Image
-                                src="/images/our-story/eco-packaging.jpg"
-                                alt="Eco-friendly packaging"
-                                fill
-                                className="object-cover"
-                            />
-                        </div>
-                        <div className="flex flex-col gap-4">
-                            <div className="relative h-[256px] rounded-2xl overflow-hidden">
-                                <Image
+        <section className="px-4 pb-18 md:px-8">
+          <div className="mx-auto grid max-w-[1200px] items-center gap-8 rounded-[30px] border border-[#e8ddd1] bg-white/70 p-6 md:p-10 lg:grid-cols-[270px_minmax(0,1fr)]">
+            <div className="relative h-[320px] overflow-hidden rounded-[130px_130px_18px_18px] bg-[#ebe5dd]">
+              <Image
+                src={FOUNDER_IMAGE}
+                alt="Founder portrait"
+                fill
+                sizes="270px"
+                className="object-cover"
+              />
+            </div>
 
-                                    src="/images/our-story/local-flowers.jpg"
+            <div>
+              <p
+                className="text-[36px] leading-none text-[#2d2a26]"
+                style={{ fontFamily: "var(--font-noto-serif)" }}
+              >
+                Minh Quân
+              </p>
+              <p className="mt-3 text-[14px] text-[#8d7f72]">Founder & Creative Lead</p>
+              <p className="mt-4 max-w-[640px] text-[14px] leading-7 text-[#6f645b]">
+                &quot;Flowers helped me understand how beauty can comfort people.
+                Floral Boutique was born from that belief: design should touch
+                emotions, not just decorate spaces.&quot;
+              </p>
+              <p className="mt-3 max-w-[640px] text-[14px] leading-7 text-[#6f645b]">
+                We continue to blend modern floral styling with meaningful
+                storytelling, making every arrangement feel thoughtful and alive.
+              </p>
+              <Link
+                href="/products"
+                className="mt-6 inline-flex items-center rounded-full bg-[#8d6030] px-6 py-3 text-[13px] font-medium text-white transition-colors hover:bg-[#744c22]"
+              >
+                Explore Collection
+              </Link>
+            </div>
+          </div>
+        </section>
 
-                                    alt="Locally sourced flowers"
-                                    fill
-                                    className="object-cover"
-                                />
-                            </div>
-                            <div className="relative h-[256px] rounded-2xl overflow-hidden">
-                                <Image
-                                    src="/images/our-story/sustainability.jpg"
-                                    alt="Sustainability detail"
-                                    fill
-                                    className="object-cover"
-                                />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-        </main>
-    );
+        <section className="bg-[#f1ede7] px-4 py-18 md:px-8">
+          <div className="mx-auto grid max-w-[1200px] gap-8 lg:grid-cols-[1fr_360px]">
+            <article className="rounded-[28px] border border-[#e6dccf] bg-white/75 p-7">
+              <p
+                className="text-[26px] text-[#2d2a26]"
+                style={{ fontFamily: "var(--font-noto-serif)" }}
+              >
+                Earth-Kind Artistry
+              </p>
+              <p className="mt-3 text-[14px] leading-7 text-[#6f655d]">
+                We believe floral design should leave beauty behind, not waste.
+                Our daily operations follow mindful standards:
+              </p>
+              <ul className="mt-5 space-y-3 text-[14px] text-[#5f554b]">
+                <li className="flex items-center gap-3">
+                  <Leaf className="h-4 w-4 text-[#7f9b71]" />
+                  Seasonal sourcing from local farms
+                </li>
+                <li className="flex items-center gap-3">
+                  <Recycle className="h-4 w-4 text-[#7f9b71]" />
+                  Reusable packaging and compost-friendly wraps
+                </li>
+                <li className="flex items-center gap-3">
+                  <HeartHandshake className="h-4 w-4 text-[#7f9b71]" />
+                  Fair partnership with growers and artisans
+                </li>
+                <li className="flex items-center gap-3">
+                  <Sparkles className="h-4 w-4 text-[#7f9b71]" />
+                  Quality-first curation in every bouquet
+                </li>
+              </ul>
+            </article>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="relative min-h-[160px] overflow-hidden rounded-[22px]">
+                <Image
+                  src={VALUE_IMAGE_1}
+                  alt="Seasonal arrangement"
+                  fill
+                  sizes="180px"
+                  className="object-cover"
+                />
+              </div>
+              <div className="relative min-h-[160px] overflow-hidden rounded-[22px]">
+                <Image
+                  src={VALUE_IMAGE_2}
+                  alt="Sympathy arrangement"
+                  fill
+                  sizes="180px"
+                  className="object-cover"
+                />
+              </div>
+              <div className="col-span-2 rounded-[22px] bg-[#e2d8cd] p-6">
+                <Flower2 className="h-6 w-6 text-[#8d6030]" />
+                <p
+                  className="mt-3 text-[21px] text-[#2d2a26]"
+                  style={{ fontFamily: "var(--font-noto-serif)" }}
+                >
+                  Floral Purpose
+                </p>
+                <p className="mt-2 text-[13px] leading-6 text-[#6d6258]">
+                  From gift moments to milestone ceremonies, our arrangements are
+                  crafted to make every memory more vivid and heartfelt.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <Footer />
+    </div>
+  );
 }

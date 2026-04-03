@@ -51,6 +51,9 @@ export function TrackingPageContent() {
   const [items, setItems] = useState<OrderDisplayItem[]>([]);
   const [reconciliation, setReconciliation] =
     useState<PaymentReconciliationDTO | null>(null);
+  const [reconciliationError, setReconciliationError] = useState<string | null>(
+    null
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const orderId = Number(searchParams.get("orderId") || "0");
@@ -70,24 +73,43 @@ export function TrackingPageContent() {
     const loadTracking = async () => {
       setIsLoading(true);
       setError(null);
+      setReconciliationError(null);
 
       try {
         const nextOrder =
           orderId > 0 ? await ordersApi.getById(orderId) : await ordersApi.getLatest();
-        const [productsById, nextReconciliation] = await Promise.all([
-          loadOrderProducts(nextOrder.items.map((item) => item.productId)),
-          paymentsApi.reconcile(nextOrder.id),
-        ]);
+        const productsById = await loadOrderProducts(
+          nextOrder.items.map((item) => item.productId)
+        );
 
         if (!active) {
           return;
         }
 
         setOrder(nextOrder);
-        setReconciliation(nextReconciliation);
         setItems(
           nextOrder.items.map((item) => mapOrderItemToDisplay(item, productsById[item.productId]))
         );
+
+        try {
+          const nextReconciliation = await paymentsApi.reconcile(nextOrder.id);
+          if (!active) {
+            return;
+          }
+          setReconciliation(nextReconciliation);
+          setReconciliationError(null);
+        } catch (reconcileError) {
+          if (!active) {
+            return;
+          }
+
+          setReconciliation(null);
+          setReconciliationError(
+            isApiError(reconcileError)
+              ? reconcileError.message
+              : "Payment reconciliation is temporarily unavailable."
+          );
+        }
       } catch (fetchError) {
         if (!active) {
           return;
@@ -114,6 +136,31 @@ export function TrackingPageContent() {
       active = false;
     };
   }, [authLoading, orderId, user]);
+
+  useEffect(() => {
+    if (!user || !order) {
+      return;
+    }
+
+    const intervalId = window.setInterval(async () => {
+      try {
+        const nextReconciliation = await paymentsApi.reconcile(order.id);
+        setReconciliation(nextReconciliation);
+        setReconciliationError(null);
+      } catch (reconcileError) {
+        setReconciliation(null);
+        setReconciliationError(
+          isApiError(reconcileError)
+            ? reconcileError.message
+            : "Payment reconciliation is temporarily unavailable."
+        );
+      }
+    }, 5000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [order, user]);
 
   return (
     <div className="min-h-screen bg-[#fdfaf7]">
@@ -176,8 +223,14 @@ export function TrackingPageContent() {
                       try {
                         const nextReconciliation = await paymentsApi.reconcile(order.id);
                         setReconciliation(nextReconciliation);
-                      } catch {
-                        return;
+                        setReconciliationError(null);
+                      } catch (reconcileError) {
+                        setReconciliation(null);
+                        setReconciliationError(
+                          isApiError(reconcileError)
+                            ? reconcileError.message
+                            : "Payment reconciliation is temporarily unavailable."
+                        );
                       }
                     }}
                     className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-[12px] border border-[rgba(138,109,93,0.16)] px-6 text-[14px] font-medium text-[#2c2825] transition-colors hover:bg-[#fdfaf7]"
@@ -226,6 +279,11 @@ export function TrackingPageContent() {
                         ? `${reconciliation.transactionCount} transaction records`
                         : "No reconciliation records returned yet."}
                     </p>
+                    {reconciliationError ? (
+                      <p className="mt-3 text-[12px] leading-5 text-[#b45309]">
+                        {reconciliationError}
+                      </p>
+                    ) : null}
                     {reconciliation?.transactions?.length ? (
                       <ul className="mt-6 space-y-2 text-[12px] leading-5 text-[#8a6d5d]">
                         {reconciliation.transactions.map((transaction) => (

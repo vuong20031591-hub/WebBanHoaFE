@@ -17,6 +17,7 @@ import { createCartItem, useCartStore } from "@/lib/cart";
 import { formatCurrency } from "@/lib/currency";
 import { isApiError, productsApi } from "@/lib/api";
 import { mapProductDTOsToProducts, mapProductDetailDTOToProduct } from "@/lib/mappers";
+import { DEFAULT_PRODUCT_IMAGE } from "@/lib/mappers/product";
 import { Navbar, Footer } from "@/components/layout";
 import { Product } from "@/lib/products";
 
@@ -28,11 +29,12 @@ const RIBBONS = [
 ] as const;
 
 function RelatedProductCard({ product }: { product: Product }) {
+  const safeImage = product.image || DEFAULT_PRODUCT_IMAGE;
   return (
     <Link href={`/products/${product.id}`} className="flex flex-col gap-6 group">
       <div className="bg-[rgba(255,255,255,0.4)] rounded-tl-[1000px] rounded-tr-[1000px] overflow-hidden relative w-full aspect-[3/4] shrink-0">
         <Image
-          src={product.image}
+          src={safeImage}
           alt={product.name}
           fill
           sizes="(max-width: 1280px) 25vw, 280px"
@@ -178,7 +180,7 @@ function ProductDetailContent() {
     );
   }
 
-  const images = [product.image];
+  const images = [product.image || DEFAULT_PRODUCT_IMAGE];
 
   const handleAddToCart = () => {
     addItem(

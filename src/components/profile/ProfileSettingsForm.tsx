@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import { isApiError } from "@/lib/api";
 import {
   ProfileCommunicationPreference,
   ProfileSettingsAccountInfo,
@@ -14,6 +15,7 @@ interface ProfileSettingsFormProps {
   communicationPreferences: ProfileCommunicationPreference[];
   cancelLabel: string;
   saveLabel: string;
+  onSave?: (payload: SaveProfileSettingsPayload) => Promise<void>;
 }
 
 interface AccountInfoFormState {
@@ -22,6 +24,17 @@ interface AccountInfoFormState {
   phone: string;
   address: string;
 }
+
+export interface SaveProfileSettingsPayload {
+  fullName: string;
+  phone: string;
+  communicationPreferences: ProfileCommunicationPreference[];
+}
+
+type SubmitMessage = {
+  tone: "success" | "error";
+  text: string;
+} | null;
 
 const fieldLabelClassName =
   "px-1 text-[12px] font-bold uppercase tracking-[0.6px] text-[rgba(92,107,94,0.6)]";
@@ -37,9 +50,16 @@ interface ProfileFieldProps {
   type: "text" | "email" | "tel";
   value: string;
   onChange: (value: string) => void;
+  readOnly?: boolean;
 }
 
-function ProfileField({ label, type, value, onChange }: ProfileFieldProps) {
+function ProfileField({
+  label,
+  type,
+  value,
+  onChange,
+  readOnly = false,
+}: ProfileFieldProps) {
   return (
     <label className="block">
       <span className={fieldLabelClassName}>{label}</span>
@@ -48,7 +68,8 @@ function ProfileField({ label, type, value, onChange }: ProfileFieldProps) {
           type={type}
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className={textInputClassName}
+          readOnly={readOnly}
+          className={`${textInputClassName} ${readOnly ? "cursor-not-allowed opacity-60" : ""}`}
         />
       </div>
     </label>
@@ -88,6 +109,7 @@ export function ProfileSettingsForm({
   communicationPreferences,
   cancelLabel,
   saveLabel,
+  onSave,
 }: ProfileSettingsFormProps) {
   const [formState, setFormState] = useState<AccountInfoFormState>({
     fullName: accountInfo.fullName,
@@ -98,6 +120,8 @@ export function ProfileSettingsForm({
   const [preferences, setPreferences] = useState(
     communicationPreferences.map((item) => ({ ...item }))
   );
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState<SubmitMessage>(null);
 
   const handleCancel = () => {
     setFormState({
@@ -107,6 +131,7 @@ export function ProfileSettingsForm({
       address: accountInfo.address,
     });
     setPreferences(communicationPreferences.map((item) => ({ ...item })));
+    setSubmitMessage(null);
   };
 
   const handlePreferenceToggle = (id: string) => {
@@ -117,9 +142,68 @@ export function ProfileSettingsForm({
     );
   };
 
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSubmitMessage(null);
+
+    const fullName = formState.fullName.trim();
+    const phone = formState.phone.trim();
+
+    if (!fullName) {
+      setSubmitMessage({
+        tone: "error",
+        text: "Full name is required.",
+      });
+      return;
+    }
+
+    if (!phone) {
+      setSubmitMessage({
+        tone: "error",
+        text: "Phone number is required.",
+      });
+      return;
+    }
+
+    if (!onSave) {
+      setSubmitMessage({
+        tone: "success",
+        text: "Settings saved.",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await onSave({
+        fullName,
+        phone,
+        communicationPreferences: preferences,
+      });
+      setFormState((current) => ({
+        ...current,
+        fullName,
+        phone,
+      }));
+      setSubmitMessage({
+        tone: "success",
+        text: "Account settings updated successfully.",
+      });
+    } catch (error) {
+      setSubmitMessage({
+        tone: "error",
+        text: isApiError(error)
+          ? error.message
+          : "Unable to save settings right now.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <form
-      onSubmit={(event) => event.preventDefault()}
+      onSubmit={handleSubmit}
       className="rounded-[40px] border border-white/40 bg-[rgba(255,255,255,0.4)] px-6 py-8 sm:px-8 xl:px-[49px] xl:py-[49px]"
     >
       <section id="account-info">
@@ -154,17 +238,23 @@ export function ProfileSettingsForm({
               }))
             }
           />
-          <ProfileField
-            label="Email Address"
-            type="email"
-            value={formState.email}
-            onChange={(email) =>
-              setFormState((current) => ({
-                ...current,
-                email,
-              }))
-            }
-          />
+          <div>
+            <ProfileField
+              label="Email Address"
+              type="email"
+              value={formState.email}
+              onChange={(email) =>
+                setFormState((current) => ({
+                  ...current,
+                  email,
+                }))
+              }
+              readOnly
+            />
+            <p className="mt-2 px-1 text-[11px] text-[rgba(92,107,94,0.7)]">
+              Email cannot be changed from this screen.
+            </p>
+          </div>
           <ProfileField
             label="Phone Number"
             type="tel"
@@ -236,6 +326,16 @@ export function ProfileSettingsForm({
         </div>
       </section>
 
+      {submitMessage ? (
+        <p
+          className={`mt-8 text-[13px] ${
+            submitMessage.tone === "success" ? "text-[#166534]" : "text-[#b91c1c]"
+          }`}
+        >
+          {submitMessage.text}
+        </p>
+      ) : null}
+
       <div id="account-actions" className="mt-10 flex flex-wrap justify-end gap-4">
         <button
           type="button"
@@ -246,9 +346,10 @@ export function ProfileSettingsForm({
         </button>
         <button
           type="submit"
-          className="inline-flex min-h-[53px] items-center justify-center rounded-xl bg-[#d0bb96] px-10 text-[14px] font-medium text-white transition-colors hover:bg-[#c2a571]"
+          disabled={isSubmitting}
+          className="inline-flex min-h-[53px] items-center justify-center rounded-xl bg-[#d0bb96] px-10 text-[14px] font-medium text-white transition-colors hover:bg-[#c2a571] disabled:cursor-not-allowed disabled:opacity-70"
         >
-          {saveLabel}
+          {isSubmitting ? "Saving..." : saveLabel}
         </button>
       </div>
     </form>

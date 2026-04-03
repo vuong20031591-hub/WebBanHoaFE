@@ -22,6 +22,16 @@ Lấy Supabase credentials từ:
 - Dashboard → Settings → API
 - Copy `Project URL` và `anon/public key`
 
+### 2.1 Configure Google OAuth (Supabase)
+
+Để dùng nút "Google" ở trang Sign In / Sign Up:
+
+1. Supabase Dashboard → **Authentication** → **Providers** → bật **Google**
+2. Thêm `Authorized redirect URL`:
+   - `http://localhost:3000/signin` (local)
+   - domain production tương ứng (nếu có)
+3. Tạo OAuth Client trong Google Cloud Console và điền `Client ID` + `Client Secret` vào Supabase
+
 ### 3. Install Dependencies
 
 ```bash

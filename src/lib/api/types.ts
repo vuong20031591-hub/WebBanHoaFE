@@ -101,6 +101,13 @@ export interface OrderDTO {
   confirmedAt: string | null;
 }
 
+export interface AdminOrderStatsDTO {
+  totalOrders: number;
+  pendingOrders: number;
+  confirmedOrders: number;
+  cancelledOrders: number;
+}
+
 export interface PaymentCheckoutDTO {
   orderId: number;
   provider: string;
