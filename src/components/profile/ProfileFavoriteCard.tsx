@@ -3,6 +3,8 @@
 import Image from "next/image";
 import { Heart, Plus } from "lucide-react";
 import { CartItem, useCartStore } from "@/lib/cart";
+import { DEFAULT_PRODUCT_IMAGE } from "@/lib/mappers/product";
+import { useFavoritesStore } from "@/lib/favorites";
 import { ProfileFavorite } from "@/lib/profile/types";
 
 const DEFAULT_CART_QUANTITY = 1;
@@ -14,15 +16,17 @@ interface ProfileFavoriteCardProps {
 
 export function ProfileFavoriteCard({ item }: ProfileFavoriteCardProps) {
   const addItem = useCartStore((state) => state.addItem);
+  const removeFavorite = useFavoritesStore((state) => state.removeFavorite);
+  const safeImage = item.image || DEFAULT_PRODUCT_IMAGE;
 
   const handleAddToCart = () => {
     addItem({
       productId: item.productId,
       productName: item.name,
-      productImage: item.image,
+      productImage: safeImage,
       price: item.price,
       quantity: DEFAULT_CART_QUANTITY,
-      availableStock: null,
+      availableStock: item.stockQuantity ?? null,
       size: DEFAULT_CART_SIZE,
     });
   };
@@ -32,7 +36,7 @@ export function ProfileFavoriteCard({ item }: ProfileFavoriteCardProps) {
       <div className="relative mx-[20.8px] mt-[20.8px] h-[360px]">
         <div className="relative h-full w-full overflow-hidden rounded-bl-[20px] rounded-br-[20px] rounded-tl-[200px] rounded-tr-[200px] bg-[#f7f3ed] shadow-sm">
           <Image
-            src={item.image}
+            src={safeImage}
             alt={item.name}
             fill
             sizes="(max-width: 768px) 90vw, 288px"
@@ -40,9 +44,14 @@ export function ProfileFavoriteCard({ item }: ProfileFavoriteCardProps) {
           />
         </div>
 
-        <div className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-[rgba(255,255,255,0.9)] shadow-sm backdrop-blur-sm">
+        <button
+          type="button"
+          onClick={() => removeFavorite(item.productId)}
+          className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-[rgba(255,255,255,0.9)] shadow-sm backdrop-blur-sm hover:scale-110 transition-transform"
+          aria-label={`Remove ${item.name} from favorites`}
+        >
           <Heart className="h-5 w-5 fill-[#f5d5d9] text-[#f5d5d9]" />
-        </div>
+        </button>
       </div>
 
       <div className="mx-[20.8px] mt-6 pb-[20.8px]">

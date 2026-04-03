@@ -26,6 +26,16 @@ export const authService = {
     return data;
   },
 
+  async signInWithGoogle(redirectTo?: string) {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: redirectTo ? { redirectTo } : undefined,
+    });
+
+    if (error) throw error;
+    return data;
+  },
+
   async signOut() {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;

@@ -4,8 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { CheckCircle2, Receipt, Truck } from "lucide-react";
-import { ChatLive, Footer, Navbar } from "@/components/layout";
+import { BadgeCheck, Quote, ReceiptText, Sparkles, Truck } from "lucide-react";
+import { Footer, Navbar } from "@/components/layout";
 import { formatCurrency } from "@/lib/currency";
 import { isApiError, ordersApi } from "@/lib/api";
 import {
@@ -29,22 +29,25 @@ function StateCard({
   action?: ReactNode;
 }) {
   return (
-    <div className="rounded-[40px] bg-white px-10 py-10 text-center shadow-[0_24px_60px_rgba(138,109,93,0.08)]">
+    <div className="rounded-[36px] border border-[rgba(170,144,125,0.14)] bg-white px-8 py-12 text-center shadow-[0_24px_60px_rgba(138,109,93,0.08)] sm:px-10">
       <h2
-        className="text-[32px] font-medium leading-[38px] text-[#2c2825]"
+        className="text-[34px] font-medium leading-none text-[#3e342d]"
         style={{ fontFamily: "var(--font-cormorant)" }}
       >
         {title}
       </h2>
-      <p
-        className="mx-auto mt-4 max-w-[520px] text-[14px] leading-6 text-[#5c6b5e]"
-        style={{ fontFamily: "var(--font-inter)" }}
-      >
+      <p className="mx-auto mt-4 max-w-[520px] text-[14px] leading-7 text-[#7a6a5f]">
         {description}
       </p>
       {action ? <div className="mt-8">{action}</div> : null}
     </div>
   );
+}
+
+function buildThankYouNote(items: OrderDisplayItem[]): string {
+  const firstItem = items[0]?.productName ?? "these blooms";
+
+  return `May ${firstItem.toLowerCase()} bring warmth and beauty to your space. Thank you for trusting Floral Boutique to prepare something memorable for this moment.`;
 }
 
 export function CompletePageContent() {
@@ -115,208 +118,237 @@ export function CompletePageContent() {
     };
   }, [authLoading, orderId, user]);
 
+  const featuredItems = items.slice(0, 2);
+  const thankYouNote = buildThankYouNote(items);
+
   return (
-    <div className="min-h-screen bg-[#fdfaf7]">
+    <div className="min-h-screen bg-[linear-gradient(180deg,#fffaf6_0%,#f9f2eb_52%,#fffdfb_100%)] text-[#3e342d]">
       <Navbar />
-      <main className="mx-auto max-w-[1280px] px-10 pb-24 pt-16 sm:px-8 lg:px-10 lg:pt-20">
-        <div className="mx-auto max-w-[1080px]">
+      <main className="px-6 pb-24 pt-12 sm:px-8 lg:px-10 lg:pt-16">
+        <div className="mx-auto max-w-[1220px]">
           {authLoading || isLoading ? (
-            <div className="h-[520px] rounded-[40px] bg-white/70 animate-pulse" />
+            <div className="mx-auto h-[760px] max-w-[1100px] rounded-[40px] bg-white/70 animate-pulse" />
           ) : !user ? (
-            <StateCard
-              title="Sign in to view your order"
-              description="Order confirmation uses real backend data and requires an authenticated session."
-              action={
-                <Link
-                  href="/signin"
-                  className="inline-flex min-h-[52px] items-center justify-center rounded-[12px] bg-[#d0bb95] px-8 text-[14px] font-medium text-white transition-colors hover:bg-[#c2a571]"
-                >
-                  Go to Sign In
-                </Link>
-              }
-            />
+            <div className="mx-auto max-w-[760px]">
+              <StateCard
+                title="Sign in to view your order"
+                description="Order confirmation uses real backend data and requires an authenticated session."
+                action={
+                  <Link
+                    href="/signin"
+                    className="inline-flex min-h-[52px] items-center justify-center rounded-full bg-[#a88672] px-8 text-[14px] font-medium text-white transition-colors hover:bg-[#916f5b]"
+                  >
+                    Go to Sign In
+                  </Link>
+                }
+              />
+            </div>
           ) : !order ? (
-            <StateCard
-              title={error ? "Unable to load order" : "No recent order found"}
-              description={
-                error ??
-                "Place an order from your cart to see the real confirmation summary here."
-              }
-              action={
-                <Link
-                  href="/products"
-                  className="inline-flex min-h-[52px] items-center justify-center rounded-[12px] bg-[#d0bb95] px-8 text-[14px] font-medium text-white transition-colors hover:bg-[#c2a571]"
-                >
-                  Continue Shopping
-                </Link>
-              }
-            />
+            <div className="mx-auto max-w-[760px]">
+              <StateCard
+                title={error ? "Unable to load order" : "No recent order found"}
+                description={
+                  error ??
+                  "Place an order from your cart to see the real confirmation summary here."
+                }
+                action={
+                  <Link
+                    href="/products"
+                    className="inline-flex min-h-[52px] items-center justify-center rounded-full bg-[#a88672] px-8 text-[14px] font-medium text-white transition-colors hover:bg-[#916f5b]"
+                  >
+                    Continue Shopping
+                  </Link>
+                }
+              />
+            </div>
           ) : (
             <>
-              <section className="rounded-[40px] bg-white px-10 py-10 shadow-[0_24px_60px_rgba(138,109,93,0.08)]">
-                <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#fdf3ea] text-[#d4a373]">
-                      <CheckCircle2 className="h-7 w-7" strokeWidth={2.2} />
-                    </div>
-                    <div>
-                      <p
-                        className="text-[10px] font-bold uppercase tracking-[1.6px] text-[#d0bb95]"
-                        style={{ fontFamily: "var(--font-inter)" }}
-                      >
-                        Order Confirmation
-                      </p>
-                      <h1
-                        className="mt-3 text-[42px] font-light leading-[1] text-[#2c2825]"
-                        style={{ fontFamily: "var(--font-cormorant)" }}
-                      >
-                        Order #{order.id}
-                      </h1>
-                      <p
-                        className="mt-4 text-[14px] leading-6 text-[#5c6b5e]"
-                        style={{ fontFamily: "var(--font-inter)" }}
-                      >
-                        Created at {formatOrderDate(order.createdAt)}. Current status:{" "}
-                        {formatOrderStatus(order.status)}.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="rounded-[24px] bg-[#fdfaf7] px-6 py-5">
-                      <p className="text-[10px] font-bold uppercase tracking-[1px] text-[#9ca3af]">
-                        Payment Method
-                      </p>
-                      <p
-                        className="mt-2 text-[22px] leading-7 text-[#2c2825]"
-                        style={{ fontFamily: "var(--font-cormorant)" }}
-                      >
-                        {formatPaymentMethod(order.paymentMethod)}
-                      </p>
-                    </div>
-                    <div className="rounded-[24px] bg-[#fdfaf7] px-6 py-5">
-                      <p className="text-[10px] font-bold uppercase tracking-[1px] text-[#9ca3af]">
-                        Backend Total
-                      </p>
-                      <p
-                        className="mt-2 text-[22px] leading-7 text-[#8a6d5d]"
-                        style={{ fontFamily: "var(--font-cormorant)" }}
-                      >
-                        {formatCurrency(order.totalAmount)}
-                      </p>
-                    </div>
-                  </div>
+              <section className="mx-auto max-w-[820px] text-center">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-[rgba(214,187,165,0.28)] bg-white/80 text-[#d0a383] shadow-[0_18px_40px_rgba(148,117,99,0.1)]">
+                  <BadgeCheck className="h-6 w-6" />
                 </div>
+                <h1
+                  className="mt-8 text-[46px] leading-none text-[#4a3b34] sm:text-[64px]"
+                  style={{ fontFamily: "var(--font-cormorant)" }}
+                >
+                  Thank you for choosing elegance
+                </h1>
+                <p className="mx-auto mt-4 max-w-[520px] text-[14px] leading-7 text-[#ab998c]">
+                  Your order #{order.id} has been received and is now being prepared with
+                  thoughtful care.
+                </p>
               </section>
 
-              <div className="mt-12 grid gap-10 xl:grid-cols-[minmax(0,1fr)_320px]">
-                <section className="rounded-[40px] bg-white px-10 py-10 shadow-[0_24px_60px_rgba(138,109,93,0.08)]">
-                  <div className="flex items-center justify-between gap-4">
-                    <h2
-                      className="text-[28px] font-medium leading-8 text-[#2c2825]"
-                      style={{ fontFamily: "var(--font-cormorant)" }}
-                    >
-                      Ordered Items
-                    </h2>
-                    <span className="text-[12px] uppercase tracking-[1px] text-[#9ca3af]">
-                      {items.length} products
-                    </span>
+              <section className="mt-16 grid gap-10 lg:grid-cols-[minmax(0,1fr)_360px]">
+                <div>
+                  <div className="flex items-end justify-between gap-4">
+                    <div>
+                      <p
+                        className="text-[28px] leading-none text-[#56463f]"
+                        style={{ fontFamily: "var(--font-cormorant)" }}
+                      >
+                        Summary of your gift
+                      </p>
+                    </div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#c6b0a2]">
+                      {items.length} items ordered
+                    </p>
                   </div>
 
-                  <div className="mt-8 space-y-6">
-                    {items.map((item) => (
-                      <article
-                        key={item.id}
-                        className="flex flex-col gap-5 border-b border-[rgba(138,109,93,0.08)] pb-6 last:border-b-0 last:pb-0 sm:flex-row sm:items-center"
-                      >
-                        <div className="relative h-28 w-24 overflow-hidden rounded-tl-[80px] rounded-tr-[80px] rounded-bl-[8px] rounded-br-[8px] bg-[#f3ede6]">
+                  <div className="mt-8 grid gap-6 sm:grid-cols-2">
+                    {featuredItems.map((item, index) => (
+                      <article key={item.id} className="max-w-[280px]">
+                        <div
+                          className={`relative h-[280px] overflow-hidden rounded-t-[120px] rounded-b-[18px] ${
+                            index % 2 === 0 ? "bg-[#f3dede]" : "bg-[#20201f]"
+                          } shadow-[0_18px_40px_rgba(148,117,99,0.1)]`}
+                        >
                           <Image
                             src={item.image}
                             alt={item.productName}
                             fill
-                            sizes="96px"
+                            sizes="280px"
                             className="object-cover"
                           />
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <h3
-                            className="text-[22px] leading-7 text-[#2c2825]"
+                        <div className="px-1 pb-1 pt-5">
+                          <h2
+                            className="text-[25px] leading-none text-[#584840]"
                             style={{ fontFamily: "var(--font-cormorant)" }}
                           >
                             {item.productName}
-                          </h3>
-                          <p className="mt-2 text-[12px] uppercase tracking-[1px] text-[#9ca3af]">
-                            Quantity {item.quantity}
-                          </p>
-                        </div>
-                        <div className="text-left sm:text-right">
-                          <p className="text-[14px] leading-6 text-[#5c6b5e]">
-                            {formatCurrency(item.price)} each
-                          </p>
-                          <p
-                            className="mt-1 text-[20px] leading-7 text-[#8a6d5d]"
-                            style={{ fontFamily: "var(--font-cormorant)" }}
-                          >
-                            {formatCurrency(item.subtotal)}
+                          </h2>
+                          <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#c2ada0]">
+                            Premium box / Quantity {item.quantity}
                           </p>
                         </div>
                       </article>
                     ))}
                   </div>
-                </section>
 
-                <aside className="space-y-6">
-                  <div className="rounded-[40px] bg-white px-8 py-8 shadow-[0_24px_60px_rgba(138,109,93,0.08)]">
-                    <div className="flex items-center gap-3">
-                      <Receipt className="h-5 w-5 text-[#d4a373]" />
-                      <p className="text-[12px] font-bold uppercase tracking-[1px] text-[#9ca3af]">
-                        Order Status
-                      </p>
-                    </div>
+                  <div className="mt-14">
                     <p
-                      className="mt-5 text-[28px] leading-8 text-[#2c2825]"
+                      className="text-[28px] leading-none text-[#56463f]"
                       style={{ fontFamily: "var(--font-cormorant)" }}
                     >
-                      {formatOrderStatus(order.status)}
+                      A Personal Touch
                     </p>
-                    <p className="mt-3 text-[14px] leading-6 text-[#5c6b5e]">
-                      Updated at {formatOrderDate(order.updatedAt)}
-                    </p>
-                  </div>
 
-                  <div className="rounded-[40px] bg-white px-8 py-8 shadow-[0_24px_60px_rgba(138,109,93,0.08)]">
-                    <div className="flex items-center gap-3">
-                      <Truck className="h-5 w-5 text-[#d4a373]" />
-                      <p className="text-[12px] font-bold uppercase tracking-[1px] text-[#9ca3af]">
-                        Next Step
+                    <div className="relative mt-6 rounded-[30px] border border-[rgba(185,158,140,0.14)] bg-white px-8 py-8 shadow-[0_20px_55px_rgba(148,117,99,0.08)]">
+                      <Quote className="absolute right-6 top-6 h-4 w-4 text-[#e7d9cf]" />
+                      <p
+                        className="text-[16px] italic leading-8 text-[#b5a39a]"
+                        style={{ fontFamily: "var(--font-cormorant)" }}
+                      >
+                        Dear Bloom Lover,
+                      </p>
+                      <p
+                        className="mt-5 max-w-[620px] text-[31px] leading-[1.35] text-[#726055]"
+                        style={{ fontFamily: "var(--font-cormorant)" }}
+                      >
+                        {thankYouNote}
+                      </p>
+                      <p
+                        className="mt-6 text-right text-[16px] italic text-[#c0aea3]"
+                        style={{ fontFamily: "var(--font-cormorant)" }}
+                      >
+                        Forever Yours
                       </p>
                     </div>
-                    <p className="mt-5 text-[14px] leading-6 text-[#5c6b5e]">
-                      Use the tracking page to inspect the real backend order
-                      status and payment reconciliation.
+                  </div>
+                </div>
+
+                <aside>
+                  <div className="rounded-[34px] border border-[rgba(185,158,140,0.14)] bg-white px-8 py-8 shadow-[0_24px_70px_rgba(148,117,99,0.12)]">
+                    <div className="flex items-center gap-3 text-[#caa88e]">
+                      <ReceiptText className="h-5 w-5" />
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.26em]">
+                        Payment Method
+                      </p>
+                    </div>
+
+                    <p
+                      className="mt-4 text-[24px] leading-none text-[#645148]"
+                      style={{ fontFamily: "var(--font-cormorant)" }}
+                    >
+                      {formatPaymentMethod(order.paymentMethod)}
                     </p>
+
+                    <div className="mt-8 border-t border-[#f3e8e0] pt-7">
+                      <p
+                        className="text-[30px] leading-none text-[#56463f]"
+                        style={{ fontFamily: "var(--font-cormorant)" }}
+                      >
+                        What&apos;s next?
+                      </p>
+                      <p className="mt-4 text-[14px] leading-7 text-[#9d8a7d]">
+                        Our florists are now hand-crafting your arrangement. We&apos;ll keep
+                        monitoring the order status and delivery progress for you.
+                      </p>
+                    </div>
+
+                    <div className="mt-8 rounded-[24px] bg-[#fcf7f2] px-6 py-6">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#cab0a0]">
+                        Order Status
+                      </p>
+                      <p
+                        className="mt-3 text-[28px] leading-none text-[#645148]"
+                        style={{ fontFamily: "var(--font-cormorant)" }}
+                      >
+                        {formatOrderStatus(order.status)}
+                      </p>
+
+                      <p className="mt-6 text-[11px] font-semibold uppercase tracking-[0.24em] text-[#cab0a0]">
+                        Total Paid
+                      </p>
+                      <p
+                        className="mt-2 text-[42px] leading-none text-[#8f7060]"
+                        style={{ fontFamily: "var(--font-cormorant)" }}
+                      >
+                        {formatCurrency(order.totalAmount)}
+                      </p>
+                      <p className="mt-3 text-[12px] leading-6 text-[#a59286]">
+                        Confirmed on {formatOrderDate(order.updatedAt)} with secure payment
+                        verification.
+                      </p>
+                    </div>
+
                     <div className="mt-8 flex flex-col gap-3">
                       <Link
                         href={`/checkout/tracking?orderId=${order.id}`}
-                        className="inline-flex min-h-[52px] items-center justify-center rounded-[12px] bg-[#8a6d5d] px-6 text-[14px] font-medium text-white transition-colors hover:bg-[#775f51]"
+                        className="inline-flex min-h-[56px] items-center justify-center gap-2 rounded-full bg-[#a88672] px-6 text-[14px] font-medium text-white transition-colors hover:bg-[#916f5b]"
                       >
-                        View Tracking
+                        Order Tracking
+                        <Truck className="h-4 w-4" />
                       </Link>
                       <Link
                         href="/products"
-                        className="inline-flex min-h-[52px] items-center justify-center rounded-[12px] border border-[rgba(138,109,93,0.16)] px-6 text-[14px] font-medium text-[#2c2825] transition-colors hover:bg-[#fdfaf7]"
+                        className="inline-flex min-h-[56px] items-center justify-center rounded-full border border-[rgba(173,145,124,0.18)] bg-white px-6 text-[14px] font-medium text-[#5d4a40] transition-colors hover:bg-[#fff7f1]"
                       >
                         Continue Shopping
                       </Link>
                     </div>
+
+                    <div className="mt-8 rounded-[22px] border border-[rgba(185,158,140,0.12)] bg-[#fffdfa] px-5 py-4">
+                      <div className="flex items-center gap-2 text-[#d0a383]">
+                        <Sparkles className="h-4 w-4" />
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.22em]">
+                          Delivery Update
+                        </p>
+                      </div>
+                      <p className="mt-3 text-[13px] leading-6 text-[#9d8a7d]">
+                        We&apos;ll keep this order refreshed with real backend status as it moves
+                        from confirmation to delivery.
+                      </p>
+                    </div>
                   </div>
                 </aside>
-              </div>
+              </section>
             </>
           )}
         </div>
       </main>
       <Footer />
-      <ChatLive />
     </div>
   );
 }

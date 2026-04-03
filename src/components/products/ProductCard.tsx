@@ -1,18 +1,23 @@
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
 import { Heart, Plus } from "lucide-react";
 import { Product } from "@/lib/products";
 import { createCartItem, useCartStore } from "@/lib/cart";
 import { formatCurrency } from "@/lib/currency";
+import { DEFAULT_PRODUCT_IMAGE } from "@/lib/mappers/product";
+import { useFavoritesStore } from "@/lib/favorites";
 
 interface ProductCardProps {
   product: Product;
 }
 
 export function ProductCard({ product }: ProductCardProps) {
-  const [liked, setLiked] = useState(false);
+  const safeImage = product.image || DEFAULT_PRODUCT_IMAGE;
   const addItem = useCartStore((state) => state.addItem);
+  const liked = useFavoritesStore((state) =>
+    state.items.some((item) => item.productId === product.id)
+  );
+  const toggleFavorite = useFavoritesStore((state) => state.toggleFavorite);
   const cartQuantity = useCartStore((state) =>
     state.variants
       .filter((item) => item.productId === product.id)
@@ -30,7 +35,7 @@ export function ProductCard({ product }: ProductCardProps) {
       <Link href={`/products/${product.id}`} className="block relative mx-[20.8px] mt-[20.8px] h-[360px]">
         <div className="relative w-full h-full rounded-tl-[200px] rounded-tr-[200px] rounded-bl-[20px] rounded-br-[20px] overflow-hidden shadow-sm bg-[#f7f3ed]">
           <Image
-            src={product.image}
+            src={safeImage}
             alt={product.name}
             fill
             sizes="288px"
@@ -38,7 +43,19 @@ export function ProductCard({ product }: ProductCardProps) {
           />
         </div>
         <button
-          onClick={(e) => { e.preventDefault(); setLiked(!liked); }}
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleFavorite({
+              productId: product.id,
+              name: product.name,
+              price: product.price,
+              image: safeImage,
+              href: `/products/${product.id}`,
+              stockQuantity: product.stockQuantity ?? null,
+            });
+          }}
           className="absolute top-5 right-3 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm hover:scale-110 transition-transform"
         >
           <Heart

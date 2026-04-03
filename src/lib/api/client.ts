@@ -3,7 +3,9 @@ import { ApiError } from "./types";
 import { getToken, clearToken } from "../auth/storage";
 
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
+  typeof window !== "undefined"
+    ? ""
+    : process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
 interface ErrorResponse {
   message?: string;
@@ -16,6 +18,7 @@ export const apiClient = axios.create({
     "Content-Type": "application/json",
   },
   withCredentials: false,
+  timeout: 12000,
 });
 
 apiClient.interceptors.request.use(
@@ -43,11 +46,12 @@ apiClient.interceptors.response.use(
       }
     }
 
+    const isNetworkFailure = !error.response;
+
     const apiError: ApiError = {
-      message:
-        error.response?.data?.message ||
-        error.message ||
-        "An error occurred",
+      message: isNetworkFailure
+        ? "Cannot connect to backend server. Please check BE is running on http://localhost:8080."
+        : error.response?.data?.message || error.message || "An error occurred",
       code: error.response?.data?.code,
       status: error.response?.status,
     };

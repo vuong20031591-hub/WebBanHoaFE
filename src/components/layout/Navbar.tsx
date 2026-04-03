@@ -1,31 +1,72 @@
+"use client";
+
 import Link from "next/link";
-import { ShoppingCart, User, Search, Flower2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState, useSyncExternalStore } from "react";
+import { Flower2, Search, ShoppingCart, User } from "lucide-react";
+import { useCartStore } from "@/lib/cart";
+import { useAuth } from "@/src/contexts";
+
+function subscribeToCartHydration(onStoreChange: () => void) {
+  const unsubscribeStart = useCartStore.persist.onHydrate(onStoreChange);
+  const unsubscribeFinish = useCartStore.persist.onFinishHydration(onStoreChange);
+
+  return () => {
+    unsubscribeStart();
+    unsubscribeFinish();
+  };
+}
 
 export function Navbar() {
+  const router = useRouter();
+  const { user, signOut } = useAuth();
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const hydrated = useSyncExternalStore(
+    subscribeToCartHydration,
+    () => useCartStore.persist.hasHydrated(),
+    () => false
+  );
+  const itemCount = useCartStore((state) =>
+    state.variants.reduce((sum, item) => sum + item.quantity, 0)
+  );
+  const displayCount = hydrated ? itemCount : 0;
+  const countLabel = displayCount > 99 ? "99+" : String(displayCount);
+
+  const handleSignOut = async () => {
+    setIsSigningOut(true);
+    try {
+      await signOut();
+      router.push("/signin");
+    } finally {
+      setIsSigningOut(false);
+    }
+  };
+
   return (
-    <nav className="bg-[#fcfaf7] border-b border-[#eee4e1] sticky top-0 z-50">
-      <div className="max-w-[1280px] mx-auto px-10 h-[81px] flex items-center justify-between">
-        <div className="flex items-center gap-8">
-          <Link href="/" className="flex items-center gap-1.5">
-            <Flower2 className="text-[#d0bb95] w-6 h-6" />
+    <nav className="sticky top-0 z-50 border-b border-[#eee3dc]/90 bg-[#fcfaf7]/95 backdrop-blur">
+      <div className="mx-auto flex h-[82px] max-w-[1280px] items-center justify-between px-6 sm:px-8 lg:px-10">
+        <div className="flex items-center gap-8 lg:gap-12">
+          <Link href="/" className="flex items-center gap-2">
+            <Flower2 className="h-6 w-6 text-[#d0bb95]" />
             <span
-              className="text-[#2d2a26] text-[20px] font-medium tracking-[-0.5px]"
+              className="text-[19px] font-medium tracking-[-0.03em] text-[#2d2a26] sm:text-[20px]"
               style={{ fontFamily: "var(--font-noto-serif)" }}
             >
               Floral Boutique
             </span>
           </Link>
-          <div className="flex items-center gap-9">
+
+          <div className="hidden items-center gap-8 lg:flex">
             {[
               { label: "Shop All", href: "/products" },
-              { label: "Categories", href: "/products" },
-              { label: "Latest", href: "/products" },
-              { label: "Our Story", href: "#our-heritage" },
+              { label: "Categories", href: "/#categories" },
+              { label: "Latest", href: "/#latest" },
+              { label: "Our Story", href: "/#our-story" },
             ].map((item) => (
               <Link
                 key={item.label}
                 href={item.href}
-                className="text-[#2d2a26] text-[14px] font-medium tracking-[0.35px] hover:text-[#d0bb95] transition-colors"
+                className="text-[14px] font-medium tracking-[0.02em] text-[#2d2a26] transition-colors hover:text-[#c2a07f]"
                 style={{ fontFamily: "var(--font-inter)" }}
               >
                 {item.label}
@@ -33,28 +74,62 @@ export function Navbar() {
             ))}
           </div>
         </div>
-        <div className="flex items-center gap-6">
-          <div className="bg-[#f1eeea] rounded-full h-8 px-4 flex items-center w-[232px]">
-            <Search className="w-3.5 h-3.5 text-gray-400 mr-2 shrink-0" />
+
+        <div className="flex items-center gap-2 sm:gap-4 lg:gap-6">
+          {user?.role?.toUpperCase() === "ADMIN" ? (
+            <Link
+              href="/admin"
+              className="hidden h-11 items-center justify-center rounded-full border border-[#d8c8bb] bg-[#fff8f3] px-5 text-[12px] font-semibold uppercase tracking-[0.12em] text-[#8a6d5d] transition-colors hover:bg-[#f7ede5] sm:inline-flex"
+              style={{ fontFamily: "var(--font-inter)" }}
+            >
+              Admin Panel
+            </Link>
+          ) : null}
+
+          <div className="hidden h-10 w-[250px] items-center rounded-full bg-[#f5f0eb] px-4 sm:flex">
+            <Search className="mr-2 h-3.5 w-3.5 shrink-0 text-[#baafa7]" />
             <span
-              className="text-gray-400 text-[12px] font-light"
+              className="text-[12px] font-light text-[#baafa7]"
               style={{ fontFamily: "var(--font-inter)" }}
             >
               Search arrangements...
             </span>
           </div>
+
           <Link
             href="/cart"
-            className="w-10 h-10 flex items-center justify-center hover:bg-[#f1eeea] rounded-full transition-colors"
+            className="relative flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-[#f5f0eb]"
           >
-            <ShoppingCart className="w-5 h-5 text-[#2d2a26]" />
+            <ShoppingCart className="h-5 w-5 text-[#2d2a26]" />
+            {displayCount > 0 ? (
+              <span
+                className="absolute -right-1 -top-1 min-w-[18px] rounded-full bg-[#d0bb95] px-1 text-center text-[10px] font-semibold leading-[18px] text-white"
+                style={{ fontFamily: "var(--font-inter)" }}
+                aria-label={`${displayCount} items in cart`}
+              >
+                {countLabel}
+              </span>
+            ) : null}
           </Link>
+
           <Link
             href="/profile"
-            className="w-9 h-9 flex items-center justify-center hover:bg-[#f1eeea] rounded-full transition-colors"
+            className="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-[#f5f0eb]"
           >
-            <User className="w-5 h-5 text-[#2d2a26]" />
+            <User className="h-5 w-5 text-[#2d2a26]" />
           </Link>
+
+          {user ? (
+            <button
+              type="button"
+              onClick={handleSignOut}
+              disabled={isSigningOut}
+              className="hidden h-11 items-center justify-center rounded-full border border-[#ddd1c8] px-5 text-[12px] font-medium text-[#2d2a26] transition-colors hover:bg-[#f5f0eb] disabled:cursor-not-allowed disabled:opacity-50 sm:inline-flex"
+              style={{ fontFamily: "var(--font-inter)" }}
+            >
+              {isSigningOut ? "Dang xuat..." : "Dang xuat"}
+            </button>
+          ) : null}
         </div>
       </div>
     </nav>

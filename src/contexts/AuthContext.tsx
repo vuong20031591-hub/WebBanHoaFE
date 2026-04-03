@@ -13,13 +13,16 @@ import { getToken, setToken, clearToken } from "@/lib/auth/storage";
 import type { AuthUser, LoginRequest, RegisterRequest } from "@/lib/auth/types";
 import { useCartStore, useCartSync, mergeCartsOnLogin, cartSyncEngine } from "@/lib/cart";
 import { cartApi } from "@/lib/api/cart";
+import { authService } from "@/lib/supabase/auth";
 
 interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
   signUp: (credentials: RegisterRequest) => Promise<void>;
   signIn: (credentials: LoginRequest, rememberMe: boolean) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -63,14 +66,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const prevUserIdRef = useRef<string | null>(null);
 
+  const exchangeSupabaseTokenForBackendToken = async (supabaseAccessToken: string) => {
+    const response = await authApi.loginWithGoogleToken(supabaseAccessToken);
+    setToken(response.accessToken, true);
+    setUser(response.user);
+    prevUserIdRef.current = String(response.user.id);
+  };
+
   useEffect(() => {
     const initAuth = async () => {
       try {
         const token = getToken();
         if (token) {
-          const user = await authApi.me(token);
-          setUser(user);
-          prevUserIdRef.current = String(user.id);
+          try {
+            const user = await authApi.me(token);
+            setUser(user);
+            prevUserIdRef.current = String(user.id);
+            return;
+          } catch (error) {
+            console.warn("Stored backend token is invalid, falling back to Supabase session:", error);
+            clearToken();
+          }
+        }
+
+        const session = await authService.getSession();
+        if (session?.access_token) {
+          await exchangeSupabaseTokenForBackendToken(session.access_token);
+          return;
         }
       } catch (error) {
         console.error("Failed to initialize auth:", error);
@@ -81,6 +103,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     initAuth();
+  }, []);
+
+  useEffect(() => {
+    const {
+      data: { subscription },
+    } = authService.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT") {
+        clearToken();
+        setUser(null);
+        return;
+      }
+
+      if (session?.access_token) {
+        void (async () => {
+          try {
+            await exchangeSupabaseTokenForBackendToken(session.access_token);
+          } catch (error) {
+            console.error("Google OAuth exchange failed:", error);
+            clearToken();
+            setUser(null);
+          }
+        })();
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -131,13 +179,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const signInWithGoogle = async () => {
+    setLoading(true);
+    try {
+      const redirectTo =
+        typeof window !== "undefined"
+          ? `${window.location.origin}/signin`
+          : undefined;
+
+      await authService.signInWithGoogle(redirectTo);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const signOut = async () => {
     setLoading(true);
     try {
+      await authService.signOut();
+    } catch (error) {
+      console.warn("Supabase sign out failed:", error);
+    } finally {
       clearToken();
       setUser(null);
-    } finally {
       setLoading(false);
+    }
+  };
+
+  const refreshUser = async () => {
+    const token = getToken();
+    if (!token) {
+      setUser(null);
+      return;
+    }
+
+    try {
+      const nextUser = await authApi.me(token);
+      setUser(nextUser);
+      prevUserIdRef.current = String(nextUser.id);
+    } catch (error) {
+      console.error("Failed to refresh current user:", error);
+      clearToken();
+      setUser(null);
     }
   };
 
@@ -148,7 +231,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         signUp,
         signIn,
+        signInWithGoogle,
         signOut,
+        refreshUser,
       }}
     >
       {children}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { isApiError } from "@/lib/api";
 import {
   ProfileSecurityPasswordField,
   ProfileSecurityToggleOption,
@@ -16,6 +17,14 @@ interface ProfileSecuritySettingsFormProps {
   twoFactorOptions: ProfileSecurityToggleOption[];
   cancelLabel: string;
   saveLabel: string;
+  onUpdatePassword?: (payload: UpdatePasswordPayload) => Promise<void>;
+  onSaveTwoFactor?: (options: ProfileSecurityToggleOption[]) => Promise<void>;
+}
+
+export interface UpdatePasswordPayload {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
 }
 
 interface PasswordState {
@@ -23,6 +32,11 @@ interface PasswordState {
   newPassword: string;
   confirmPassword: string;
 }
+
+type FormMessage = {
+  tone: "success" | "error";
+  text: string;
+} | null;
 
 const fieldLabelClassName =
   "px-1 text-[12px] font-bold uppercase tracking-[0.6px] text-[rgba(92,107,94,0.6)]";
@@ -68,6 +82,8 @@ export function ProfileSecuritySettingsForm({
   twoFactorOptions,
   cancelLabel,
   saveLabel,
+  onUpdatePassword,
+  onSaveTwoFactor,
 }: ProfileSecuritySettingsFormProps) {
   const [passwordState, setPasswordState] = useState<PasswordState>({
     currentPassword: "",
@@ -77,6 +93,10 @@ export function ProfileSecuritySettingsForm({
   const [twoFactorState, setTwoFactorState] = useState(
     twoFactorOptions.map((option) => ({ ...option }))
   );
+  const [passwordMessage, setPasswordMessage] = useState<FormMessage>(null);
+  const [settingsMessage, setSettingsMessage] = useState<FormMessage>(null);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
 
   const handleCancel = () => {
     setPasswordState({
@@ -85,6 +105,8 @@ export function ProfileSecuritySettingsForm({
       confirmPassword: "",
     });
     setTwoFactorState(twoFactorOptions.map((option) => ({ ...option })));
+    setPasswordMessage(null);
+    setSettingsMessage(null);
   };
 
   const handlePasswordChange = (id: string, value: string) => {
@@ -121,9 +143,107 @@ export function ProfileSecuritySettingsForm({
     return passwordState.confirmPassword;
   };
 
+  const handleUpdatePassword = async () => {
+    setPasswordMessage(null);
+
+    const currentPassword = passwordState.currentPassword.trim();
+    const newPassword = passwordState.newPassword.trim();
+    const confirmPassword = passwordState.confirmPassword.trim();
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordMessage({
+        tone: "error",
+        text: "Please fill all password fields.",
+      });
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setPasswordMessage({
+        tone: "error",
+        text: "New password must be at least 6 characters.",
+      });
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordMessage({
+        tone: "error",
+        text: "New password and confirm password do not match.",
+      });
+      return;
+    }
+
+    if (!onUpdatePassword) {
+      setPasswordMessage({
+        tone: "success",
+        text: "Password updated.",
+      });
+      return;
+    }
+
+    setIsUpdatingPassword(true);
+    try {
+      await onUpdatePassword({
+        currentPassword,
+        newPassword,
+        confirmPassword,
+      });
+      setPasswordState({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+      setPasswordMessage({
+        tone: "success",
+        text: "Password updated successfully.",
+      });
+    } catch (error) {
+      setPasswordMessage({
+        tone: "error",
+        text: isApiError(error)
+          ? error.message
+          : "Unable to update password right now.",
+      });
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  };
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSettingsMessage(null);
+
+    if (!onSaveTwoFactor) {
+      setSettingsMessage({
+        tone: "success",
+        text: "Security preferences saved.",
+      });
+      return;
+    }
+
+    setIsSavingSettings(true);
+    try {
+      await onSaveTwoFactor(twoFactorState);
+      setSettingsMessage({
+        tone: "success",
+        text: "Security preferences saved.",
+      });
+    } catch (error) {
+      setSettingsMessage({
+        tone: "error",
+        text: isApiError(error)
+          ? error.message
+          : "Unable to save security preferences right now.",
+      });
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
+
   return (
     <form
-      onSubmit={(event) => event.preventDefault()}
+      onSubmit={handleSubmit}
       className="rounded-[40px] border border-white/40 bg-[rgba(255,255,255,0.4)] px-6 py-8 sm:px-8 xl:px-[48.8px] xl:py-[48.8px]"
     >
       <section id="change-password">
@@ -163,11 +283,27 @@ export function ProfileSecuritySettingsForm({
         <div className="mt-8">
           <button
             type="button"
-            className="inline-flex min-h-[52px] min-w-[175px] items-center justify-center rounded-[12px] bg-[#d0bb95] px-8 text-[14px] font-medium text-white transition-colors hover:bg-[#c2a571]"
+            disabled={isUpdatingPassword}
+            onClick={() => {
+              void handleUpdatePassword();
+            }}
+            className="inline-flex min-h-[52px] min-w-[175px] items-center justify-center rounded-[12px] bg-[#d0bb95] px-8 text-[14px] font-medium text-white transition-colors hover:bg-[#c2a571] disabled:cursor-not-allowed disabled:opacity-70"
           >
-            {updatePasswordLabel}
+            {isUpdatingPassword ? "Updating..." : updatePasswordLabel}
           </button>
         </div>
+
+        {passwordMessage ? (
+          <p
+            className={`mt-5 text-[13px] ${
+              passwordMessage.tone === "success"
+                ? "text-[#166534]"
+                : "text-[#b91c1c]"
+            }`}
+          >
+            {passwordMessage.text}
+          </p>
+        ) : null}
       </section>
 
       <div className="mt-16 border-t border-[rgba(92,107,94,0.12)]" />
@@ -219,6 +355,18 @@ export function ProfileSecuritySettingsForm({
         </div>
       </section>
 
+      {settingsMessage ? (
+        <p
+          className={`mt-8 text-[13px] ${
+            settingsMessage.tone === "success"
+              ? "text-[#166534]"
+              : "text-[#b91c1c]"
+          }`}
+        >
+          {settingsMessage.text}
+        </p>
+      ) : null}
+
       <div
         id="security-actions"
         className="mt-16 flex flex-wrap justify-end gap-4"
@@ -232,9 +380,10 @@ export function ProfileSecuritySettingsForm({
         </button>
         <button
           type="submit"
-          className="inline-flex min-h-[52px] min-w-[172px] items-center justify-center rounded-[12px] bg-[#d0bb96] px-10 text-[14px] font-medium text-white transition-colors hover:bg-[#c2a571]"
+          disabled={isSavingSettings}
+          className="inline-flex min-h-[52px] min-w-[172px] items-center justify-center rounded-[12px] bg-[#d0bb96] px-10 text-[14px] font-medium text-white transition-colors hover:bg-[#c2a571] disabled:cursor-not-allowed disabled:opacity-70"
         >
-          {saveLabel}
+          {isSavingSettings ? "Saving..." : saveLabel}
         </button>
       </div>
     </form>

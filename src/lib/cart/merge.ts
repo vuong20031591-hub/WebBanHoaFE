@@ -1,6 +1,7 @@
 import { CartVariantItem, CartSyncState, ServerCartEntry } from "./types";
 import { CartDTO } from "../api/types";
 import { groupByProductId, sumQuantities, generateUUID } from "./utils";
+import { DEFAULT_PRODUCT_IMAGE } from "../mappers/product";
 
 export async function mergeCartsOnLogin(
   localVariants: CartVariantItem[],
@@ -56,7 +57,10 @@ export async function mergeCartsOnLogin(
     deltas.push({ productId, localTotal: targetTotal, serverTotal });
 
     if (localByProduct[productId]) {
-      const variants = [...localByProduct[productId]];
+      const variants = localByProduct[productId].map((variant) => ({
+        ...variant,
+        productImage: variant.productImage || DEFAULT_PRODUCT_IMAGE,
+      }));
       const currentSum = sumQuantities(variants);
 
       if (targetTotal > currentSum) {

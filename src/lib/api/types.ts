@@ -38,6 +38,15 @@ export interface ProductDetailDTO {
   updatedAt: string;
 }
 
+export interface AdminProductUpsertRequest {
+  name: string;
+  price: number;
+  description?: string;
+  image?: string;
+  stockQuantity: number;
+  categoryId: number;
+}
+
 export interface CategoryDTO {
   id: number;
   name: string;
@@ -99,6 +108,24 @@ export interface OrderDTO {
   createdAt: string;
   updatedAt: string;
   confirmedAt: string | null;
+}
+
+export interface AdminOrderStatsDTO {
+  totalOrders: number;
+  pendingOrders: number;
+  confirmedOrders: number;
+  cancelledOrders: number;
+}
+
+export interface AdminCreateOrderItemRequest {
+  productId: number;
+  quantity: number;
+}
+
+export interface AdminCreateOrderRequest {
+  customerEmail: string;
+  paymentMethod: OrderPaymentMethod;
+  items: AdminCreateOrderItemRequest[];
 }
 
 export interface PaymentCheckoutDTO {

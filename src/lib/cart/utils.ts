@@ -1,4 +1,5 @@
 import { Product } from "@/lib/products";
+import { DEFAULT_PRODUCT_IMAGE } from "@/lib/mappers/product";
 import { CartVariantItem } from "./types";
 
 interface CreateCartItemOptions {
@@ -25,7 +26,7 @@ export function createCartItem(
   return {
     productId: product.id,
     productName: product.name,
-    productImage: product.image,
+    productImage: product.image || DEFAULT_PRODUCT_IMAGE,
     price: product.price,
     quantity,
     availableStock,

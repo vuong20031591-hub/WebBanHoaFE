@@ -4,8 +4,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { ArrowUpRight, Clock3, RefreshCw, ScanQrCode, ShieldCheck } from "lucide-react";
-import { ChatLive, Footer, Navbar } from "@/components/layout";
+import QRCode from "qrcode";
+import { Clock3, ExternalLink, ShieldCheck } from "lucide-react";
+import { Footer, Navbar } from "@/components/layout";
 import { formatCurrency } from "@/lib/currency";
 import { isApiError, ordersApi, paymentsApi } from "@/lib/api";
 import {
@@ -17,10 +18,36 @@ import {
 import { OrderDTO, PaymentCheckoutDTO, PaymentReconciliationDTO } from "@/lib/api/types";
 import { useAuth } from "@/src/contexts";
 
+const PAYMENT_STEPS = [
+  {
+    label: "STEP 01",
+    title: "Scan Code",
+    description: "Use your banking app to scan the QR code shown here.",
+  },
+  {
+    label: "STEP 02",
+    title: "Authenticate",
+    description: "Confirm the amount and transfer message exactly as provided.",
+  },
+  {
+    label: "STEP 03",
+    title: "Success",
+    description: "Once payment is detected, we will move you to confirmation automatically.",
+  },
+] as const;
+
 function formatTimer(totalSeconds: number): string {
   const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
   const seconds = String(totalSeconds % 60).padStart(2, "0");
   return `${minutes}:${seconds}`;
+}
+
+function getInlineQrImage(checkout: PaymentCheckoutDTO | null): string | null {
+  if (!checkout) {
+    return null;
+  }
+
+  return checkout.checkoutUrl?.startsWith("data:image/") ? checkout.checkoutUrl : null;
 }
 
 function QrStateCard({
@@ -33,14 +60,14 @@ function QrStateCard({
   action?: ReactNode;
 }) {
   return (
-    <div className="rounded-[40px] bg-white px-10 py-10 text-center shadow-[0_24px_60px_rgba(138,109,93,0.08)]">
+    <div className="rounded-[36px] border border-[rgba(170,144,125,0.14)] bg-white px-8 py-12 text-center shadow-[0_24px_60px_rgba(138,109,93,0.08)] sm:px-10">
       <h2
-        className="text-[32px] font-medium leading-[38px] text-[#2c2825]"
+        className="text-[34px] font-medium leading-none text-[#3e342d]"
         style={{ fontFamily: "var(--font-cormorant)" }}
       >
         {title}
       </h2>
-      <p className="mx-auto mt-4 max-w-[520px] text-[14px] leading-6 text-[#5c6b5e]">
+      <p className="mx-auto mt-4 max-w-[520px] text-[14px] leading-7 text-[#7a6a5f]">
         {description}
       </p>
       {action ? <div className="mt-8">{action}</div> : null}
@@ -56,9 +83,11 @@ export function QrPaymentPageContent() {
   const [checkout, setCheckout] = useState<PaymentCheckoutDTO | null>(null);
   const [reconciliation, setReconciliation] =
     useState<PaymentReconciliationDTO | null>(null);
+  const [qrImageSrc, setQrImageSrc] = useState<string | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const orderId = Number(searchParams.get("orderId") || "0");
 
   useEffect(() => {
@@ -154,116 +183,211 @@ export function QrPaymentPageContent() {
       } catch {
         return;
       }
-    }, 10000);
+    }, 5000);
 
     return () => {
       window.clearInterval(intervalId);
     };
   }, [checkout, orderId, user]);
 
+  useEffect(() => {
+    const shouldRedirect =
+      !!order &&
+      !!reconciliation &&
+      (reconciliation.paid || reconciliation.orderStatus === "CONFIRMED");
+
+    if (!shouldRedirect || !order || isRedirecting) {
+      return;
+    }
+
+    setIsRedirecting(true);
+
+    const redirectTimer = window.setTimeout(() => {
+      window.location.assign(`/checkout/complete?orderId=${order.id}`);
+    }, 800);
+
+    return () => {
+      window.clearTimeout(redirectTimer);
+    };
+  }, [isRedirecting, order, reconciliation]);
+
+  useEffect(() => {
+    let active = true;
+
+    const buildQrImage = async () => {
+      const inlineQrImage = getInlineQrImage(checkout);
+      if (inlineQrImage) {
+        setQrImageSrc(inlineQrImage);
+        return;
+      }
+
+      if (!checkout?.qrContent) {
+        setQrImageSrc(null);
+        return;
+      }
+
+      try {
+        const nextQrImageSrc = await QRCode.toDataURL(checkout.qrContent, {
+          width: 480,
+          margin: 1,
+          errorCorrectionLevel: "M",
+          color: {
+            dark: "#3e342d",
+            light: "#fffdfb",
+          },
+        });
+
+        if (active) {
+          setQrImageSrc(nextQrImageSrc);
+        }
+      } catch {
+        if (active) {
+          setQrImageSrc(null);
+        }
+      }
+    };
+
+    buildQrImage();
+
+    return () => {
+      active = false;
+    };
+  }, [checkout]);
+
   return (
-    <div className="min-h-screen bg-[#fdfaf7]">
+    <div className="min-h-screen bg-[linear-gradient(180deg,#fffaf6_0%,#f8f1ea_50%,#fffdfb_100%)] text-[#3e342d]">
       <Navbar />
-      <main className="mx-auto max-w-[1280px] px-10 pb-20 pt-16 sm:px-8 lg:px-10 lg:pt-24">
-        <div className="mx-auto max-w-[1100px]">
+      <main className="overflow-hidden px-6 pb-20 pt-10 sm:px-8 lg:px-10 lg:pt-12">
+        <div className="mx-auto max-w-[1280px]">
           {authLoading || isLoading ? (
-            <div className="h-[560px] rounded-[40px] bg-white/70 animate-pulse" />
+            <div className="mx-auto h-[680px] max-w-[1120px] rounded-[40px] bg-white/70 animate-pulse" />
           ) : !user ? (
-            <QrStateCard
-              title="Sign in to continue"
-              description="QR checkout is generated from the real payment API and requires an authenticated session."
-              action={
-                <Link
-                  href="/signin"
-                  className="inline-flex min-h-[52px] items-center justify-center rounded-[12px] bg-[#d0bb95] px-8 text-[14px] font-medium text-white transition-colors hover:bg-[#c2a571]"
-                >
-                  Go to Sign In
-                </Link>
-              }
-            />
+            <div className="mx-auto max-w-[760px]">
+              <QrStateCard
+                title="Sign in to continue"
+                description="QR checkout is generated from the real payment API and requires an authenticated session."
+                action={
+                  <Link
+                    href="/signin"
+                    className="inline-flex min-h-[52px] items-center justify-center rounded-full bg-[#a88672] px-8 text-[14px] font-medium text-white transition-colors hover:bg-[#916f5b]"
+                  >
+                    Go to Sign In
+                  </Link>
+                }
+              />
+            </div>
           ) : !order || !checkout ? (
-            <QrStateCard
-              title="QR payment unavailable"
-              description={error ?? "Create a real order first to receive a QR checkout payload."}
-              action={
-                <Link
-                  href="/checkout"
-                  className="inline-flex min-h-[52px] items-center justify-center rounded-[12px] bg-[#d0bb95] px-8 text-[14px] font-medium text-white transition-colors hover:bg-[#c2a571]"
-                >
-                  Return to Checkout
-                </Link>
-              }
-            />
+            <div className="mx-auto max-w-[760px]">
+              <QrStateCard
+                title="QR payment unavailable"
+                description={error ?? "Create a real order first to receive a QR checkout payload."}
+                action={
+                  <Link
+                    href="/checkout"
+                    className="inline-flex min-h-[52px] items-center justify-center rounded-full bg-[#a88672] px-8 text-[14px] font-medium text-white transition-colors hover:bg-[#916f5b]"
+                  >
+                    Return to Checkout
+                  </Link>
+                }
+              />
+            </div>
           ) : (
             <>
-              <header className="rounded-[40px] bg-white px-10 py-10 shadow-[0_24px_60px_rgba(138,109,93,0.08)]">
-                <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#fdf3ea] text-[#d4a373]">
-                      <ScanQrCode className="h-7 w-7" strokeWidth={2.2} />
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-[1.6px] text-[#d0bb95]">
-                        Real Payment Checkout
-                      </p>
-                      <h1
-                        className="mt-3 text-[42px] font-light leading-[1] text-[#2c2825]"
-                        style={{ fontFamily: "var(--font-cormorant)" }}
-                      >
-                        Order #{order.id}
-                      </h1>
-                      <p className="mt-4 text-[14px] leading-6 text-[#5c6b5e]">
-                        Provider {checkout.provider}. Status {formatOrderStatus(order.status)}.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="rounded-[24px] bg-[#fdfaf7] px-6 py-5">
-                    <p className="text-[10px] font-bold uppercase tracking-[1px] text-[#9ca3af]">
-                      Expires In
-                    </p>
-                    <p
-                      className="mt-2 text-[30px] leading-9 text-[#2c2825]"
-                      style={{ fontFamily: "var(--font-cormorant)" }}
-                    >
-                      {formatTimer(remainingSeconds)}
-                    </p>
-                  </div>
-                </div>
+              <header className="mx-auto max-w-[760px] text-center">
+                <h1
+                  className="text-[48px] font-medium leading-none text-[#4b3d35] sm:text-[62px]"
+                  style={{ fontFamily: "var(--font-cormorant)" }}
+                >
+                  Complete Your Purchase
+                </h1>
+                <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.38em] text-[#d0b59c]">
+                  Waiting For Secure Transaction Confirmation
+                </p>
               </header>
 
-              <div className="mt-12 grid gap-10 xl:grid-cols-[minmax(0,1fr)_320px]">
-                <section className="space-y-8">
-                  <div className="rounded-[40px] bg-white px-10 py-10 shadow-[0_24px_60px_rgba(138,109,93,0.08)]">
-                    <div className="flex items-center gap-3">
-                      <ShieldCheck className="h-5 w-5 text-[#d4a373]" />
-                      <p className="text-[12px] font-bold uppercase tracking-[1px] text-[#9ca3af]">
-                        QR Payload
+              <div className="mt-10 grid gap-8 xl:grid-cols-[180px_minmax(0,420px)_240px] xl:items-start xl:justify-center">
+                <section className="order-2 space-y-10 text-center xl:order-1 xl:pt-8">
+                  {PAYMENT_STEPS.map((step) => (
+                    <article key={step.label}>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-[#d0b59c]">
+                        {step.label}
+                      </p>
+                      <h2
+                        className="mt-3 text-[28px] leading-none text-[#7d6657]"
+                        style={{ fontFamily: "var(--font-cormorant)" }}
+                      >
+                        {step.title}
+                      </h2>
+                      <p className="mx-auto mt-3 max-w-[170px] text-[13px] leading-7 text-[#b09d91]">
+                        {step.description}
+                      </p>
+                    </article>
+                  ))}
+                </section>
+
+                <section className="order-1 xl:order-2">
+                  <div className="relative mx-auto max-w-[420px] rounded-[40px] border border-[rgba(173,145,124,0.14)] bg-white px-8 pb-8 pt-8 text-center shadow-[0_28px_80px_rgba(148,117,99,0.1)]">
+                    <div className="absolute right-6 top-6 flex h-12 w-12 items-center justify-center rounded-full border border-[rgba(208,181,156,0.28)] bg-[#fff8f3] text-[#d9af8d]">
+                      <ShieldCheck className="h-5 w-5" />
+                    </div>
+
+                    <div className="mx-auto w-fit rounded-[34px] bg-[linear-gradient(180deg,#fbf1eb_0%,#fffefd_100%)] px-6 py-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
+                      <div className="rounded-[24px] bg-white p-5 shadow-[0_14px_32px_rgba(160,133,116,0.1)]">
+                        {qrImageSrc ? (
+                          <div className="relative h-[250px] w-[250px] overflow-hidden rounded-[18px] bg-white">
+                            <Image
+                              src={qrImageSrc}
+                              alt={`QR payment for order ${order.id}`}
+                              fill
+                              unoptimized
+                              sizes="250px"
+                              className="object-contain"
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex h-[250px] w-[250px] items-center justify-center rounded-[18px] bg-[#fffaf6] px-8 text-center text-[14px] leading-6 text-[#8a6d5d]">
+                            Unable to render QR image right now.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="mt-7">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-[#d0b59c]">
+                        Transaction Expiry
+                      </p>
+                      <p
+                        className="mt-3 text-[34px] leading-none text-[#6d5649]"
+                        style={{ fontFamily: "var(--font-cormorant)" }}
+                      >
+                        Valid for {formatTimer(remainingSeconds)}
                       </p>
                     </div>
-                    <p className="mt-4 text-[14px] leading-6 text-[#5c6b5e]">
-                      Use the real payload below in your banking app or open the
-                      provider checkout page directly.
+
+                    <div className="mt-8 flex items-center justify-center gap-3">
+                      <span className="rounded-full border border-[rgba(173,145,124,0.14)] bg-[#fff8f3] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-[#c9aa8d]">
+                        {checkout.provider}
+                      </span>
+                      <span className="rounded-full border border-[rgba(173,145,124,0.14)] bg-white px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-[#8d796d]">
+                        {reconciliation?.paid ? "Paid" : "Pending"}
+                      </span>
+                    </div>
+
+                    <p className="mx-auto mt-7 max-w-[300px] text-[13px] leading-7 text-[#8b776b]">
+                      Use a VietQR-compatible banking app to scan and pay. Keep the transfer
+                      content unchanged so the order can be matched automatically.
                     </p>
-                    <textarea
-                      readOnly
-                      value={checkout.qrContent ?? ""}
-                      className="mt-6 h-48 w-full resize-none rounded-[24px] border border-[rgba(138,109,93,0.12)] bg-[#fdfaf7] px-6 py-5 text-[13px] leading-6 text-[#2c2825] outline-none"
-                    />
-                    {checkout.note ? (
-                      <p className="mt-4 text-[12px] leading-6 text-[#8a6d5d]">
-                        {checkout.note}
-                      </p>
-                    ) : null}
-                    <div className="mt-6 flex flex-wrap gap-3">
+
+                    <div className="mt-7 flex items-center justify-center gap-6 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#ad8e7c]">
                       {checkout.checkoutUrl ? (
                         <Link
                           href={checkout.checkoutUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-[12px] bg-[#8a6d5d] px-6 text-[14px] font-medium text-white transition-colors hover:bg-[#775f51]"
+                          className="inline-flex items-center gap-2 transition-colors hover:text-[#8e6f5d]"
                         >
-                          Open Provider Checkout
-                          <ArrowUpRight className="h-4 w-4" />
+                          Open Link
+                          <ExternalLink className="h-3.5 w-3.5" />
                         </Link>
                       ) : null}
                       <button
@@ -276,105 +400,90 @@ export function QrPaymentPageContent() {
                             return;
                           }
                         }}
-                        className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-[12px] border border-[rgba(138,109,93,0.16)] px-6 text-[14px] font-medium text-[#2c2825] transition-colors hover:bg-[#fdfaf7]"
+                        className="transition-colors hover:text-[#8e6f5d]"
                       >
                         Refresh Status
-                        <RefreshCw className="h-4 w-4" />
                       </button>
                     </div>
-                  </div>
 
-                  <div className="rounded-[40px] bg-white px-10 py-10 shadow-[0_24px_60px_rgba(138,109,93,0.08)]">
-                    <div className="flex items-center justify-between gap-4">
-                      <h2
-                        className="text-[28px] font-medium leading-8 text-[#2c2825]"
-                        style={{ fontFamily: "var(--font-cormorant)" }}
-                      >
-                        Order Items
-                      </h2>
-                      <span className="text-[12px] uppercase tracking-[1px] text-[#9ca3af]">
-                        {items.length} products
-                      </span>
-                    </div>
-                    <div className="mt-8 space-y-5">
-                      {items.map((item) => (
-                        <article
-                          key={item.id}
-                          className="flex gap-4 border-b border-[rgba(138,109,93,0.08)] pb-5 last:border-b-0 last:pb-0"
-                        >
-                          <div className="relative h-20 w-20 overflow-hidden rounded-full bg-[#f3ede6]">
+                    {(checkout.note || checkout.qrContent) ? (
+                      <details className="mt-7 rounded-[22px] bg-[#fffaf6] px-5 py-4 text-left">
+                        <summary className="cursor-pointer list-none text-[11px] font-semibold uppercase tracking-[0.24em] text-[#c9aa8d]">
+                          Bank transfer details
+                        </summary>
+                        {checkout.note ? (
+                          <p className="mt-4 text-[13px] leading-6 text-[#8b776b]">{checkout.note}</p>
+                        ) : null}
+                        {checkout.qrContent ? (
+                          <p className="mt-3 break-all text-[12px] leading-6 text-[#6f5c50]">
+                            {checkout.qrContent}
+                          </p>
+                        ) : null}
+                      </details>
+                    ) : null}
+                  </div>
+                </section>
+
+                <aside className="order-3 xl:pt-10">
+                  <div className="rounded-[34px] border border-[rgba(173,145,124,0.14)] bg-white px-7 py-8 shadow-[0_18px_55px_rgba(148,117,99,0.08)]">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-[#d0b59c]">
+                      Order Total
+                    </p>
+                    <p
+                      className="mt-5 text-[46px] leading-none text-[#8d6f5f]"
+                      style={{ fontFamily: "var(--font-cormorant)" }}
+                    >
+                      {formatCurrency(order.totalAmount)}
+                    </p>
+
+                    <div className="mt-8 space-y-4">
+                      {items.slice(0, 2).map((item) => (
+                        <article key={item.id} className="flex items-center gap-4">
+                          <div className="relative h-14 w-14 overflow-hidden rounded-full bg-[#f2e8df]">
                             <Image
                               src={item.image}
                               alt={item.productName}
                               fill
-                              sizes="80px"
+                              sizes="56px"
                               className="object-cover"
                             />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p
-                              className="text-[20px] leading-7 text-[#2c2825]"
-                              style={{ fontFamily: "var(--font-cormorant)" }}
-                            >
+                            <p className="truncate text-[13px] font-medium text-[#6f5c50]">
                               {item.productName}
                             </p>
-                            <p className="mt-1 text-[12px] uppercase tracking-[1px] text-[#9ca3af]">
-                              Quantity {item.quantity}
+                            <p className="mt-1 text-[11px] uppercase tracking-[0.18em] text-[#baa79b]">
+                              Qty {item.quantity}
                             </p>
                           </div>
-                          <p className="text-[14px] leading-6 text-[#8a6d5d]">
+                          <p className="text-[12px] text-[#8b776b]">
                             {formatCurrency(item.subtotal)}
                           </p>
                         </article>
                       ))}
                     </div>
-                  </div>
-                </section>
 
-                <aside className="space-y-6">
-                  <div className="rounded-[40px] bg-white px-8 py-8 shadow-[0_24px_60px_rgba(138,109,93,0.08)]">
-                    <div className="flex items-center gap-3">
-                      <Clock3 className="h-5 w-5 text-[#d4a373]" />
-                      <p className="text-[12px] font-bold uppercase tracking-[1px] text-[#9ca3af]">
-                        Payment Status
+                    <div className="mt-8 border-t border-[#f2e7de] pt-7">
+                      <div className="flex items-center gap-3">
+                        <Clock3 className="h-5 w-5 text-[#d2a889]" />
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-[#d0b59c]">
+                          Payment Status
+                        </p>
+                      </div>
+                      <p
+                        className="mt-4 text-[28px] leading-none text-[#4b3d35]"
+                        style={{ fontFamily: "var(--font-cormorant)" }}
+                      >
+                        {reconciliation?.paid ? "Payment received" : "Awaiting payment"}
                       </p>
-                    </div>
-                    <p
-                      className="mt-5 text-[28px] leading-8 text-[#2c2825]"
-                      style={{ fontFamily: "var(--font-cormorant)" }}
-                    >
-                      {reconciliation?.paid ? "Paid" : "Awaiting payment"}
-                    </p>
-                    <p className="mt-3 text-[14px] leading-6 text-[#5c6b5e]">
-                      {reconciliation
-                        ? `${reconciliation.transactionCount} transaction records found.`
-                        : "No reconciliation data yet."}
-                    </p>
-                  </div>
-
-                  <div className="rounded-[40px] bg-white px-8 py-8 shadow-[0_24px_60px_rgba(138,109,93,0.08)]">
-                    <p className="text-[10px] font-bold uppercase tracking-[1px] text-[#9ca3af]">
-                      Backend Total
-                    </p>
-                    <p
-                      className="mt-3 text-[32px] leading-9 text-[#8a6d5d]"
-                      style={{ fontFamily: "var(--font-cormorant)" }}
-                    >
-                      {formatCurrency(order.totalAmount)}
-                    </p>
-                    <div className="mt-8 flex flex-col gap-3">
-                      <Link
-                        href={`/checkout/complete?orderId=${order.id}`}
-                        className="inline-flex min-h-[52px] items-center justify-center rounded-[12px] bg-[#8a6d5d] px-6 text-[14px] font-medium text-white transition-colors hover:bg-[#775f51]"
-                      >
-                        View Confirmation
-                      </Link>
-                      <Link
-                        href={`/checkout/tracking?orderId=${order.id}`}
-                        className="inline-flex min-h-[52px] items-center justify-center rounded-[12px] border border-[rgba(138,109,93,0.16)] px-6 text-[14px] font-medium text-[#2c2825] transition-colors hover:bg-[#fdfaf7]"
-                      >
-                        View Tracking
-                      </Link>
+                      <p className="mt-4 text-[13px] leading-7 text-[#8b776b]">
+                        {reconciliation
+                          ? `${reconciliation.transactionCount} transaction record(s) found.`
+                          : "Waiting for reconciliation data."}
+                      </p>
+                      <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#c6a98f]">
+                        Order #{order.id} • {formatOrderStatus(order.status)}
+                      </p>
                     </div>
                   </div>
                 </aside>
@@ -384,7 +493,6 @@ export function QrPaymentPageContent() {
         </div>
       </main>
       <Footer />
-      <ChatLive />
     </div>
   );
 }
