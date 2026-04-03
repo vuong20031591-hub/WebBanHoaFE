@@ -18,15 +18,17 @@ import {
   Users,
 } from "lucide-react";
 import { adminOrdersApi, isApiError } from "@/lib/api";
+import type { UpdatableOrderStatus } from "@/lib/api/admin";
 import type { OrderDTO } from "@/lib/api/types";
 import { formatCurrency } from "@/lib/currency";
 import { loadOrderProducts } from "@/lib/mappers";
+import { DEFAULT_PRODUCT_IMAGE } from "@/lib/mappers/product";
 import { useAuth } from "@/src/contexts";
 
-const FALLBACK_IMAGE = "/images/hero-main.png";
+const FALLBACK_IMAGE = DEFAULT_PRODUCT_IMAGE;
 
 type StatusFilter = "ALL" | "PENDING" | "CONFIRMED" | "CANCELLED";
-type TimeWindow = "WEEK" | "MONTH";
+type TimeWindow = "ALL" | "WEEK" | "MONTH";
 
 function DashboardStateCard({
   title,
@@ -171,6 +173,28 @@ function getFormattedDate(value: string): string {
   }).format(new Date(value));
 }
 
+function getNextStatusOptions(status: string): UpdatableOrderStatus[] {
+  switch (status) {
+    case "PENDING":
+      return ["CONFIRMED", "CANCELLED"];
+    case "CONFIRMED":
+      return ["CANCELLED"];
+    default:
+      return [];
+  }
+}
+
+function getStatusActionLabel(status: UpdatableOrderStatus): string {
+  switch (status) {
+    case "CONFIRMED":
+      return "Mark Delivered";
+    case "CANCELLED":
+      return "Cancel Order";
+    default:
+      return status;
+  }
+}
+
 export function AdminOrderManagementPageContent() {
   const router = useRouter();
   const { user, loading: authLoading, signOut } = useAuth();
@@ -178,9 +202,11 @@ export function AdminOrderManagementPageContent() {
   const [orders, setOrders] = useState<OrderDTO[]>([]);
   const [coverByOrderId, setCoverByOrderId] = useState<Record<number, string>>({});
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
-  const [timeWindow, setTimeWindow] = useState<TimeWindow>("WEEK");
+  const [timeWindow, setTimeWindow] = useState<TimeWindow>("ALL");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [statusActionError, setStatusActionError] = useState<string | null>(null);
+  const [updatingOrderId, setUpdatingOrderId] = useState<number | null>(null);
   const [isSigningOut, setIsSigningOut] = useState(false);
 
   const isAdmin = user?.role?.toUpperCase() === "ADMIN";
@@ -192,6 +218,29 @@ export function AdminOrderManagementPageContent() {
       router.push("/signin");
     } finally {
       setIsSigningOut(false);
+    }
+  };
+
+  const handleStatusChange = async (
+    orderId: number,
+    nextStatus: UpdatableOrderStatus
+  ) => {
+    setStatusActionError(null);
+    setUpdatingOrderId(orderId);
+
+    try {
+      const updatedOrder = await adminOrdersApi.updateOrderStatus(orderId, nextStatus);
+      setOrders((previousOrders) =>
+        previousOrders.map((order) => (order.id === orderId ? updatedOrder : order))
+      );
+    } catch (statusError) {
+      setStatusActionError(
+        isApiError(statusError)
+          ? statusError.message
+          : "Unable to update order status right now."
+      );
+    } finally {
+      setUpdatingOrderId(null);
     }
   };
 
@@ -217,7 +266,7 @@ export function AdminOrderManagementPageContent() {
       try {
         const ordersPage = await adminOrdersApi.getOrders({
           page: 0,
-          size: 80,
+          size: 500,
           sortBy: "createdAt",
           sortDir: "DESC",
         });
@@ -276,7 +325,12 @@ export function AdminOrderManagementPageContent() {
 
   const filteredOrders = useMemo(() => {
     const now = new Date();
-    const thresholdDate = timeWindow === "WEEK" ? getStartOfWeek(now) : getStartOfMonth(now);
+    const thresholdDate =
+      timeWindow === "WEEK"
+        ? getStartOfWeek(now)
+        : timeWindow === "MONTH"
+          ? getStartOfMonth(now)
+          : null;
 
     return orders.filter((order) => {
       if (statusFilter !== "ALL" && order.status !== statusFilter) {
@@ -288,11 +342,15 @@ export function AdminOrderManagementPageContent() {
         return false;
       }
 
+      if (!thresholdDate) {
+        return true;
+      }
+
       return createdAt >= thresholdDate;
     });
   }, [orders, statusFilter, timeWindow]);
 
-  const visibleOrders = useMemo(() => filteredOrders.slice(0, 6), [filteredOrders]);
+  const visibleOrders = useMemo(() => filteredOrders, [filteredOrders]);
   const weeklyGrowth = useMemo(() => calculateWeeklyGrowth(orders), [orders]);
 
   const activeArrangements = useMemo(
@@ -470,6 +528,11 @@ export function AdminOrderManagementPageContent() {
               </div>
             ) : (
               <div className="space-y-6">
+                {statusActionError ? (
+                  <div className="rounded-[14px] border border-[#efd0cc] bg-[#fbefec] px-4 py-3 text-[13px] text-[#8f3d35]">
+                    {statusActionError}
+                  </div>
+                ) : null}
                 <div className="flex flex-wrap items-end justify-between gap-4">
                   <div>
                     <h1
@@ -566,6 +629,7 @@ export function AdminOrderManagementPageContent() {
                         onChange={(event) => setTimeWindow(event.target.value as TimeWindow)}
                         className="h-8 rounded-full border border-[#e5ddd4] bg-white px-3 text-[11px] text-[#6d6358] outline-none"
                       >
+                        <option value="ALL">All Time</option>
                         <option value="WEEK">This Week</option>
                         <option value="MONTH">This Month</option>
                       </select>
@@ -580,6 +644,7 @@ export function AdminOrderManagementPageContent() {
                           <th className="px-2 py-3 font-medium">Recipient</th>
                           <th className="px-2 py-3 font-medium">Delivery Date</th>
                           <th className="px-2 py-3 font-medium">Status</th>
+                          <th className="px-2 py-3 font-medium">Action</th>
                           <th className="px-5 py-3 text-right font-medium">Value</th>
                         </tr>
                       </thead>
@@ -587,7 +652,7 @@ export function AdminOrderManagementPageContent() {
                         {visibleOrders.length === 0 ? (
                           <tr>
                             <td
-                              colSpan={5}
+                              colSpan={6}
                               className="px-5 py-8 text-center text-[13px] text-[#8f877f]"
                             >
                               No commissions match the selected filters.
@@ -599,6 +664,8 @@ export function AdminOrderManagementPageContent() {
                             const itemSummary = `${order.items.length} arrangement${
                               order.items.length > 1 ? "s" : ""
                             }`;
+                            const statusOptions = getNextStatusOptions(order.status);
+                            const isRowUpdating = updatingOrderId === order.id;
 
                             return (
                               <tr
@@ -638,6 +705,35 @@ export function AdminOrderManagementPageContent() {
                                   >
                                     {formatOrderStatus(order.status)}
                                   </span>
+                                </td>
+                                <td className="px-2 py-3">
+                                  {statusOptions.length === 0 ? (
+                                    <span className="text-[11px] text-[#9a9087]">No action</span>
+                                  ) : (
+                                    <select
+                                      defaultValue=""
+                                      disabled={isRowUpdating}
+                                      onChange={(event) => {
+                                        const nextStatus = event.target
+                                          .value as UpdatableOrderStatus;
+                                        if (!nextStatus) {
+                                          return;
+                                        }
+                                        void handleStatusChange(order.id, nextStatus);
+                                        event.target.value = "";
+                                      }}
+                                      className="h-8 w-[148px] rounded-full border border-[#e5ddd4] bg-white px-3 text-[11px] text-[#6d6358] outline-none disabled:cursor-not-allowed disabled:opacity-70"
+                                    >
+                                      <option value="">
+                                        {isRowUpdating ? "Updating..." : "Update status"}
+                                      </option>
+                                      {statusOptions.map((statusOption) => (
+                                        <option key={statusOption} value={statusOption}>
+                                          {getStatusActionLabel(statusOption)}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  )}
                                 </td>
                                 <td className="px-5 py-3 text-right font-medium">
                                   {formatCurrency(order.totalAmount)}

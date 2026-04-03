@@ -6,7 +6,7 @@ import { Minus, Plus, ShoppingBag, AlertCircle, RefreshCw } from "lucide-react";
 import { CartItem, useCartStore } from "@/lib/cart";
 import { formatCurrency } from "@/lib/currency";
 import { getCartItemVariant } from "./constants";
-import { DEFAULT_PRODUCT_IMAGE } from "@/lib/mappers/product";
+import { resolveProductImage } from "@/lib/mappers/product";
 
 interface CartItemsTableProps {
   isHydrating: boolean;
@@ -123,7 +123,7 @@ export function CartItemsTable({
                 <div className="flex gap-4 pl-1 sm:gap-8">
                   <div className="relative h-32 w-24 overflow-hidden rounded-tl-[80px] rounded-tr-[80px] rounded-bl-[8px] rounded-br-[8px] bg-white">
                     <Image
-                      src={item.productImage || DEFAULT_PRODUCT_IMAGE}
+                      src={resolveProductImage(item.productImage)}
                       alt={item.productName}
                       fill
                       sizes="96px"
