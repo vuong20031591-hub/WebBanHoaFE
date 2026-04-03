@@ -7,13 +7,18 @@ function isAbsoluteUrl(value: string): boolean {
   return /^https?:\/\//i.test(value);
 }
 
-export function resolveProductImage(image: string | null | undefined): string {
-  if (!image) {
+export function resolveProductImage(image: unknown): string {
+  if (typeof image !== "string") {
     return DEFAULT_PRODUCT_IMAGE;
   }
 
-  if (image.startsWith("/") || isAbsoluteUrl(image)) {
-    return image;
+  const normalized = image.trim();
+  if (!normalized) {
+    return DEFAULT_PRODUCT_IMAGE;
+  }
+
+  if (normalized.startsWith("/") || isAbsoluteUrl(normalized)) {
+    return normalized;
   }
 
   return DEFAULT_PRODUCT_IMAGE;

@@ -1,8 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Flower2,
@@ -15,13 +14,6 @@ import {
 } from "lucide-react";
 import { Navbar, Footer } from "@/components/layout";
 import { useAuth } from "@/src/contexts/AuthContext";
-
-/* ─────────────────────────────────────────────
-   Asset URLs từ Figma MCP
-───────────────────────────────────────────── */
-const IMG_SIGNUP_FLOWER = "/images/hero-main.png";
-
-
 
 /* ─────────────────────────────────────────────
    Google Icon SVG
@@ -54,7 +46,7 @@ function GoogleIcon() {
 ───────────────────────────────────────────── */
 function SignUpForm() {
   const router = useRouter();
-  const { signUp } = useAuth();
+  const { user, loading: authLoading, signUp, signInWithGoogle } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [fullName, setFullName] = useState("");
@@ -64,6 +56,13 @@ function SignUpForm() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      router.replace("/");
+    }
+  }, [authLoading, user, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,6 +87,20 @@ function SignUpForm() {
       setError(error.response?.data?.message || error.message || "Registration failed");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setError("");
+    setGoogleLoading(true);
+
+    try {
+      await signInWithGoogle();
+    } catch (err) {
+      const error = err as { message?: string };
+      setError(error.message || "Google sign up failed");
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -280,25 +293,18 @@ function SignUpForm() {
       </div>
 
       {/* Social Buttons */}
-      <div className="w-full flex gap-3">
+      <div className="w-full">
         <button
-          className="flex-1 h-[46px] border border-[#d1d5dc] rounded-[14px] flex items-center justify-center gap-2 hover:bg-[#f9f9f9] transition-colors"
+          type="button"
+          onClick={handleGoogleSignIn}
+          disabled={googleLoading}
+          className="w-full h-[46px] border border-[#d1d5dc] rounded-[14px] flex items-center justify-center gap-2 hover:bg-[#f9f9f9] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           style={{ fontFamily: "var(--font-inter)" }}
         >
           <GoogleIcon />
-          <span className="text-[#0a0a0a] text-[15px]">Google</span>
-        </button>
-        <button
-          className="flex-1 h-[46px] border border-[#d1d5dc] rounded-[14px] flex items-center justify-center gap-2 hover:bg-[#f9f9f9] transition-colors"
-          style={{ fontFamily: "var(--font-inter)" }}
-        >
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <path
-              d="M20 10C20 4.477 15.523 0 10 0S0 4.477 0 10c0 4.991 3.657 9.128 8.438 9.878V12.89H5.898V10h2.54V7.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V10h2.773l-.443 2.89h-2.33v6.988C16.343 19.128 20 14.991 20 10z"
-              fill="#1877F2"
-            />
-          </svg>
-          <span className="text-[#0a0a0a] text-[15px]">Facebook</span>
+          <span className="text-[#0a0a0a] text-[15px]">
+            {googleLoading ? "Redirecting..." : "Google"}
+          </span>
         </button>
       </div>
 

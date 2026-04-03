@@ -1,5 +1,13 @@
 import axios from "axios";
-import type { AuthUser, LoginRequest, LoginResponse, RegisterRequest } from "./types";
+import { apiClient } from "@/lib/api/client";
+import type {
+  AuthUser,
+  ChangePasswordRequest,
+  LoginRequest,
+  LoginResponse,
+  RegisterRequest,
+  UpdateProfileRequest,
+} from "./types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
@@ -21,6 +29,19 @@ export const authApi = {
     return response.data;
   },
 
+  async loginWithGoogleToken(supabaseAccessToken: string): Promise<LoginResponse> {
+    const response = await authClient.post<LoginResponse>(
+      "/api/auth/oauth/google",
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${supabaseAccessToken}`,
+        },
+      }
+    );
+    return response.data;
+  },
+
   async me(token: string): Promise<AuthUser> {
     const response = await authClient.get<AuthUser>("/api/auth/me", {
       headers: {
@@ -28,5 +49,14 @@ export const authApi = {
       },
     });
     return response.data;
+  },
+
+  async updateProfile(data: UpdateProfileRequest): Promise<AuthUser> {
+    const response = await apiClient.put<AuthUser>("/api/auth/me", data);
+    return response.data;
+  },
+
+  async changePassword(data: ChangePasswordRequest): Promise<void> {
+    await apiClient.post("/api/auth/change-password", data);
   },
 };

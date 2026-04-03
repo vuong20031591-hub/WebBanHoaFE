@@ -1,7 +1,57 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState, useSyncExternalStore } from "react";
 import { ShoppingCart, User, Search, Flower2 } from "lucide-react";
+import { useCartStore } from "@/lib/cart";
+import { useAuth } from "@/src/contexts";
+
+function subscribeToCartHydration(onStoreChange: () => void) {
+  const unsubscribeStart = useCartStore.persist.onHydrate(onStoreChange);
+  const unsubscribeFinish = useCartStore.persist.onFinishHydration(onStoreChange);
+
+  return () => {
+    unsubscribeStart();
+    unsubscribeFinish();
+  };
+}
 
 export function Navbar() {
+  const router = useRouter();
+  const { user, signOut } = useAuth();
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const hydrated = useSyncExternalStore(
+    subscribeToCartHydration,
+    () => useCartStore.persist.hasHydrated(),
+    () => false
+  );
+  const itemCount = useCartStore((state) =>
+    state.variants.reduce((sum, item) => sum + item.quantity, 0)
+  );
+  const displayCount = hydrated ? itemCount : 0;
+  const countLabel = displayCount > 99 ? "99+" : String(displayCount);
+  const navLinks = [
+    { label: "Shop All", href: "/products" },
+    { label: "Categories", href: "/products?view=categories" },
+    { label: "Latest", href: "/products?sort=latest" },
+    { label: "Our Story", href: "/our-story" },
+  ];
+
+  if (user?.role?.toUpperCase() === "ADMIN") {
+    navLinks.push({ label: "Dashboard", href: "/admin" });
+  }
+
+  const handleSignOut = async () => {
+    setIsSigningOut(true);
+    try {
+      await signOut();
+      router.push("/signin");
+    } finally {
+      setIsSigningOut(false);
+    }
+  };
+
   return (
     <nav className="bg-[#fcfaf7] border-b border-[#eee4e1] sticky top-0 z-50">
       <div className="max-w-[1280px] mx-auto px-10 h-[81px] flex items-center justify-between">
@@ -16,12 +66,7 @@ export function Navbar() {
             </span>
           </Link>
           <div className="flex items-center gap-9">
-            {[
-              { label: "Shop All", href: "/products" },
-              { label: "Categories", href: "/products" },
-              { label: "Latest", href: "/products" },
-              { label: "Our Story", href: "#our-heritage" },
-            ].map((item) => (
+            {navLinks.map((item) => (
               <Link
                 key={item.label}
                 href={item.href}
@@ -45,16 +90,48 @@ export function Navbar() {
           </div>
           <Link
             href="/cart"
-            className="w-10 h-10 flex items-center justify-center hover:bg-[#f1eeea] rounded-full transition-colors"
+            className="relative w-10 h-10 flex items-center justify-center hover:bg-[#f1eeea] rounded-full transition-colors"
           >
             <ShoppingCart className="w-5 h-5 text-[#2d2a26]" />
+            {displayCount > 0 ? (
+              <span
+                className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#d0bb95] text-white text-[10px] font-semibold leading-[18px] text-center"
+                style={{ fontFamily: "var(--font-inter)" }}
+                aria-label={`${displayCount} items in cart`}
+              >
+                {countLabel}
+              </span>
+            ) : null}
           </Link>
-          <Link
-            href="/profile"
-            className="w-9 h-9 flex items-center justify-center hover:bg-[#f1eeea] rounded-full transition-colors"
-          >
-            <User className="w-5 h-5 text-[#2d2a26]" />
-          </Link>
+          {user ? (
+            <div className="relative group">
+              <Link
+                href="/profile"
+                className="w-9 h-9 flex items-center justify-center hover:bg-[#f1eeea] rounded-full transition-colors"
+                aria-label="Profile"
+              >
+                <User className="w-5 h-5 text-[#2d2a26]" />
+              </Link>
+              <div className="pointer-events-none invisible absolute right-0 top-[calc(100%+8px)] z-50 w-[132px] translate-y-1 rounded-[12px] border border-[#e5ddd4] bg-[#fcfaf7] p-1 opacity-0 shadow-sm transition-all duration-150 group-hover:pointer-events-auto group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  disabled={isSigningOut}
+                  className="w-full rounded-[9px] px-3 py-2 text-left text-[12px] font-medium text-[#5b4f43] transition-colors hover:bg-[#f1eeea] disabled:cursor-not-allowed disabled:opacity-50"
+                  style={{ fontFamily: "var(--font-inter)" }}
+                >
+                  {isSigningOut ? "Đang thoát..." : "Đăng xuất"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <Link
+              href="/profile"
+              className="w-9 h-9 flex items-center justify-center hover:bg-[#f1eeea] rounded-full transition-colors"
+            >
+              <User className="w-5 h-5 text-[#2d2a26]" />
+            </Link>
+          )}
         </div>
       </div>
     </nav>

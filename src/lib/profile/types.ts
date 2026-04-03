@@ -35,6 +35,7 @@ export interface ProfileFavorite {
   price: number;
   image: string;
   href: string;
+  stockQuantity?: number | null;
 }
 
 export interface ProfileFavoritesCollection {

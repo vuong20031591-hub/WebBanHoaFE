@@ -2,8 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
+import QRCode from "qrcode";
 import { ArrowUpRight, Clock3, RefreshCw, ScanQrCode, ShieldCheck } from "lucide-react";
 import { ChatLive, Footer, Navbar } from "@/components/layout";
 import { formatCurrency } from "@/lib/currency";
@@ -21,6 +22,14 @@ function formatTimer(totalSeconds: number): string {
   const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
   const seconds = String(totalSeconds % 60).padStart(2, "0");
   return `${minutes}:${seconds}`;
+}
+
+function getInlineQrImage(checkout: PaymentCheckoutDTO | null): string | null {
+  if (!checkout) {
+    return null;
+  }
+
+  return checkout.checkoutUrl?.startsWith("data:image/") ? checkout.checkoutUrl : null;
 }
 
 function QrStateCard({
@@ -49,6 +58,7 @@ function QrStateCard({
 }
 
 export function QrPaymentPageContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
   const [order, setOrder] = useState<OrderDTO | null>(null);
@@ -56,6 +66,7 @@ export function QrPaymentPageContent() {
   const [checkout, setCheckout] = useState<PaymentCheckoutDTO | null>(null);
   const [reconciliation, setReconciliation] =
     useState<PaymentReconciliationDTO | null>(null);
+  const [qrImageSrc, setQrImageSrc] = useState<string | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -154,12 +165,69 @@ export function QrPaymentPageContent() {
       } catch {
         return;
       }
-    }, 10000);
+    }, 5000);
 
     return () => {
       window.clearInterval(intervalId);
     };
   }, [checkout, orderId, user]);
+
+  useEffect(() => {
+    if (!reconciliation?.paid || !order) {
+      return;
+    }
+
+    const redirectTimer = window.setTimeout(() => {
+      router.push(`/checkout/complete?orderId=${order.id}`);
+    }, 1500);
+
+    return () => {
+      window.clearTimeout(redirectTimer);
+    };
+  }, [order, reconciliation?.paid, router]);
+
+  useEffect(() => {
+    let active = true;
+
+    const buildQrImage = async () => {
+      const inlineQrImage = getInlineQrImage(checkout);
+      if (inlineQrImage) {
+        setQrImageSrc(inlineQrImage);
+        return;
+      }
+
+      if (!checkout?.qrContent) {
+        setQrImageSrc(null);
+        return;
+      }
+
+      try {
+        const nextQrImageSrc = await QRCode.toDataURL(checkout.qrContent, {
+          width: 480,
+          margin: 1,
+          errorCorrectionLevel: "M",
+          color: {
+            dark: "#2c2825",
+            light: "#ffffff",
+          },
+        });
+
+        if (active) {
+          setQrImageSrc(nextQrImageSrc);
+        }
+      } catch {
+        if (active) {
+          setQrImageSrc(null);
+        }
+      }
+    };
+
+    buildQrImage();
+
+    return () => {
+      active = false;
+    };
+  }, [checkout]);
 
   return (
     <div className="min-h-screen bg-[#fdfaf7]">
@@ -241,14 +309,38 @@ export function QrPaymentPageContent() {
                       </p>
                     </div>
                     <p className="mt-4 text-[14px] leading-6 text-[#5c6b5e]">
-                      Use the real payload below in your banking app or open the
-                      provider checkout page directly.
+                      Scan this QR in your banking app. If your bank app does not
+                      support scanning from screen, you can still use the raw
+                      payload below or open the provider checkout page directly.
                     </p>
-                    <textarea
-                      readOnly
-                      value={checkout.qrContent ?? ""}
-                      className="mt-6 h-48 w-full resize-none rounded-[24px] border border-[rgba(138,109,93,0.12)] bg-[#fdfaf7] px-6 py-5 text-[13px] leading-6 text-[#2c2825] outline-none"
-                    />
+                    <div className="mt-6 flex justify-center">
+                      <div className="rounded-[28px] border border-[rgba(138,109,93,0.12)] bg-[#fdfaf7] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
+                        {qrImageSrc ? (
+                          <div className="relative h-[320px] w-[320px] overflow-hidden rounded-[20px] bg-white">
+                            <Image
+                              src={qrImageSrc}
+                              alt={`QR payment for order ${order.id}`}
+                              fill
+                              unoptimized
+                              sizes="320px"
+                              className="object-contain"
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex h-[320px] w-[320px] items-center justify-center rounded-[20px] bg-white px-8 text-center text-[14px] leading-6 text-[#8a6d5d]">
+                            Unable to render QR image right now. You can still use
+                            the payment payload below.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {checkout.qrContent ? (
+                      <textarea
+                        readOnly
+                        value={checkout.qrContent}
+                        className="mt-6 h-36 w-full resize-none rounded-[24px] border border-[rgba(138,109,93,0.12)] bg-[#fdfaf7] px-6 py-5 text-[13px] leading-6 text-[#2c2825] outline-none"
+                      />
+                    ) : null}
                     {checkout.note ? (
                       <p className="mt-4 text-[12px] leading-6 text-[#8a6d5d]">
                         {checkout.note}
