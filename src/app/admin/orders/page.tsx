@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -45,6 +46,7 @@ const COMMISSIONS = [
         statusBg: "bg-[#efd4c6]",
         statusColor: "text-[#6e5b4f]",
         value: "$185.00",
+        img: "/images/orders/graceful-peony.jpg",
     },
     {
         name: "Wild Meadow Drift",
@@ -55,6 +57,7 @@ const COMMISSIONS = [
         statusBg: "bg-[#d2e5c8]",
         statusColor: "text-[#566750]",
         value: "$142.00",
+        img: "/images/orders/wild-meadow-drift.jpg",
     },
     {
         name: "Velvet Nocturne",
@@ -65,6 +68,7 @@ const COMMISSIONS = [
         statusBg: "bg-[#e4e2de]",
         statusColor: "text-[#4f4444]",
         value: "$95.00",
+        img: "/images/orders/velvet-nocturne.jpg",
     },
     {
         name: "Solstice Bright",
@@ -75,6 +79,7 @@ const COMMISSIONS = [
         statusBg: "bg-[#d2e5c8]",
         statusColor: "text-[#566750]",
         value: "$78.00",
+        img: "/images/orders/solstice-bright.jpg",
     },
 ];
 
@@ -240,7 +245,9 @@ export default function OrdersPage() {
                                 >
                                     {/* Arrangement */}
                                     <div className="px-8 py-6 flex items-center gap-4">
-                                        <div className="w-12 h-16 rounded-t-full bg-[#e4e2de] shrink-0" />
+                                        <div className="w-12 h-16 rounded-t-full bg-[#e4e2de] shrink-0 overflow-hidden relative">
+                                            <Image src={c.img} alt={c.name} fill className="object-cover" />
+                                        </div>
                                         <div>
                                             <p className="text-[#1b1c1a] text-base font-medium leading-5" style={{ fontFamily: "var(--font-inter)" }}>
                                                 {c.name}
