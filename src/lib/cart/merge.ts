@@ -91,7 +91,7 @@ export async function mergeCartsOnLogin(
         localId: generateUUID(),
         productId: serverItem!.productId,
         productName: serverItem!.productName,
-        productImage: serverItem!.image || "/images/hero-main.png",
+        productImage: resolveProductImage(serverItem!.image),
         price: Number(serverItem!.price),
         quantity: targetTotal,
         availableStock: availableStock,

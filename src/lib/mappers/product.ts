@@ -52,6 +52,9 @@ export function resolveProductImage(image: unknown): string {
     return normalized;
   }
 
+export function resolveProductImage(_image: unknown): string {
+  // Temporary fallback requested by user: force a single image for all products.
+  void _image;
   return DEFAULT_PRODUCT_IMAGE;
 }
 

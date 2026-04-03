@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import QRCode from "qrcode";
 import { Clock3, ExternalLink, ShieldCheck } from "lucide-react";
@@ -76,6 +76,7 @@ function QrStateCard({
 }
 
 export function QrPaymentPageContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
   const [order, setOrder] = useState<OrderDTO | null>(null);

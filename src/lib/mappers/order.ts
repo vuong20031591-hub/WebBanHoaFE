@@ -2,7 +2,11 @@ import { productsApi } from "../api/products";
 import { OrderDTO, OrderItemDTO, OrderPaymentMethod } from "../api/types";
 import { ProfileOrder } from "../profile/types";
 import { Product } from "../products/types";
-import { mapProductDetailDTOToProduct } from "./product";
+import {
+  DEFAULT_PRODUCT_IMAGE,
+  mapProductDetailDTOToProduct,
+  resolveProductImage,
+} from "./product";
 
 export interface OrderDisplayItem {
   id: number;
@@ -81,7 +85,7 @@ export function mapOrderItemToDisplay(
     quantity: item.quantity,
     price: item.price,
     subtotal: item.subtotal,
-    image: product?.image ?? "/images/hero-main.png",
+    image: resolveProductImage(product?.image ?? DEFAULT_PRODUCT_IMAGE),
   };
 }
 
@@ -91,8 +95,8 @@ export function mapOrderToProfileOrder(
 ): ProfileOrder {
   const firstItem = order.items[0];
   const image = firstItem
-    ? productsById[firstItem.productId]?.image ?? "/images/hero-main.png"
-    : "/images/hero-main.png";
+    ? resolveProductImage(productsById[firstItem.productId]?.image ?? DEFAULT_PRODUCT_IMAGE)
+    : DEFAULT_PRODUCT_IMAGE;
   const extraItemsCount = Math.max(0, order.items.length - 1);
   const title = firstItem
     ? extraItemsCount > 0

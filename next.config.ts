@@ -17,7 +17,12 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "picsum.photos",
+        hostname: "canhdonghoatuoi.com",
+      },
+      {
+        protocol: "https",
+        hostname: "www.canhdonghoatuoi.com",
+
       },
       {
         protocol: "http",

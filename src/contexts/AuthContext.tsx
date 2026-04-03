@@ -12,6 +12,7 @@ import { authApi } from "@/lib/auth/client";
 import { getToken, setToken, clearToken } from "@/lib/auth/storage";
 import type { AuthUser, LoginRequest, RegisterRequest } from "@/lib/auth/types";
 import { useCartStore, useCartSync, mergeCartsOnLogin, cartSyncEngine } from "@/lib/cart";
+import { useFavoritesStore } from "@/lib/favorites";
 import { cartApi } from "@/lib/api/cart";
 import { authService } from "@/lib/supabase/auth";
 
@@ -134,6 +135,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const nextUserId = user ? String(user.id) : null;
     const prevUserId = prevUserIdRef.current;
+
+    useFavoritesStore.getState().setActiveUser(nextUserId);
 
     if (nextUserId && nextUserId !== prevUserId) {
       const store = useCartStore.getState();
