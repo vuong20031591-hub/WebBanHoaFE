@@ -3,7 +3,7 @@
 import Image from "next/image";
 import type { CartItem } from "@/lib/cart/types";
 import { formatCurrency } from "@/lib/currency";
-import { DEFAULT_PRODUCT_IMAGE } from "@/lib/mappers/product";
+import { resolveProductImage } from "@/lib/mappers/product";
 
 interface OrderSummaryProps {
   items: CartItem[];
@@ -33,7 +33,7 @@ export function OrderSummary({
           <div key={`${item.productId}-${item.size}`} className="flex gap-5">
             <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-tl-[80px] rounded-tr-[80px] rounded-bl-[8px] rounded-br-[8px]">
               <Image
-                src={item.productImage || DEFAULT_PRODUCT_IMAGE}
+                src={resolveProductImage(item.productImage)}
                 alt={item.productName}
                 fill
                 className="object-cover"

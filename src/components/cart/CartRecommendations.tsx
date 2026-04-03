@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { formatCurrency } from "@/lib/currency";
-import { DEFAULT_PRODUCT_IMAGE } from "@/lib/mappers/product";
+import { resolveProductImage } from "@/lib/mappers/product";
 import { CartRecommendation } from "./constants";
 
 interface CartRecommendationsProps {
@@ -34,7 +34,7 @@ export function CartRecommendations({
           >
             <div className="relative aspect-[0.75] overflow-hidden rounded-b-[28px] rounded-t-[180px] bg-white/35">
               <Image
-                src={recommendation.image || DEFAULT_PRODUCT_IMAGE}
+                src={resolveProductImage(recommendation.image)}
                 alt={recommendation.name}
                 fill
                 sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 352px"

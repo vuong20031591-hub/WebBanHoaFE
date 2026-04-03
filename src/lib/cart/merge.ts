@@ -1,7 +1,7 @@
 import { CartVariantItem, CartSyncState, ServerCartEntry } from "./types";
 import { CartDTO } from "../api/types";
 import { groupByProductId, sumQuantities, generateUUID } from "./utils";
-import { DEFAULT_PRODUCT_IMAGE } from "../mappers/product";
+import { resolveProductImage } from "../mappers/product";
 
 export async function mergeCartsOnLogin(
   localVariants: CartVariantItem[],
@@ -59,7 +59,7 @@ export async function mergeCartsOnLogin(
     if (localByProduct[productId]) {
       const variants = localByProduct[productId].map((variant) => ({
         ...variant,
-        productImage: variant.productImage || DEFAULT_PRODUCT_IMAGE,
+        productImage: resolveProductImage(variant.productImage),
       }));
       const currentSum = sumQuantities(variants);
 
@@ -91,7 +91,7 @@ export async function mergeCartsOnLogin(
         localId: generateUUID(),
         productId: serverItem!.productId,
         productName: serverItem!.productName,
-        productImage: serverItem!.image || "/images/hero-main.png",
+        productImage: resolveProductImage(serverItem!.image),
         price: Number(serverItem!.price),
         quantity: targetTotal,
         availableStock: availableStock,

@@ -1,26 +1,12 @@
 import { ProductDTO, ProductDetailDTO } from "../api/types";
 import { Product } from "../products/types";
 
-export const DEFAULT_PRODUCT_IMAGE = "/images/hero-main.png";
+export const DEFAULT_PRODUCT_IMAGE =
+  "https://canhdonghoatuoi.com/wp-content/uploads/2024/05/Chua-co-ten-1080-x-1080-px-4.png";
 
-function isAbsoluteUrl(value: string): boolean {
-  return /^https?:\/\//i.test(value);
-}
-
-export function resolveProductImage(image: unknown): string {
-  if (typeof image !== "string") {
-    return DEFAULT_PRODUCT_IMAGE;
-  }
-
-  const normalized = image.trim();
-  if (!normalized) {
-    return DEFAULT_PRODUCT_IMAGE;
-  }
-
-  if (normalized.startsWith("/") || isAbsoluteUrl(normalized)) {
-    return normalized;
-  }
-
+export function resolveProductImage(_image: unknown): string {
+  // Temporary fallback requested by user: force a single image for all products.
+  void _image;
   return DEFAULT_PRODUCT_IMAGE;
 }
 
