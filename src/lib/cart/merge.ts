@@ -1,7 +1,7 @@
 import { CartVariantItem, CartSyncState, ServerCartEntry } from "./types";
 import { CartDTO } from "../api/types";
 import { groupByProductId, sumQuantities, generateUUID } from "./utils";
-import { DEFAULT_PRODUCT_IMAGE } from "../mappers/product";
+import { DEFAULT_PRODUCT_IMAGE, resolveProductImage } from "../mappers/product";
 
 export async function mergeCartsOnLogin(
   localVariants: CartVariantItem[],

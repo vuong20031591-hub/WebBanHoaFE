@@ -11,7 +11,20 @@ function exists(items: FavoriteItem[], productId: number): boolean {
 export const useFavoritesStore = create<FavoritesState>()(
   persist(
     (set, get) => ({
+      activeUserId: null,
       items: [],
+
+      setActiveUser: (userId) =>
+        set((state) => {
+          if (state.activeUserId === userId) {
+            return state;
+          }
+
+          return {
+            activeUserId: userId,
+            items: [],
+          };
+        }),
 
       addFavorite: (item) =>
         set((state) => {
