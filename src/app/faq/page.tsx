@@ -263,14 +263,18 @@ export default function FaqPage() {
                         Floral Boutique
                     </span>
                     <div className="flex items-center gap-8">
-                        {["Privacy Policy", "Terms of Service", "Sustainability"].map((link) => (
+                        {[
+                            { label: "Privacy Policy", href: "/privacy-policy" },
+                            { label: "Terms of Service", href: "/terms-of-service" },
+                            { label: "Sustainability", href: "#" },
+                        ].map((link) => (
                             <Link
-                                key={link}
-                                href="#"
+                                key={link.label}
+                                href={link.href}
                                 className="text-[#4f4444] text-[14px] font-semibold tracking-[1.4px] uppercase hover:text-[#1b1c1a] transition-colors"
                                 style={{ fontFamily: "var(--font-inter)" }}
                             >
-                                {link}
+                                {link.label}
                             </Link>
                         ))}
                     </div>

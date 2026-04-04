@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
 import {
   ProfilePreferencesGiftingSection,
@@ -10,6 +10,11 @@ import {
   ProfilePreferencesSelectField,
   ProfilePreferencesToggleOption,
 } from "@/lib/profile/types";
+import {
+  getUserPreferences,
+  updateUserPreferences,
+  isApiError,
+} from "@/lib/api";
 
 interface ProfilePreferencesSettingsFormProps {
   regionalSection: ProfilePreferencesRegionalSection;
@@ -147,6 +152,51 @@ export function ProfilePreferencesSettingsForm({
   const [ribbonColors, setRibbonColors] = useState(
     giftingSection.ribbonColors.map((color) => ({ ...color }))
   );
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  useEffect(() => {
+    loadPreferences();
+  }, []);
+
+  const loadPreferences = async () => {
+    try {
+      setLoading(true);
+      const prefs = await getUserPreferences();
+      
+      setFieldValues((current) => ({
+        ...current,
+        language: prefs.language,
+        currency: prefs.currency.toLowerCase(),
+        theme: prefs.theme,
+        timezone: prefs.timezone,
+      }));
+
+      setToggleOptions((current) =>
+        current.map((toggle) => {
+          if (toggle.id === "signature_wrap") {
+            return { ...toggle, enabled: prefs.signatureWrap };
+          }
+          if (toggle.id === "eco_delivery") {
+            return { ...toggle, enabled: prefs.ecoDelivery };
+          }
+          return toggle;
+        })
+      );
+
+      setRibbonColors((current) =>
+        current.map((color) => ({
+          ...color,
+          selected: color.id === prefs.ribbonColor,
+        }))
+      );
+    } catch (err) {
+      console.error("Failed to load preferences:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleFieldChange = (fieldId: string, value: string) => {
     setFieldValues((current) => ({
@@ -173,19 +223,53 @@ export function ProfilePreferencesSettingsForm({
   };
 
   const handleReset = () => {
-    setFieldValues(
-      Object.fromEntries(
-        regionalSection.fields.map((field) => [field.id, field.value])
-      )
-    );
+    loadPreferences();
     setToggleOptions(giftingSection.toggles.map((toggle) => ({ ...toggle })));
     setRibbonColors(
       giftingSection.ribbonColors.map((color) => ({ ...color }))
     );
+    setMessage(null);
   };
 
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setMessage(null);
+    setSaving(true);
+
+    try {
+      const signatureWrapToggle = toggleOptions.find((t) => t.id === "signature_wrap");
+      const ecoDeliveryToggle = toggleOptions.find((t) => t.id === "eco_delivery");
+      const selectedRibbon = ribbonColors.find((c) => c.selected);
+
+      await updateUserPreferences({
+        language: fieldValues.language,
+        currency: fieldValues.currency.toUpperCase(),
+        theme: fieldValues.theme,
+        timezone: fieldValues.timezone,
+        signatureWrap: signatureWrapToggle?.enabled,
+        ecoDelivery: ecoDeliveryToggle?.enabled,
+        ribbonColor: selectedRibbon?.id,
+      });
+
+      setMessage({ type: "success", text: "Preferences saved successfully." });
+    } catch (err) {
+      setMessage({
+        type: "error",
+        text: isApiError(err) ? err.message : "Failed to save preferences.",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="h-[600px] animate-pulse rounded-[24px] bg-white/60" />
+    );
+  }
+
   return (
-    <form onSubmit={(event) => event.preventDefault()}>
+    <form onSubmit={handleSubmit}>
       <section>
         <h2
           className="text-[20px] font-light leading-7 text-[#4a3a3d]"
@@ -258,17 +342,29 @@ export function ProfilePreferencesSettingsForm({
         </div>
       </section>
 
+      {message && (
+        <p
+          className={`mt-6 text-[13px] ${
+            message.type === "success" ? "text-[#166534]" : "text-[#b91c1c]"
+          }`}
+        >
+          {message.text}
+        </p>
+      )}
+
       <div className="mt-10 flex flex-wrap items-center gap-8 pt-10">
         <button
           type="submit"
-          className="inline-flex min-h-[44px] min-w-[195px] items-center justify-center rounded-[8px] bg-[#2d2a26] px-8 text-[12px] font-medium uppercase tracking-[1.8px] text-white transition-colors hover:bg-[#3a342f]"
+          disabled={saving}
+          className="inline-flex min-h-[44px] min-w-[195px] items-center justify-center rounded-[8px] bg-[#2d2a26] px-8 text-[12px] font-medium uppercase tracking-[1.8px] text-white transition-colors hover:bg-[#3a342f] disabled:opacity-50"
         >
-          {saveLabel}
+          {saving ? "Saving..." : saveLabel}
         </button>
         <button
           type="button"
           onClick={handleReset}
-          className="text-[12px] font-medium uppercase tracking-[1.8px] text-[#a8a29e] transition-colors hover:text-[#7c736a]"
+          disabled={saving}
+          className="text-[12px] font-medium uppercase tracking-[1.8px] text-[#a8a29e] transition-colors hover:text-[#7c736a] disabled:opacity-50"
         >
           {resetLabel}
         </button>

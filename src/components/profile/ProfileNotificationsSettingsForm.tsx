@@ -1,10 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ProfileNotificationsPreference,
   ProfileNotificationsSection,
 } from "@/lib/profile/types";
+import {
+  getNotificationPreferences,
+  updateNotificationPreferences,
+  isApiError,
+} from "@/lib/api";
 
 interface ProfileNotificationsSettingsFormProps {
   emailSection: ProfileNotificationsSection;
@@ -106,14 +111,45 @@ export function ProfileNotificationsSettingsForm({
   const [pushPreferences, setPushPreferences] = useState(
     pushSection.preferences.map((preference) => ({ ...preference }))
   );
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  useEffect(() => {
+    loadPreferences();
+  }, []);
+
+  const loadPreferences = async () => {
+    try {
+      setLoading(true);
+      const prefs = await getNotificationPreferences();
+      
+      setEmailPreferences((current) =>
+        current.map((pref) => {
+          if (pref.id === "order_updates") return { ...pref, enabled: prefs.emailOrderUpdates };
+          if (pref.id === "seasonal_curations") return { ...pref, enabled: prefs.emailPromotions };
+          if (pref.id === "boutique_news") return { ...pref, enabled: prefs.emailNewsletter };
+          return pref;
+        })
+      );
+
+      setPushPreferences((current) =>
+        current.map((pref) => {
+          if (pref.id === "delivery_alerts") return { ...pref, enabled: prefs.smsOrderUpdates };
+          if (pref.id === "artist_updates") return { ...pref, enabled: prefs.pushArtistUpdates };
+          return pref;
+        })
+      );
+    } catch (err) {
+      console.error("Failed to load preferences:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleDiscard = () => {
-    setEmailPreferences(
-      emailSection.preferences.map((preference) => ({ ...preference }))
-    );
-    setPushPreferences(
-      pushSection.preferences.map((preference) => ({ ...preference }))
-    );
+    loadPreferences();
+    setMessage(null);
   };
 
   const handleToggle = (
@@ -135,9 +171,46 @@ export function ProfileNotificationsSettingsForm({
     setPushPreferences((current) => updatePreferences(current));
   };
 
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setMessage(null);
+    setSaving(true);
+
+    try {
+      const orderUpdates = emailPreferences.find((p) => p.id === "order_updates")?.enabled ?? true;
+      const promotions = emailPreferences.find((p) => p.id === "seasonal_curations")?.enabled ?? true;
+      const newsletter = emailPreferences.find((p) => p.id === "boutique_news")?.enabled ?? false;
+      const smsUpdates = pushPreferences.find((p) => p.id === "delivery_alerts")?.enabled ?? false;
+      const artistUpdates = pushPreferences.find((p) => p.id === "artist_updates")?.enabled ?? false;
+
+      await updateNotificationPreferences({
+        emailOrderUpdates: orderUpdates,
+        emailPromotions: promotions,
+        emailNewsletter: newsletter,
+        smsOrderUpdates: smsUpdates,
+        pushArtistUpdates: artistUpdates,
+      });
+
+      setMessage({ type: "success", text: "Notification preferences updated successfully." });
+    } catch (err) {
+      setMessage({
+        type: "error",
+        text: isApiError(err) ? err.message : "Failed to update preferences.",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="h-[600px] animate-pulse rounded-[40px] bg-white/60" />
+    );
+  }
+
   return (
     <form
-      onSubmit={(event) => event.preventDefault()}
+      onSubmit={handleSubmit}
       className="rounded-[40px] border border-white/40 bg-[rgba(255,255,255,0.4)] px-6 py-8 sm:px-8 xl:px-[48.8px] xl:py-[48.8px]"
     >
       <NotificationPreferenceSection
@@ -156,19 +229,31 @@ export function ProfileNotificationsSettingsForm({
         />
       </div>
 
+      {message && (
+        <p
+          className={`mt-6 text-[13px] ${
+            message.type === "success" ? "text-[#166534]" : "text-[#b91c1c]"
+          }`}
+        >
+          {message.text}
+        </p>
+      )}
+
       <div className="mt-[63.5px] flex flex-wrap justify-end gap-4 pt-8">
         <button
           type="button"
           onClick={handleDiscard}
-          className="inline-flex min-h-[52px] min-w-[171px] items-center justify-center rounded-[12px] px-8 text-[14px] font-medium text-[#5c6b5e] transition-colors hover:bg-white/50"
+          disabled={saving}
+          className="inline-flex min-h-[52px] min-w-[171px] items-center justify-center rounded-[12px] px-8 text-[14px] font-medium text-[#5c6b5e] transition-colors hover:bg-white/50 disabled:opacity-50"
         >
           {discardLabel}
         </button>
         <button
           type="submit"
-          className="inline-flex min-h-[52px] min-w-[205px] items-center justify-center rounded-[12px] bg-[#d0bb95] px-10 text-[14px] font-medium text-white transition-colors hover:bg-[#c2a571]"
+          disabled={saving}
+          className="inline-flex min-h-[52px] min-w-[205px] items-center justify-center rounded-[12px] bg-[#d0bb95] px-10 text-[14px] font-medium text-white transition-colors hover:bg-[#c2a571] disabled:opacity-50"
         >
-          {updateLabel}
+          {saving ? "Saving..." : updateLabel}
         </button>
       </div>
     </form>

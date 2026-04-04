@@ -79,12 +79,6 @@ const TWO_FACTOR_OPTIONS: ProfileSecurityToggleOption[] = [
     description: "Receive a security code on your phone when signing in.",
     enabled: false,
   },
-  {
-    id: "authenticator-app",
-    label: "Authenticator App",
-    description: "Use an app like Google Authenticator for added security.",
-    enabled: true,
-  },
 ];
 
 const TWO_FACTOR_STORAGE_KEY = "profile_security_two_factor";

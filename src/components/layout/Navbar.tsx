@@ -2,10 +2,17 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore, useEffect, useRef } from "react";
 import { Flower2, Search, ShoppingCart, User } from "lucide-react";
 import { useCartStore } from "@/lib/cart";
 import { useAuth } from "@/src/contexts";
+
+interface ProductSuggestion {
+  id: number;
+  name: string;
+  price: number;
+  imageUrl?: string;
+}
 
 function subscribeToCartHydration(onStoreChange: () => void) {
   const unsubscribeStart = useCartStore.persist.onHydrate(onStoreChange);
@@ -21,6 +28,13 @@ export function Navbar() {
   const router = useRouter();
   const { user, signOut } = useAuth();
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<ProductSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const debounceTimer = useRef<NodeJS.Timeout>();
+
   const hydrated = useSyncExternalStore(
     subscribeToCartHydration,
     () => useCartStore.persist.hasHydrated(),
@@ -31,6 +45,67 @@ export function Navbar() {
   );
   const displayCount = hydrated ? itemCount : 0;
   const countLabel = displayCount > 99 ? "99+" : String(displayCount);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+
+    if (searchQuery.trim().length < 2) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    debounceTimer.current = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const response = await fetch(
+          `/api/products/search/suggestions?query=${encodeURIComponent(searchQuery)}&size=5`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          setSuggestions(data.content || []);
+          setShowSuggestions(true);
+        }
+      } catch (error) {
+        console.error("Search error:", error);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300);
+
+    return () => {
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
+    };
+  }, [searchQuery]);
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/products?search=${encodeURIComponent(searchQuery)}`);
+      setShowSuggestions(false);
+      setSearchQuery("");
+    }
+  };
+
+  const handleSuggestionClick = (productId: number) => {
+    router.push(`/products/${productId}`);
+    setShowSuggestions(false);
+    setSearchQuery("");
+  };
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
@@ -86,14 +161,66 @@ export function Navbar() {
             </Link>
           ) : null}
 
-          <div className="hidden h-10 w-[250px] items-center rounded-full bg-[#f5f0eb] px-4 sm:flex">
-            <Search className="mr-2 h-3.5 w-3.5 shrink-0 text-[#baafa7]" />
-            <span
-              className="text-[12px] font-light text-[#baafa7]"
-              style={{ fontFamily: "var(--font-inter)" }}
-            >
-              Search arrangements...
-            </span>
+          <div ref={searchRef} className="relative hidden sm:block">
+            <form onSubmit={handleSearchSubmit}>
+              <div className="flex h-10 w-[250px] items-center rounded-full bg-[#f5f0eb] px-4">
+                <Search className="mr-2 h-3.5 w-3.5 shrink-0 text-[#baafa7]" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => searchQuery.length >= 2 && setShowSuggestions(true)}
+                  placeholder="Search arrangements..."
+                  className="w-full bg-transparent text-[12px] font-light text-[#2d2a26] placeholder-[#baafa7] outline-none"
+                  style={{ fontFamily: "var(--font-inter)" }}
+                />
+              </div>
+            </form>
+
+            {showSuggestions && suggestions.length > 0 && (
+              <div className="absolute left-0 right-0 top-full mt-2 rounded-2xl border border-[#eee3dc] bg-white shadow-lg">
+                {suggestions.map((product) => (
+                  <button
+                    key={product.id}
+                    onClick={() => handleSuggestionClick(product.id)}
+                    className="flex w-full items-center gap-3 border-b border-[#f5f0eb] px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-[#fcfaf7]"
+                  >
+                    {product.imageUrl && (
+                      <img
+                        src={product.imageUrl}
+                        alt={product.name}
+                        className="h-10 w-10 rounded-lg object-cover"
+                      />
+                    )}
+                    <div className="flex-1">
+                      <p
+                        className="text-[13px] font-medium text-[#2d2a26]"
+                        style={{ fontFamily: "var(--font-inter)" }}
+                      >
+                        {product.name}
+                      </p>
+                      <p
+                        className="text-[12px] text-[#8a7968]"
+                        style={{ fontFamily: "var(--font-inter)" }}
+                      >
+                        ${product.price.toLocaleString()}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {showSuggestions && searchQuery.length >= 2 && suggestions.length === 0 && !isSearching && (
+              <div className="absolute left-0 right-0 top-full mt-2 rounded-2xl border border-[#eee3dc] bg-white px-4 py-3 shadow-lg">
+                <p
+                  className="text-[12px] text-[#8a7968]"
+                  style={{ fontFamily: "var(--font-inter)" }}
+                >
+                  No products found
+                </p>
+              </div>
+            )}
           </div>
 
           <Link
@@ -127,7 +254,7 @@ export function Navbar() {
               className="hidden h-11 items-center justify-center rounded-full border border-[#ddd1c8] px-5 text-[12px] font-medium text-[#2d2a26] transition-colors hover:bg-[#f5f0eb] disabled:cursor-not-allowed disabled:opacity-50 sm:inline-flex"
               style={{ fontFamily: "var(--font-inter)" }}
             >
-              {isSigningOut ? "Dang xuat..." : "Dang xuat"}
+              {isSigningOut ? "Log out..." : "Log out"}
             </button>
           ) : null}
         </div>

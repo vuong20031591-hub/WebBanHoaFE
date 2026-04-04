@@ -1,4 +1,45 @@
+'use client';
+
+import { useState } from 'react';
+
 export function ContactSection() {
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const handleSubscribe = async () => {
+    if (!email || !email.includes('@')) {
+      setMessage({ type: 'error', text: 'Please enter a valid email address' });
+      return;
+    }
+
+    setLoading(true);
+    setMessage(null);
+
+    try {
+      const response = await fetch('/api/newsletter/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, source: 'bloom_club' }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to subscribe');
+      }
+
+      setMessage({ type: 'success', text: 'Check your email for the Zalo group link!' });
+      setEmail('');
+    } catch (error) {
+      setMessage({ 
+        type: 'error', 
+        text: error instanceof Error ? error.message : 'Failed to subscribe. Please try again.' 
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <section className="bg-[rgba(245,213,217,0.2)] py-24">
       <div className="max-w-[1280px] mx-auto px-[192px]">
@@ -17,21 +58,34 @@ export function ContactSection() {
               Receive styling tips, seasonal updates, and 10% off your first order.
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="w-[320px] h-16 bg-white rounded-3xl border border-[#ece4da] px-4 flex items-center">
-              <input
-                type="email"
-                placeholder="Your email address"
-                className="w-full bg-transparent text-[14px] font-light text-[#2d2a26] placeholder-gray-400 outline-none"
+          <div>
+            <div className="flex items-center gap-3">
+              <div className="w-[320px] h-16 bg-white rounded-3xl border border-[#ece4da] px-4 flex items-center">
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSubscribe()}
+                  placeholder="Your email address"
+                  className="w-full bg-transparent text-[14px] font-light text-[#2d2a26] placeholder-gray-400 outline-none"
+                  style={{ fontFamily: "var(--font-inter)" }}
+                  disabled={loading}
+                />
+              </div>
+              <button
+                onClick={handleSubscribe}
+                disabled={loading}
+                className="bg-[#d0bb95] border border-[rgba(0,0,0,0.1)] text-white text-[16px] font-medium px-8 h-16 rounded-3xl hover:bg-[#c2a571] transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ fontFamily: "var(--font-inter)" }}
-              />
+              >
+                {loading ? 'Subscribing...' : 'Subscribe'}
+              </button>
             </div>
-            <button
-              className="bg-[#d0bb95] border border-[rgba(0,0,0,0.1)] text-white text-[16px] font-medium px-8 h-16 rounded-3xl hover:bg-[#c2a571] transition-colors whitespace-nowrap"
-              style={{ fontFamily: "var(--font-inter)" }}
-            >
-              Subscribe
-            </button>
+            {message && (
+              <p className={`mt-3 text-sm ${message.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+                {message.text}
+              </p>
+            )}
           </div>
         </div>
       </div>

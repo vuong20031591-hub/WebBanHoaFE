@@ -26,9 +26,14 @@ export function Footer() {
             </p>
 
             <div className="mt-8 flex gap-4">
-              <button className="flex h-11 w-11 items-center justify-center rounded-full bg-[#f8f2ec] text-[#8b776b] transition-colors hover:bg-[#eee2d8]">
+              <Link
+                href="https://www.facebook.com/le.ho.minh.quan.2024?locale=vi_VN"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex h-11 w-11 items-center justify-center rounded-full bg-[#f8f2ec] text-[#8b776b] transition-colors hover:bg-[#eee2d8]"
+              >
                 <Facebook className="h-5 w-5" />
-              </button>
+              </Link>
             </div>
           </div>
 
@@ -119,14 +124,18 @@ export function Footer() {
             © 2026 Floral Boutique. All rights reserved.
           </p>
           <div className="flex flex-wrap gap-6">
-            {["Privacy Policy", "Terms of Service", "Shipping Info"].map((item) => (
+            {[
+              { label: "Privacy Policy", href: "/privacy-policy" },
+              { label: "Terms of Service", href: "/terms-of-service" },
+              { label: "Shipping Info", href: "/shipping-info" },
+            ].map((item) => (
               <Link
-                key={item}
-                href="#"
+                key={item.label}
+                href={item.href}
                 className="transition-colors hover:text-[#7b6d64]"
                 style={{ fontFamily: "var(--font-inter)" }}
               >
-                {item}
+                {item.label}
               </Link>
             ))}
           </div>

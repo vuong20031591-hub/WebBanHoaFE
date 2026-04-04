@@ -146,3 +146,96 @@ export interface PaymentReconciliationDTO {
   paid: boolean;
   transactions: string[];
 }
+
+export interface AddressDTO {
+  id: number;
+  fullName: string;
+  phone: string;
+  address: string;
+  city: string;
+  district: string;
+  ward: string | null;
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateAddressRequest {
+  fullName: string;
+  phone: string;
+  address: string;
+  city: string;
+  district: string;
+  ward?: string;
+  isDefault?: boolean;
+}
+
+export interface UpdateAddressRequest {
+  fullName?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  district?: string;
+  ward?: string;
+  isDefault?: boolean;
+}
+
+export interface NotificationPreferencesDTO {
+  emailOrderUpdates: boolean;
+  emailPromotions: boolean;
+  emailNewsletter: boolean;
+  smsOrderUpdates: boolean;
+  pushArtistUpdates: boolean;
+}
+
+export interface UpdateNotificationPreferencesRequest {
+  emailOrderUpdates?: boolean;
+  emailPromotions?: boolean;
+  emailNewsletter?: boolean;
+  smsOrderUpdates?: boolean;
+  pushArtistUpdates?: boolean;
+}
+
+export interface UserPreferencesDTO {
+  language: string;
+  currency: string;
+  theme: string;
+  timezone: string;
+  signatureWrap: boolean;
+  ecoDelivery: boolean;
+  ribbonColor: string;
+}
+
+export interface UpdateUserPreferencesRequest {
+  language?: string;
+  currency?: string;
+  theme?: string;
+  timezone?: string;
+  signatureWrap?: boolean;
+  ecoDelivery?: boolean;
+  ribbonColor?: string;
+}
+
+export interface UserRewardsDTO {
+  points: number;
+  lifetimePoints: number;
+  tier: string;
+  pointsToNextTier: number;
+}
+
+export interface RewardsTransactionDTO {
+  id: number;
+  points: number;
+  type: string;
+  description: string;
+  orderId: number | null;
+  createdAt: string;
+}
+
+export interface RewardsHistoryResponse {
+  content: RewardsTransactionDTO[];
+  totalElements: number;
+  totalPages: number;
+  currentPage: number;
+  size: number;
+}

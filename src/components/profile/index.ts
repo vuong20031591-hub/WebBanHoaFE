@@ -15,3 +15,5 @@ export { ProfileNotificationsSettingsPageContent } from "./ProfileNotificationsS
 export { ProfileNotificationsSettingsForm } from "./ProfileNotificationsSettingsForm";
 export { ProfilePreferencesSettingsPageContent } from "./ProfilePreferencesSettingsPageContent";
 export { ProfilePreferencesSettingsForm } from "./ProfilePreferencesSettingsForm";
+
+export { BloomRewardsModal } from "./BloomRewardsModal";

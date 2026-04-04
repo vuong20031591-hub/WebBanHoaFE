@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { isApiError } from "@/lib/api";
 import {
   ProfileCommunicationPreference,
@@ -28,6 +28,7 @@ interface AccountInfoFormState {
 export interface SaveProfileSettingsPayload {
   fullName: string;
   phone: string;
+  address?: string;
   communicationPreferences: ProfileCommunicationPreference[];
 }
 
@@ -123,6 +124,16 @@ export function ProfileSettingsForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState<SubmitMessage>(null);
 
+  // Sync form state when accountInfo changes (after save or reload)
+  useEffect(() => {
+    setFormState({
+      fullName: accountInfo.fullName,
+      email: accountInfo.email,
+      phone: accountInfo.phone,
+      address: accountInfo.address,
+    });
+  }, [accountInfo.fullName, accountInfo.email, accountInfo.phone, accountInfo.address]);
+
   const handleCancel = () => {
     setFormState({
       fullName: accountInfo.fullName,
@@ -178,13 +189,11 @@ export function ProfileSettingsForm({
       await onSave({
         fullName,
         phone,
+        address: formState.address.trim(),
         communicationPreferences: preferences,
       });
-      setFormState((current) => ({
-        ...current,
-        fullName,
-        phone,
-      }));
+      
+      // Don't reset form state here - let useEffect handle it when accountInfo updates
       setSubmitMessage({
         tone: "success",
         text: "Account settings updated successfully.",
