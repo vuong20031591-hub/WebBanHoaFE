@@ -12,6 +12,36 @@ interface ErrorResponse {
   code?: string;
 }
 
+async function retryRequest<T>(
+  fn: () => Promise<T>,
+  maxRetries = 3,
+  initialDelayMs = 1000
+): Promise<T> {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+
+      const isNetworkError =
+        axios.isAxiosError(error) &&
+        (!error.response || error.code === "ECONNREFUSED" || error.code === "ECONNABORTED");
+
+      if (!isNetworkError || attempt === maxRetries) {
+        throw error;
+      }
+
+      const delayMs = initialDelayMs * Math.pow(2, attempt);
+      console.log(`API retry ${attempt + 1}/${maxRetries} after ${delayMs}ms...`);
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+
+  throw lastError;
+}
+
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -39,6 +69,22 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError<ErrorResponse>) => {
+    const isNetworkError =
+      axios.isAxiosError(error) &&
+      (!error.response || error.code === "ECONNREFUSED" || error.code === "ECONNABORTED");
+
+    if (isNetworkError && error.config) {
+      const retryCount = (error.config as any).__retryCount || 0;
+      
+      if (retryCount < 2) {
+        (error.config as any).__retryCount = retryCount + 1;
+        const delayMs = 2000 * (retryCount + 1);
+        console.log(`API retry ${retryCount + 1}/2 after ${delayMs}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+        return apiClient.request(error.config);
+      }
+    }
+
     if (error.response?.status === 401) {
       clearToken();
       if (typeof window !== "undefined") {
