@@ -36,6 +36,7 @@ export interface ProductDetailDTO {
   stockQuantity: number | null;
   createdAt: string;
   updatedAt: string;
+  deletedAt: string | null;
 }
 
 export interface AdminProductUpsertRequest {

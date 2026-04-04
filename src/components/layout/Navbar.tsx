@@ -33,7 +33,7 @@ export function Navbar() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
-  const debounceTimer = useRef<NodeJS.Timeout>();
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
   const hydrated = useSyncExternalStore(
     subscribeToCartHydration,
@@ -120,18 +120,18 @@ export function Navbar() {
   return (
     <nav className="sticky top-0 z-50 border-b border-[#eee3dc]/90 bg-[#fcfaf7]/95 backdrop-blur">
       <div className="mx-auto flex h-[82px] max-w-[1280px] items-center justify-between px-6 sm:px-8 lg:px-10">
-        <div className="flex items-center gap-8 lg:gap-12">
-          <Link href="/" className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-8 lg:gap-12">
+          <Link href="/" className="flex shrink-0 items-center gap-2">
             <Flower2 className="h-6 w-6 text-[#d0bb95]" />
             <span
-              className="text-[19px] font-medium tracking-[-0.03em] text-[#2d2a26] sm:text-[20px]"
+              className="whitespace-nowrap text-[19px] font-medium tracking-[-0.03em] text-[#2d2a26] sm:text-[20px]"
               style={{ fontFamily: "var(--font-noto-serif)" }}
             >
               Floral Boutique
             </span>
           </Link>
 
-          <div className="hidden items-center gap-8 lg:flex">
+          <div className="hidden shrink-0 items-center gap-8 whitespace-nowrap lg:flex">
             {[
               { label: "Shop All", href: "/products" },
               { label: "Categories", href: "/#categories" },
@@ -141,7 +141,7 @@ export function Navbar() {
               <Link
                 key={item.label}
                 href={item.href}
-                className="text-[14px] font-medium tracking-[0.02em] text-[#2d2a26] transition-colors hover:text-[#c2a07f]"
+                className="whitespace-nowrap text-[14px] font-medium tracking-[0.02em] text-[#2d2a26] transition-colors hover:text-[#c2a07f]"
                 style={{ fontFamily: "var(--font-inter)" }}
               >
                 {item.label}
