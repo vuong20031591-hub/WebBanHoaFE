@@ -31,14 +31,14 @@ export function ProductCard({ product }: ProductCardProps) {
   };
 
   return (
-    <div className="bg-[rgba(255,255,255,0.4)] backdrop-blur-sm rounded-[32px] overflow-hidden w-[329px] shadow-[inset_0px_0.8px_0px_0px_rgba(255,255,255,0.6),inset_0px_-0.8px_0px_0px_rgba(255,255,255,0.6)]">
-      <Link href={`/products/${product.id}`} className="block relative mx-[20.8px] mt-[20.8px] h-[360px]">
+    <div className="bg-[rgba(255,255,255,0.4)] backdrop-blur-sm rounded-[32px] overflow-hidden w-full max-w-[360px] mx-auto shadow-[inset_0px_0.8px_0px_0px_rgba(255,255,255,0.6),inset_0px_-0.8px_0px_0px_rgba(255,255,255,0.6)]">
+      <Link href={`/products/${product.id}`} className="block relative mx-[20.8px] mt-[20.8px] h-[300px] sm:h-[340px] lg:h-[360px]">
         <div className="relative w-full h-full rounded-tl-[200px] rounded-tr-[200px] rounded-bl-[20px] rounded-br-[20px] overflow-hidden shadow-sm bg-[#f7f3ed]">
           <Image
             src={safeImage}
             alt={product.name}
             fill
-            sizes="288px"
+            sizes="(max-width: 640px) 92vw, (max-width: 1024px) 45vw, 288px"
             className="object-cover hover:scale-105 transition-transform duration-500"
           />
         </div>

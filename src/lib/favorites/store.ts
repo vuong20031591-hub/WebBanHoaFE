@@ -4,8 +4,29 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { FavoriteItem, FavoritesState } from "./types";
 
+interface LegacyFavoritesState {
+  activeUserId?: string | null;
+  items?: FavoriteItem[];
+}
+
+const GUEST_BUCKET = "__guest__";
+
+function bucketKey(userId: string | null): string {
+  return userId ?? GUEST_BUCKET;
+}
+
 function exists(items: FavoriteItem[], productId: number): boolean {
   return items.some((item) => item.productId === productId);
+}
+
+function mergeActiveItemsIntoBuckets(
+  state: FavoritesState,
+  nextItems: FavoriteItem[]
+): Record<string, FavoriteItem[]> {
+  return {
+    ...state.favoritesByUser,
+    [bucketKey(state.activeUserId)]: nextItems,
+  };
 }
 
 export const useFavoritesStore = create<FavoritesState>()(
@@ -13,6 +34,9 @@ export const useFavoritesStore = create<FavoritesState>()(
     (set, get) => ({
       activeUserId: null,
       items: [],
+      favoritesByUser: {
+        [GUEST_BUCKET]: [],
+      },
 
       setActiveUser: (userId) =>
         set((state) => {
@@ -20,9 +44,13 @@ export const useFavoritesStore = create<FavoritesState>()(
             return state;
           }
 
+          const bucketsWithCurrent = mergeActiveItemsIntoBuckets(state, state.items);
+          const nextItems = bucketsWithCurrent[bucketKey(userId)] ?? [];
+
           return {
             activeUserId: userId,
-            items: [],
+            items: nextItems,
+            favoritesByUser: bucketsWithCurrent,
           };
         }),
 
@@ -31,32 +59,73 @@ export const useFavoritesStore = create<FavoritesState>()(
           if (exists(state.items, item.productId)) {
             return state;
           }
-          return { items: [item, ...state.items] };
+
+          const nextItems = [item, ...state.items];
+          return {
+            items: nextItems,
+            favoritesByUser: mergeActiveItemsIntoBuckets(state, nextItems),
+          };
         }),
 
       removeFavorite: (productId) =>
-        set((state) => ({
-          items: state.items.filter((item) => item.productId !== productId),
-        })),
+        set((state) => {
+          const nextItems = state.items.filter((item) => item.productId !== productId);
+          return {
+            items: nextItems,
+            favoritesByUser: mergeActiveItemsIntoBuckets(state, nextItems),
+          };
+        }),
 
       toggleFavorite: (item) =>
         set((state) => {
           if (exists(state.items, item.productId)) {
+            const nextItems = state.items.filter(
+              (favorite) => favorite.productId !== item.productId
+            );
+
             return {
-              items: state.items.filter(
-                (favorite) => favorite.productId !== item.productId
-              ),
+              items: nextItems,
+              favoritesByUser: mergeActiveItemsIntoBuckets(state, nextItems),
             };
           }
-          return { items: [item, ...state.items] };
+
+          const nextItems = [item, ...state.items];
+          return {
+            items: nextItems,
+            favoritesByUser: mergeActiveItemsIntoBuckets(state, nextItems),
+          };
         }),
 
       isFavorite: (productId) => exists(get().items, productId),
 
-      clearFavorites: () => set({ items: [] }),
+      clearFavorites: () =>
+        set((state) => ({
+          items: [],
+          favoritesByUser: mergeActiveItemsIntoBuckets(state, []),
+        })),
     }),
     {
       name: "floral-favorites-storage",
+      version: 2,
+      migrate: (persistedState: unknown, version: number) => {
+        const legacy = persistedState as LegacyFavoritesState;
+
+        if (version < 2 && legacy && Array.isArray(legacy.items)) {
+          const activeUserId = legacy.activeUserId ?? null;
+          const key = bucketKey(activeUserId);
+
+          return {
+            activeUserId,
+            items: legacy.items,
+            favoritesByUser: {
+              [GUEST_BUCKET]: activeUserId ? [] : legacy.items,
+              [key]: legacy.items,
+            },
+          };
+        }
+
+        return persistedState;
+      },
     }
   )
 );

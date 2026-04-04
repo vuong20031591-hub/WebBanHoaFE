@@ -10,6 +10,7 @@ export interface FavoriteItem {
 export interface FavoritesState {
   activeUserId: string | null;
   items: FavoriteItem[];
+  favoritesByUser: Record<string, FavoriteItem[]>;
   setActiveUser: (userId: string | null) => void;
   addFavorite: (item: FavoriteItem) => void;
   removeFavorite: (productId: number) => void;

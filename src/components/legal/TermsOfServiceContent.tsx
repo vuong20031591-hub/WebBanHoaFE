@@ -151,8 +151,8 @@ export default function TermsOfServiceContent() {
                   <div className="absolute top-0 right-0 w-32 h-32 bg-[#7d562d33] rounded-full blur-3xl" />
                   <div className="relative space-y-8">
                     <p className="font-serif text-lg leading-[29.25px] text-[#f5f5f4]">
-                      "Nature is unpredictable, and so is life. We strive for perfection but
-                      acknowledge the variables beyond our control."
+                      &ldquo;Nature is unpredictable, and so is life. We strive for perfection but
+                      acknowledge the variables beyond our control.&rdquo;
                     </p>
                     <div className="space-y-4">
                       <p className="text-sm leading-5 text-[#a8a29e]">

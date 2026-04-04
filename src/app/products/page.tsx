@@ -340,10 +340,10 @@ function ProductsPageContent() {
   };
 
   return (
-    <div className="bg-[#f7f3ed] min-h-screen">
+    <div className="min-h-screen bg-[#f7f3ed]">
       <Navbar />
 
-      <div className="bg-[#f7f3ed] h-[245px] flex items-center justify-center">
+      <div className="flex min-h-[220px] items-center justify-center bg-[#f7f3ed] px-5 py-10 sm:min-h-[245px] sm:px-6">
         <div className="text-center">
           <p
             className="text-[#d0bb95] text-[10px] font-bold tracking-[4px] uppercase mb-4"
@@ -352,13 +352,13 @@ function ProductsPageContent() {
             THE CURATED GALLERY
           </p>
           <h1
-            className="text-black text-[72px] font-light leading-[72px] tracking-[4px]"
+            className="text-black text-[38px] font-light leading-[1.1] tracking-[2px] sm:text-[54px] sm:tracking-[3px] lg:text-[72px] lg:leading-[72px] lg:tracking-[4px]"
             style={{ fontFamily: "var(--font-noto-serif)" }}
           >
             {headingTitle}
           </h1>
           <p
-            className="text-[rgba(92,107,94,0.8)] text-[18px] font-light leading-[29.25px] mt-3 max-w-[580px]"
+            className="mt-3 max-w-[580px] text-[15px] font-light leading-7 text-[rgba(92,107,94,0.8)] sm:text-[18px] sm:leading-[29.25px]"
             style={{ fontFamily: "var(--font-inter)" }}
           >
             {headingDescription}
@@ -366,9 +366,9 @@ function ProductsPageContent() {
         </div>
       </div>
 
-      <div className="max-w-[1280px] mx-auto px-[54px] py-14">
+      <div className="mx-auto w-full max-w-[1280px] px-4 py-8 sm:px-6 sm:py-10 lg:px-[54px] lg:py-14">
         {showCategoryLanding ? (
-          <div className="flex gap-16">
+          <div className="flex flex-col gap-8 lg:flex-row lg:gap-16">
             <ProductFilter
               name={nameInput}
               categoryId={filters.categoryId}
@@ -380,7 +380,7 @@ function ProductsPageContent() {
 
             <div className="flex-1">
               {isLoadingCategories || isLoadingCategoryCovers ? (
-                <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
                   {Array.from({ length: 6 }, (_, index) => (
                     <div
                       key={index}
@@ -393,7 +393,7 @@ function ProductsPageContent() {
                   <p className="text-[14px] text-[#7b7268]">No categories available right now.</p>
                 </div>
               ) : (
-                <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
                   {categories.map((category) => (
                     <button
                       key={category.id}
@@ -423,7 +423,7 @@ function ProductsPageContent() {
             </div>
           </div>
         ) : (
-          <div className="flex gap-16">
+          <div className="flex flex-col gap-8 lg:flex-row lg:gap-16">
             <ProductFilter
               name={nameInput}
               categoryId={filters.categoryId}
@@ -490,7 +490,7 @@ function ProductsPageContent() {
                   </p>
                 </div>
               ) : isLoadingProducts ? (
-                <div className="grid grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
                   {Array.from({ length: PAGE_SIZE }, (_, index) => (
                     <div
                       key={index}
@@ -510,18 +510,18 @@ function ProductsPageContent() {
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
                     {pageData.content.map((product) => (
                       <ProductCard key={product.id} product={product} />
                     ))}
                   </div>
 
                   {pageData.totalPages > 1 && (
-                    <div className="mt-10 flex items-center justify-center gap-3">
+                    <div className="mt-10 flex items-center justify-center gap-2 overflow-x-auto pb-2 sm:gap-3">
                       <button
                         disabled={pageData.first}
                         onClick={() => handlePageChange(pageData.number - 1)}
-                        className="w-10 h-10 rounded-full border border-[rgba(208,187,149,0.3)] text-[#d0bb95] hover:bg-[rgba(208,187,149,0.1)] transition-colors disabled:opacity-30 flex items-center justify-center"
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[rgba(208,187,149,0.3)] text-[#d0bb95] transition-colors hover:bg-[rgba(208,187,149,0.1)] disabled:opacity-30"
                         style={{ fontFamily: "var(--font-inter)" }}
                       >
                         ‹
@@ -530,7 +530,7 @@ function ProductsPageContent() {
                         <button
                           key={index}
                           onClick={() => handlePageChange(index)}
-                          className={`w-10 h-10 rounded-full text-[14px] font-medium transition-colors ${
+                          className={`h-10 w-10 shrink-0 rounded-full text-[14px] font-medium transition-colors ${
                             pageData.number === index
                               ? "bg-[#d0bb95] text-white"
                               : "border border-[rgba(208,187,149,0.3)] text-[#d0bb95] hover:bg-[rgba(208,187,149,0.1)]"
@@ -543,7 +543,7 @@ function ProductsPageContent() {
                       <button
                         disabled={pageData.last}
                         onClick={() => handlePageChange(pageData.number + 1)}
-                        className="w-10 h-10 rounded-full border border-[rgba(208,187,149,0.3)] text-[#d0bb95] hover:bg-[rgba(208,187,149,0.1)] transition-colors disabled:opacity-30 flex items-center justify-center"
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[rgba(208,187,149,0.3)] text-[#d0bb95] transition-colors hover:bg-[rgba(208,187,149,0.1)] disabled:opacity-30"
                         style={{ fontFamily: "var(--font-inter)" }}
                       >
                         ›

@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Search, ChevronDown, Truck, Flower2, RotateCcw, MessageCircle, Phone } from "lucide-react";
-import { Navbar, Footer } from "@/components/layout";
+import { Navbar } from "@/components/layout";
 
 /* ─────────────────────────────────────────────
    FAQ Data

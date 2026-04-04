@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useSyncExternalStore, useEffect, useRef } from "react";
@@ -33,7 +34,7 @@ export function Navbar() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
-  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const hydrated = useSyncExternalStore(
     subscribeToCartHydration,
@@ -186,9 +187,12 @@ export function Navbar() {
                     className="flex w-full items-center gap-3 border-b border-[#f5f0eb] px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-[#fcfaf7]"
                   >
                     {product.imageUrl && (
-                      <img
+                      <Image
                         src={product.imageUrl}
                         alt={product.name}
+                        width={40}
+                        height={40}
+                        unoptimized
                         className="h-10 w-10 rounded-lg object-cover"
                       />
                     )}

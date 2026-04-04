@@ -10,6 +10,7 @@ const PROFILE_TABS = [
   { id: "orders", label: "My Orders", href: "/profile", active: false },
   { id: "favorites", label: "Favorites", href: "/profile/favorites", active: true },
   { id: "settings", label: "Settings", href: "/profile/settings", active: false },
+  { id: "addresses", label: "Addresses", href: "/profile/addresses", active: false },
 ] as const;
 
 export function ProfileFavoritesPageContent() {

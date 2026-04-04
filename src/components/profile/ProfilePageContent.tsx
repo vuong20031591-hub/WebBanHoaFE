@@ -14,6 +14,7 @@ const PROFILE_TABS = [
   { id: "orders", label: "My Orders", href: "/profile", active: true },
   { id: "favorites", label: "Favorites", href: "/profile/favorites", active: false },
   { id: "settings", label: "Settings", href: "/profile/settings", active: false },
+  { id: "addresses", label: "Addresses", href: "/profile/addresses", active: false },
 ] as const;
 
 function ProfileStateCard({

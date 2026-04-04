@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Flower2, Check, Package, Truck } from 'lucide-react';
+import { Check, Package } from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 

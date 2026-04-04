@@ -7,17 +7,22 @@ import { DEFAULT_PRODUCT_IMAGE } from "@/lib/mappers/product";
 
 interface OrderSummaryProps {
   items: CartItem[];
+  redeemedPoints?: number;
+  rewardsDiscount?: number;
   onPlaceOrder?: () => void;
   isSubmitting?: boolean;
 }
 
 export function OrderSummary({
   items,
+  redeemedPoints = 0,
+  rewardsDiscount = 0,
   onPlaceOrder,
   isSubmitting = false,
 }: OrderSummaryProps) {
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const total = subtotal;
+  const appliedDiscount = Math.max(0, Math.min(rewardsDiscount, subtotal));
+  const total = subtotal - appliedDiscount;
 
   return (
     <aside className="rounded-[40px] bg-white p-10">
@@ -78,6 +83,23 @@ export function OrderSummary({
             {formatCurrency(subtotal)}
           </span>
         </div>
+
+        {appliedDiscount > 0 ? (
+          <div className="flex items-center justify-between">
+            <span
+              className="text-[12px] font-medium leading-4 tracking-[0.3px] text-[#9ca3af]"
+              style={{ fontFamily: "var(--font-inter)" }}
+            >
+              BLOOM REWARDS ({redeemedPoints} PTS)
+            </span>
+            <span
+              className="text-[12px] font-medium leading-4 tracking-[0.3px] text-[#166534]"
+              style={{ fontFamily: "var(--font-inter)" }}
+            >
+              -{formatCurrency(appliedDiscount)}
+            </span>
+          </div>
+        ) : null}
 
         <div className="flex items-center justify-between border-t border-[#f3f0ec] pt-4">
           <span

@@ -88,6 +88,7 @@ export type OrderPaymentMethod = "COD" | "VIETQR" | "SEPAY";
 export interface CreateOrderFromCartRequest {
   paymentMethod: OrderPaymentMethod;
   addressId?: number;
+  redeemPoints?: number;
 }
 
 export interface OrderItemDTO {
@@ -103,6 +104,8 @@ export interface OrderDTO {
   id: number;
   userId: string;
   totalAmount: number;
+  redeemedPoints: number;
+  rewardsDiscountAmount: number;
   paymentMethod: OrderPaymentMethod;
   status: string;
   items: OrderItemDTO[];
@@ -204,7 +207,6 @@ export interface UserPreferencesDTO {
   timezone: string;
   signatureWrap: boolean;
   ecoDelivery: boolean;
-  ribbonColor: string;
 }
 
 export interface UpdateUserPreferencesRequest {
@@ -214,7 +216,6 @@ export interface UpdateUserPreferencesRequest {
   timezone?: string;
   signatureWrap?: boolean;
   ecoDelivery?: boolean;
-  ribbonColor?: string;
 }
 
 export interface UserRewardsDTO {

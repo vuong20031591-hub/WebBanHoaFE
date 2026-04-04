@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useState, useEffect } from "react";
 import { isApiError } from "@/lib/api";
 import {
@@ -15,6 +16,7 @@ interface ProfileSettingsFormProps {
   communicationPreferences: ProfileCommunicationPreference[];
   cancelLabel: string;
   saveLabel: string;
+  manageAddressesHref?: string;
   onSave?: (payload: SaveProfileSettingsPayload) => Promise<void>;
 }
 
@@ -110,6 +112,7 @@ export function ProfileSettingsForm({
   communicationPreferences,
   cancelLabel,
   saveLabel,
+  manageAddressesHref,
   onSave,
 }: ProfileSettingsFormProps) {
   const [formState, setFormState] = useState<AccountInfoFormState>({
@@ -285,6 +288,17 @@ export function ProfileSettingsForm({
               }))
             }
           />
+          {manageAddressesHref ? (
+            <div className="lg:col-start-2 -mt-4 px-1 text-[11px] text-[rgba(92,107,94,0.8)]">
+              Need full address management?
+              <Link
+                href={manageAddressesHref}
+                className="ml-1 font-medium text-[#5c6b5e] underline underline-offset-2 hover:text-[#2d2a26]"
+              >
+                Open Address Book
+              </Link>
+            </div>
+          ) : null}
         </div>
       </section>
 

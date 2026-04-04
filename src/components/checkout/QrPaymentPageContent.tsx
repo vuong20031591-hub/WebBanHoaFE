@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import QRCode from "qrcode";
 import { Clock3, ExternalLink, ShieldCheck } from "lucide-react";
@@ -18,23 +18,47 @@ import {
 import { OrderDTO, PaymentCheckoutDTO, PaymentReconciliationDTO } from "@/lib/api/types";
 import { useAuth } from "@/src/contexts";
 
-const PAYMENT_STEPS = [
-  {
-    label: "STEP 01",
-    title: "Scan Code",
-    description: "Use your banking app to scan the QR code shown here.",
-  },
-  {
-    label: "STEP 02",
-    title: "Authenticate",
-    description: "Confirm the amount and transfer message exactly as provided.",
-  },
-  {
-    label: "STEP 03",
-    title: "Success",
-    description: "Once payment is detected, we will move you to confirmation automatically.",
-  },
-] as const;
+type CheckoutProvider = "VIETQR" | "SEPAY";
+
+function getPaymentSteps(provider: CheckoutProvider) {
+  if (provider === "SEPAY") {
+    return [
+      {
+        label: "STEP 01",
+        title: "Open SePay",
+        description: "Open the hosted checkout link or scan the code to start payment.",
+      },
+      {
+        label: "STEP 02",
+        title: "Transfer",
+        description: "Complete transfer exactly with the provided amount and content.",
+      },
+      {
+        label: "STEP 03",
+        title: "Success",
+        description: "We auto-confirm as soon as SePay reports a successful transaction.",
+      },
+    ] as const;
+  }
+
+  return [
+    {
+      label: "STEP 01",
+      title: "Scan VietQR",
+      description: "Use your banking app to scan the QR code shown here.",
+    },
+    {
+      label: "STEP 02",
+      title: "Authenticate",
+      description: "Confirm the amount and transfer message exactly as provided.",
+    },
+    {
+      label: "STEP 03",
+      title: "Success",
+      description: "Once payment is detected, we will move you to confirmation automatically.",
+    },
+  ] as const;
+}
 
 function formatTimer(totalSeconds: number): string {
   const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
@@ -75,10 +99,15 @@ function QrStateCard({
   );
 }
 
-export function QrPaymentPageContent() {
-  const router = useRouter();
+export function QrPaymentPageContent({
+  provider = "VIETQR",
+}: {
+  provider?: CheckoutProvider;
+}) {
   const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
+  const paymentSteps = getPaymentSteps(provider);
+  const providerLabel = provider === "SEPAY" ? "SePay" : "VietQR";
   const [order, setOrder] = useState<OrderDTO | null>(null);
   const [items, setItems] = useState<OrderDisplayItem[]>([]);
   const [checkout, setCheckout] = useState<PaymentCheckoutDTO | null>(null);
@@ -108,9 +137,14 @@ export function QrPaymentPageContent() {
       setError(null);
 
       try {
+        const checkoutPromise =
+          provider === "SEPAY"
+            ? paymentsApi.createSePayCheckout(orderId)
+            : paymentsApi.createVietQrCheckout(orderId);
+
         const [nextOrder, nextCheckout, nextReconciliation] = await Promise.all([
           ordersApi.getById(orderId),
-          paymentsApi.createVietQrCheckout(orderId),
+          checkoutPromise,
           paymentsApi.reconcile(orderId),
         ]);
         const productsById = await loadOrderProducts(
@@ -140,7 +174,7 @@ export function QrPaymentPageContent() {
         setError(
           isApiError(fetchError)
             ? fetchError.message
-            : "Unable to load QR checkout right now."
+            : `Unable to load ${providerLabel} checkout right now.`
         );
       } finally {
         if (active) {
@@ -154,7 +188,7 @@ export function QrPaymentPageContent() {
     return () => {
       active = false;
     };
-  }, [authLoading, orderId, user]);
+  }, [authLoading, orderId, provider, providerLabel, user]);
 
   useEffect(() => {
     if (!checkout || remainingSeconds <= 0) {
@@ -222,13 +256,15 @@ export function QrPaymentPageContent() {
         return;
       }
 
-      if (!checkout?.qrContent) {
+      const qrPayload = checkout?.qrContent || checkout?.checkoutUrl;
+
+      if (!qrPayload) {
         setQrImageSrc(null);
         return;
       }
 
       try {
-        const nextQrImageSrc = await QRCode.toDataURL(checkout.qrContent, {
+        const nextQrImageSrc = await QRCode.toDataURL(qrPayload, {
           width: 480,
           margin: 1,
           errorCorrectionLevel: "M",
@@ -266,7 +302,7 @@ export function QrPaymentPageContent() {
             <div className="mx-auto max-w-[760px]">
               <QrStateCard
                 title="Sign in to continue"
-                description="QR checkout is generated from the real payment API and requires an authenticated session."
+                description={`${providerLabel} checkout is generated from the real payment API and requires an authenticated session.`}
                 action={
                   <Link
                     href="/signin"
@@ -280,8 +316,8 @@ export function QrPaymentPageContent() {
           ) : !order || !checkout ? (
             <div className="mx-auto max-w-[760px]">
               <QrStateCard
-                title="QR payment unavailable"
-                description={error ?? "Create a real order first to receive a QR checkout payload."}
+                title={`${providerLabel} payment unavailable`}
+                description={error ?? `Create a real order first to receive a ${providerLabel} checkout payload.`}
                 action={
                   <Link
                     href="/checkout"
@@ -299,7 +335,7 @@ export function QrPaymentPageContent() {
                   className="text-[48px] font-medium leading-none text-[#4b3d35] sm:text-[62px]"
                   style={{ fontFamily: "var(--font-cormorant)" }}
                 >
-                  Complete Your Purchase
+                  Complete Your {providerLabel} Payment
                 </h1>
                 <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.38em] text-[#d0b59c]">
                   Waiting For Secure Transaction Confirmation
@@ -308,7 +344,7 @@ export function QrPaymentPageContent() {
 
               <div className="mt-10 grid gap-8 xl:grid-cols-[180px_minmax(0,420px)_240px] xl:items-start xl:justify-center">
                 <section className="order-2 space-y-10 text-center xl:order-1 xl:pt-8">
-                  {PAYMENT_STEPS.map((step) => (
+                  {paymentSteps.map((step) => (
                     <article key={step.label}>
                       <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-[#d0b59c]">
                         {step.label}
@@ -375,8 +411,9 @@ export function QrPaymentPageContent() {
                     </div>
 
                     <p className="mx-auto mt-7 max-w-[300px] text-[13px] leading-7 text-[#8b776b]">
-                      Use a VietQR-compatible banking app to scan and pay. Keep the transfer
-                      content unchanged so the order can be matched automatically.
+                      {provider === "SEPAY"
+                        ? "Use SePay checkout or scan the generated code. Keep transfer content unchanged so the order can be matched automatically."
+                        : "Use a VietQR-compatible banking app to scan and pay. Keep transfer content unchanged so the order can be matched automatically."}
                     </p>
 
                     <div className="mt-7 flex items-center justify-center gap-6 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#ad8e7c]">

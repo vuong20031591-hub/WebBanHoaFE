@@ -72,10 +72,10 @@ export function Footer() {
             </p>
             <div className="mt-6 flex flex-col gap-4">
               {[
-                { label: "Weddings", href: "/products" },
-                { label: "Occasions", href: "/products" },
-                { label: "Corporate", href: "/products" },
-                { label: "Our Story", href: "/#our-story" },
+                { label: "Weddings", href: "/events#weddings" },
+                { label: "Occasions", href: "/events#occasions" },
+                { label: "Corporate", href: "/events#corporate" },
+                { label: "Our Story", href: "/our-story" },
               ].map((item) => (
                 <Link
                   key={item.label}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { ChevronDown } from "lucide-react";
 import { getUserAddresses, setPrimaryAddress, AddressDTO } from "@/lib/api";
 
@@ -14,11 +14,7 @@ export function AddressSelector({ onAddressChange }: AddressSelectorProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadAddresses();
-  }, []);
-
-  const loadAddresses = async () => {
+  const loadAddresses = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -39,7 +35,11 @@ export function AddressSelector({ onAddressChange }: AddressSelectorProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [onAddressChange]);
+
+  useEffect(() => {
+    loadAddresses();
+  }, [loadAddresses]);
 
   const handleSetPrimary = async (id: number) => {
     try {

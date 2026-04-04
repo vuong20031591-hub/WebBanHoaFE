@@ -13,7 +13,7 @@ import {
 
 interface ProfileNotificationsSettingsFormProps {
   emailSection: ProfileNotificationsSection;
-  pushSection: ProfileNotificationsSection;
+  smsSection: ProfileNotificationsSection;
   discardLabel: string;
   updateLabel: string;
 }
@@ -101,15 +101,15 @@ function NotificationPreferenceSection({
 
 export function ProfileNotificationsSettingsForm({
   emailSection,
-  pushSection,
+  smsSection,
   discardLabel,
   updateLabel,
 }: ProfileNotificationsSettingsFormProps) {
   const [emailPreferences, setEmailPreferences] = useState(
     emailSection.preferences.map((preference) => ({ ...preference }))
   );
-  const [pushPreferences, setPushPreferences] = useState(
-    pushSection.preferences.map((preference) => ({ ...preference }))
+  const [smsPreferences, setSmsPreferences] = useState(
+    smsSection.preferences.map((preference) => ({ ...preference }))
   );
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -122,6 +122,7 @@ export function ProfileNotificationsSettingsForm({
   const loadPreferences = async () => {
     try {
       setLoading(true);
+      setMessage(null);
       const prefs = await getNotificationPreferences();
       
       setEmailPreferences((current) =>
@@ -133,15 +134,17 @@ export function ProfileNotificationsSettingsForm({
         })
       );
 
-      setPushPreferences((current) =>
+      setSmsPreferences((current) =>
         current.map((pref) => {
           if (pref.id === "delivery_alerts") return { ...pref, enabled: prefs.smsOrderUpdates };
-          if (pref.id === "artist_updates") return { ...pref, enabled: prefs.pushArtistUpdates };
           return pref;
         })
       );
     } catch (err) {
-      console.error("Failed to load preferences:", err);
+      setMessage({
+        type: "error",
+        text: isApiError(err) ? err.message : "Failed to load notification preferences.",
+      });
     } finally {
       setLoading(false);
     }
@@ -153,7 +156,7 @@ export function ProfileNotificationsSettingsForm({
   };
 
   const handleToggle = (
-    sectionId: "email" | "push",
+    sectionId: "email" | "sms",
     preferenceId: string
   ) => {
     const updatePreferences = (preferences: ProfileNotificationsPreference[]) =>
@@ -168,7 +171,7 @@ export function ProfileNotificationsSettingsForm({
       return;
     }
 
-    setPushPreferences((current) => updatePreferences(current));
+    setSmsPreferences((current) => updatePreferences(current));
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -180,15 +183,13 @@ export function ProfileNotificationsSettingsForm({
       const orderUpdates = emailPreferences.find((p) => p.id === "order_updates")?.enabled ?? true;
       const promotions = emailPreferences.find((p) => p.id === "seasonal_curations")?.enabled ?? true;
       const newsletter = emailPreferences.find((p) => p.id === "boutique_news")?.enabled ?? false;
-      const smsUpdates = pushPreferences.find((p) => p.id === "delivery_alerts")?.enabled ?? false;
-      const artistUpdates = pushPreferences.find((p) => p.id === "artist_updates")?.enabled ?? false;
+      const smsUpdates = smsPreferences.find((p) => p.id === "delivery_alerts")?.enabled ?? false;
 
       await updateNotificationPreferences({
         emailOrderUpdates: orderUpdates,
         emailPromotions: promotions,
         emailNewsletter: newsletter,
         smsOrderUpdates: smsUpdates,
-        pushArtistUpdates: artistUpdates,
       });
 
       setMessage({ type: "success", text: "Notification preferences updated successfully." });
@@ -223,10 +224,14 @@ export function ProfileNotificationsSettingsForm({
 
       <div className="mt-[48px]">
         <NotificationPreferenceSection
-          section={pushSection}
-          preferences={pushPreferences}
-          onToggle={(id) => handleToggle("push", id)}
+          section={smsSection}
+          preferences={smsPreferences}
+          onToggle={(id) => handleToggle("sms", id)}
         />
+
+        <div className="mt-8 rounded-2xl border border-dashed border-[rgba(92,107,94,0.2)] bg-white/40 px-5 py-4 text-[13px] leading-6 text-[#5c6b5e]">
+          Push notifications are not available yet. Toggle controls are hidden until the push delivery workflow is fully integrated.
+        </div>
       </div>
 
       {message && (
