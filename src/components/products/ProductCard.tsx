@@ -4,7 +4,7 @@ import { Heart, Plus } from "lucide-react";
 import { Product } from "@/lib/products";
 import { createCartItem, useCartStore } from "@/lib/cart";
 import { formatCurrency } from "@/lib/currency";
-import { resolveProductImage } from "@/lib/mappers/product";
+import { DEFAULT_PRODUCT_IMAGE } from "@/lib/mappers/product";
 import { useFavoritesStore } from "@/lib/favorites";
 
 interface ProductCardProps {
@@ -12,7 +12,7 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product }: ProductCardProps) {
-  const safeImage = resolveProductImage(product.image);
+  const safeImage = product.image || DEFAULT_PRODUCT_IMAGE;
   const addItem = useCartStore((state) => state.addItem);
   const liked = useFavoritesStore((state) =>
     state.items.some((item) => item.productId === product.id)

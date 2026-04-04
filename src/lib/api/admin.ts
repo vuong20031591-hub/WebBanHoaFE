@@ -1,6 +1,8 @@
 import { apiClient } from "./client";
 import {
+  AdminCreateOrderRequest,
   AdminOrderStatsDTO,
+  AdminProductUpsertRequest,
   OrderDTO,
   PagedResponse,
   ProductDetailDTO,
@@ -17,22 +19,18 @@ export interface AdminOrderQueryParams {
   sortDir?: "ASC" | "DESC";
 }
 
-export type UpdatableOrderStatus = "PENDING" | "CONFIRMED" | "CANCELLED";
-
-export interface AdminProductUpsertPayload {
-  name: string;
-  price: number;
-  description?: string | null;
-  image?: string | null;
-  stockQuantity: number;
-  categoryId: number;
-}
-
 const ADMIN_HEADERS = {
   "X-Role": "ADMIN",
 };
 
 export const adminOrdersApi = {
+  async createOrder(request: AdminCreateOrderRequest): Promise<OrderDTO> {
+    const { data } = await apiClient.post<OrderDTO>("/api/admin/orders", request, {
+      headers: ADMIN_HEADERS,
+    });
+    return data;
+  },
+
   async getStats(): Promise<AdminOrderStatsDTO> {
     const { data } = await apiClient.get<AdminOrderStatsDTO>("/api/admin/orders/stats", {
       headers: ADMIN_HEADERS,
@@ -49,49 +47,13 @@ export const adminOrdersApi = {
     });
     return data;
   },
-
-  async updateOrderStatus(
-    orderId: number,
-    status: UpdatableOrderStatus
-  ): Promise<OrderDTO> {
-    const { data } = await apiClient.put<OrderDTO>(
-      `/api/admin/orders/${orderId}/status`,
-      { status },
-      {
-        headers: ADMIN_HEADERS,
-      }
-    );
-    return data;
-  },
 };
 
 export const adminProductsApi = {
-  async createProduct(
-    payload: AdminProductUpsertPayload
-  ): Promise<ProductDetailDTO> {
-    const { data } = await apiClient.post<ProductDetailDTO>(
-      "/api/admin/products",
-      payload,
-      { headers: ADMIN_HEADERS }
-    );
-    return data;
-  },
-
-  async updateProduct(
-    productId: number,
-    payload: AdminProductUpsertPayload
-  ): Promise<ProductDetailDTO> {
-    const { data } = await apiClient.put<ProductDetailDTO>(
-      `/api/admin/products/${productId}`,
-      payload,
-      { headers: ADMIN_HEADERS }
-    );
-    return data;
-  },
-
-  async deleteProduct(productId: number): Promise<void> {
-    await apiClient.delete(`/api/admin/products/${productId}`, {
+  async createProduct(request: AdminProductUpsertRequest): Promise<ProductDetailDTO> {
+    const { data } = await apiClient.post<ProductDetailDTO>("/api/admin/products", request, {
       headers: ADMIN_HEADERS,
     });
+    return data;
   },
 };

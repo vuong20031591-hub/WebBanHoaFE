@@ -3,13 +3,18 @@ import { apiClient } from "@/lib/api/client";
 import type {
   AuthUser,
   ChangePasswordRequest,
+  ForgotPasswordRequest,
   LoginRequest,
   LoginResponse,
   RegisterRequest,
+  ResetPasswordWithCodeRequest,
   UpdateProfileRequest,
 } from "./types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
+const API_BASE_URL =
+  typeof window !== "undefined"
+    ? ""
+    : process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
 const authClient = axios.create({
   baseURL: API_BASE_URL,
@@ -58,5 +63,13 @@ export const authApi = {
 
   async changePassword(data: ChangePasswordRequest): Promise<void> {
     await apiClient.post("/api/auth/change-password", data);
+  },
+
+  async requestForgotPasswordCode(data: ForgotPasswordRequest): Promise<void> {
+    await authClient.post("/api/auth/forgot-password/request", data);
+  },
+
+  async resetPasswordWithCode(data: ResetPasswordWithCodeRequest): Promise<void> {
+    await authClient.post("/api/auth/forgot-password/confirm", data);
   },
 };

@@ -21,7 +21,6 @@ import type { AdminOrderStatsDTO, OrderDTO } from "@/lib/api/types";
 import { formatCurrency } from "@/lib/currency";
 import { useAuth } from "@/src/contexts";
 import { loadOrderProducts } from "@/lib/mappers";
-import { DEFAULT_PRODUCT_IMAGE } from "@/lib/mappers/product";
 
 interface MetricCard {
   id: string;
@@ -43,7 +42,7 @@ interface OrderRow {
   image: string;
 }
 
-const FALLBACK_IMAGE = DEFAULT_PRODUCT_IMAGE;
+const FALLBACK_IMAGE = "/images/hero-main.png";
 
 function DashboardStateCard({
   title,

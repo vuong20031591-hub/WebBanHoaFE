@@ -25,12 +25,11 @@ import { adminOrdersApi, isApiError, productsApi } from "@/lib/api";
 import type { AdminOrderStatsDTO, OrderDTO, ProductDTO } from "@/lib/api/types";
 import { formatCurrency } from "@/lib/currency";
 import { loadOrderProducts } from "@/lib/mappers";
-import { DEFAULT_PRODUCT_IMAGE } from "@/lib/mappers/product";
 import { useAuth } from "@/src/contexts";
 
 const WEEKDAY_LABELS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"] as const;
 const LOW_STOCK_THRESHOLD = 15;
-const FALLBACK_IMAGE = DEFAULT_PRODUCT_IMAGE;
+const FALLBACK_IMAGE = "/images/hero-main.png";
 
 function formatDashboardCurrency(value: number): string {
   const safeValue = Number.isFinite(value) ? Math.round(value) : 0;

@@ -8,9 +8,8 @@ export interface FavoriteItem {
 }
 
 export interface FavoritesState {
-  items: FavoriteItem[];
   activeUserId: string | null;
-  itemsByUserId: Record<string, FavoriteItem[]>;
+  items: FavoriteItem[];
   setActiveUser: (userId: string | null) => void;
   addFavorite: (item: FavoriteItem) => void;
   removeFavorite: (productId: number) => void;

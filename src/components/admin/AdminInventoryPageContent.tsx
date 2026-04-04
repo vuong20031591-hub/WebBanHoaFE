@@ -17,16 +17,15 @@ import {
   Sparkles,
   User,
   Users,
+  X,
 } from "lucide-react";
-import {
-  adminOrdersApi,
-  adminProductsApi,
-  categoriesApi,
-  isApiError,
-  productsApi,
-} from "@/lib/api";
-import type { AdminProductUpsertPayload } from "@/lib/api/admin";
-import type { CategoryDTO, OrderDTO, ProductDTO, ProductDetailDTO } from "@/lib/api/types";
+import { adminOrdersApi, adminProductsApi, categoriesApi, isApiError, productsApi } from "@/lib/api";
+import type {
+  AdminProductUpsertRequest,
+  CategoryDTO,
+  OrderDTO,
+  ProductDTO,
+} from "@/lib/api/types";
 import { formatCurrency } from "@/lib/currency";
 import { resolveProductImage } from "@/lib/mappers/product";
 import { useAuth } from "@/src/contexts";
@@ -52,6 +51,15 @@ type ProductFormState = {
   image: string;
   stockQuantity: string;
   categoryId: string;
+};
+
+const INITIAL_PRODUCT_FORM: ProductFormState = {
+  name: "",
+  price: "",
+  description: "",
+  image: "",
+  stockQuantity: "0",
+  categoryId: "",
 };
 
 function DashboardStateCard({
@@ -90,6 +98,20 @@ function normalizeStock(value: number | null): number {
   return typeof value === "number" ? value : 0;
 }
 
+function getStockStatusLabel(stockQuantity: number | null): string {
+  const stock = normalizeStock(stockQuantity);
+
+  if (stock <= 0) {
+    return "Out of stock";
+  }
+
+  if (stock <= LOW_STOCK_THRESHOLD) {
+    return "Low stock";
+  }
+
+  return "In stock";
+}
+
 function getStockStatusClassName(stockQuantity: number | null): string {
   const stock = normalizeStock(stockQuantity);
 
@@ -117,27 +139,152 @@ function formatInventoryDate(value: string): string {
   }).format(date);
 }
 
-function createEmptyProductForm(defaultCategoryId: string): ProductFormState {
-  return {
-    name: "",
-    price: "",
-    description: "",
-    image: "",
-    stockQuantity: "0",
-    categoryId: defaultCategoryId,
-  };
-}
+function ProductCreateModal({
+  open,
+  categories,
+  form,
+  submitError,
+  submitting,
+  onClose,
+  onChange,
+  onSubmit,
+}: {
+  open: boolean;
+  categories: CategoryDTO[];
+  form: ProductFormState;
+  submitError: string | null;
+  submitting: boolean;
+  onClose: () => void;
+  onChange: (field: keyof ProductFormState, value: string) => void;
+  onSubmit: () => void;
+}) {
+  if (!open) {
+    return null;
+  }
 
-function toProductDto(detail: ProductDetailDTO): ProductDTO {
-  return {
-    id: detail.id,
-    name: detail.name,
-    price: detail.price,
-    description: detail.description,
-    imageUrl: detail.image,
-    stockQuantity: detail.stockQuantity,
-    categoryName: detail.categoryName,
-  };
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4">
+      <div className="w-full max-w-[620px] rounded-[24px] border border-[#e7dfd5] bg-[#fbfaf8] p-6 shadow-2xl">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2
+              className="text-[32px] leading-none text-[#2d2a26]"
+              style={{ fontFamily: "var(--font-noto-serif)" }}
+            >
+              New Botanical Element
+            </h2>
+            <p className="mt-2 text-[13px] text-[#7c736c]">
+              Create a new product and publish it to both admin inventory and storefront.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f2ede8] text-[#6e655d] transition-colors hover:bg-[#e7e0d8]"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
+          <label className="grid gap-2 text-[12px] text-[#5f564d]">
+            Product name
+            <input
+              value={form.name}
+              onChange={(event) => onChange("name", event.target.value)}
+              className="h-11 rounded-[14px] border border-[#e4ddd4] bg-white px-4 outline-none transition-colors focus:border-[#8d6030]"
+              placeholder="Midnight Dahlia"
+            />
+          </label>
+
+          <label className="grid gap-2 text-[12px] text-[#5f564d]">
+            Price (VND)
+            <input
+              type="number"
+              min="1"
+              value={form.price}
+              onChange={(event) => onChange("price", event.target.value)}
+              className="h-11 rounded-[14px] border border-[#e4ddd4] bg-white px-4 outline-none transition-colors focus:border-[#8d6030]"
+              placeholder="350000"
+            />
+          </label>
+
+          <label className="grid gap-2 text-[12px] text-[#5f564d]">
+            Category
+            <select
+              value={form.categoryId}
+              onChange={(event) => onChange("categoryId", event.target.value)}
+              className="h-11 rounded-[14px] border border-[#e4ddd4] bg-white px-4 outline-none transition-colors focus:border-[#8d6030]"
+            >
+              <option value="">Choose category</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="grid gap-2 text-[12px] text-[#5f564d]">
+            Stock quantity
+            <input
+              type="number"
+              min="0"
+              value={form.stockQuantity}
+              onChange={(event) => onChange("stockQuantity", event.target.value)}
+              className="h-11 rounded-[14px] border border-[#e4ddd4] bg-white px-4 outline-none transition-colors focus:border-[#8d6030]"
+              placeholder="20"
+            />
+          </label>
+
+          <label className="grid gap-2 text-[12px] text-[#5f564d] md:col-span-2">
+            Image URL or local path
+            <input
+              value={form.image}
+              onChange={(event) => onChange("image", event.target.value)}
+              className="h-11 rounded-[14px] border border-[#e4ddd4] bg-white px-4 outline-none transition-colors focus:border-[#8d6030]"
+              placeholder="/images/inventory/midnight-dahlia.jpg"
+            />
+          </label>
+
+          <label className="grid gap-2 text-[12px] text-[#5f564d] md:col-span-2">
+            Description
+            <textarea
+              value={form.description}
+              onChange={(event) => onChange("description", event.target.value)}
+              className="min-h-[120px] rounded-[18px] border border-[#e4ddd4] bg-white px-4 py-3 outline-none transition-colors focus:border-[#8d6030]"
+              placeholder="Describe the arrangement, flowers, and tone."
+            />
+          </label>
+        </div>
+
+        {submitError ? (
+          <div className="mt-4 rounded-[16px] border border-[#efd0cc] bg-[#fbefec] px-4 py-3 text-[13px] text-[#8f3d35]">
+            {submitError}
+          </div>
+        ) : null}
+
+        <div className="mt-6 flex flex-wrap justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-11 items-center justify-center rounded-full border border-[#ddd2c6] px-5 text-[12px] font-medium text-[#6a5c4e] transition-colors hover:bg-[#f3eee8]"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onSubmit}
+            disabled={submitting}
+            className="inline-flex h-11 items-center justify-center rounded-full bg-[#8d6030] px-5 text-[12px] font-medium text-white transition-colors hover:bg-[#724e26] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {submitting ? "Creating..." : "Create product"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function AdminInventoryPageContent() {
@@ -145,23 +292,16 @@ export function AdminInventoryPageContent() {
   const { user, loading: authLoading, signOut } = useAuth();
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [products, setProducts] = useState<ProductDTO[]>([]);
-  const [categories, setCategories] = useState<CategoryDTO[]>([]);
   const [ordersWindow, setOrdersWindow] = useState<OrderDTO[]>([]);
+  const [categories, setCategories] = useState<CategoryDTO[]>([]);
   const [totalSkuCount, setTotalSkuCount] = useState(0);
   const [activeCategory, setActiveCategory] = useState("ALL");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [isSavingProduct, setIsSavingProduct] = useState(false);
-  const [deletingProductId, setDeletingProductId] = useState<number | null>(null);
-  const [openActionProductId, setOpenActionProductId] = useState<number | null>(null);
-  const [editingProductId, setEditingProductId] = useState<number | null>(null);
-  const [formMode, setFormMode] = useState<"create" | "edit">("create");
-  const [showProductForm, setShowProductForm] = useState(false);
-  const [productForm, setProductForm] = useState<ProductFormState>(
-    createEmptyProductForm("")
-  );
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [productForm, setProductForm] = useState<ProductFormState>(INITIAL_PRODUCT_FORM);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isAdmin = user?.role?.toUpperCase() === "ADMIN";
 
@@ -175,140 +315,24 @@ export function AdminInventoryPageContent() {
     }
   };
 
-  const defaultCategoryId = categories.length > 0 ? String(categories[0].id) : "";
+  const fetchInventoryData = async () => {
+    const [productsPage, ordersPage] = await Promise.all([
+      productsApi.search({
+        page: 0,
+        size: PRODUCT_PAGE_SIZE,
+        sort: "id,desc",
+      }),
+      adminOrdersApi.getOrders({
+        page: 0,
+        size: ORDER_PAGE_SIZE,
+        sortBy: "createdAt",
+        sortDir: "DESC",
+      }),
+    ]);
 
-  const openCreateProductForm = () => {
-    setFormMode("create");
-    setEditingProductId(null);
-    setFormError(null);
-    setActionError(null);
-    setProductForm(createEmptyProductForm(defaultCategoryId));
-    setShowProductForm(true);
-  };
-
-  const openEditProductForm = async (productId: number) => {
-    setOpenActionProductId(null);
-    setFormMode("edit");
-    setEditingProductId(productId);
-    setFormError(null);
-    setActionError(null);
-    setIsSavingProduct(true);
-    setShowProductForm(true);
-
-    try {
-      const detail = await productsApi.getById(productId);
-      setProductForm({
-        name: detail.name,
-        price: String(detail.price),
-        description: detail.description ?? "",
-        image: detail.image ?? "",
-        stockQuantity: String(detail.stockQuantity ?? 0),
-        categoryId: String(detail.categoryId),
-      });
-    } catch (loadError) {
-      setFormError(
-        isApiError(loadError)
-          ? loadError.message
-          : "Unable to load product details for editing."
-      );
-    } finally {
-      setIsSavingProduct(false);
-    }
-  };
-
-  const closeProductForm = () => {
-    setShowProductForm(false);
-    setIsSavingProduct(false);
-    setFormError(null);
-    setEditingProductId(null);
-    setProductForm(createEmptyProductForm(defaultCategoryId));
-  };
-
-  const handleProductFormChange = (key: keyof ProductFormState, value: string) => {
-    setProductForm((previous) => ({ ...previous, [key]: value }));
-  };
-
-  const handleDeleteProduct = async (productId: number) => {
-    setActionError(null);
-    setDeletingProductId(productId);
-    setOpenActionProductId(null);
-
-    try {
-      await adminProductsApi.deleteProduct(productId);
-      setProducts((previous) => previous.filter((product) => product.id !== productId));
-      setTotalSkuCount((previous) => Math.max(0, previous - 1));
-    } catch (deleteError) {
-      setActionError(
-        isApiError(deleteError) ? deleteError.message : "Unable to delete product."
-      );
-    } finally {
-      setDeletingProductId(null);
-    }
-  };
-
-  const handleSaveProduct = async () => {
-    setFormError(null);
-    setActionError(null);
-
-    const name = productForm.name.trim();
-    const price = Number(productForm.price);
-    const stockQuantity = Number(productForm.stockQuantity);
-    const categoryId = Number(productForm.categoryId);
-
-    if (!name) {
-      setFormError("Product name is required.");
-      return;
-    }
-
-    if (!Number.isFinite(price) || price <= 0) {
-      setFormError("Price must be greater than 0.");
-      return;
-    }
-
-    if (!Number.isInteger(stockQuantity) || stockQuantity < 0) {
-      setFormError("Stock quantity must be an integer >= 0.");
-      return;
-    }
-
-    if (!Number.isInteger(categoryId) || categoryId <= 0) {
-      setFormError("Please select a valid category.");
-      return;
-    }
-
-    const payload: AdminProductUpsertPayload = {
-      name,
-      price,
-      description: productForm.description.trim() || null,
-      image: productForm.image.trim() || null,
-      stockQuantity,
-      categoryId,
-    };
-
-    setIsSavingProduct(true);
-
-    try {
-      const response =
-        formMode === "create"
-          ? await adminProductsApi.createProduct(payload)
-          : await adminProductsApi.updateProduct(editingProductId as number, payload);
-
-      const dto = toProductDto(response);
-
-      if (formMode === "create") {
-        setProducts((previous) => [dto, ...previous]);
-        setTotalSkuCount((previous) => previous + 1);
-      } else {
-        setProducts((previous) =>
-          previous.map((product) => (product.id === dto.id ? dto : product))
-        );
-      }
-
-      closeProductForm();
-    } catch (saveError) {
-      setFormError(isApiError(saveError) ? saveError.message : "Unable to save product.");
-    } finally {
-      setIsSavingProduct(false);
-    }
+    setProducts(productsPage.content);
+    setOrdersWindow(ordersPage.content);
+    setTotalSkuCount(productsPage.totalElements ?? productsPage.content.length);
   };
 
   useEffect(() => {
@@ -318,10 +342,9 @@ export function AdminInventoryPageContent() {
 
     if (!user || !isAdmin) {
       setProducts([]);
-      setCategories([]);
       setOrdersWindow([]);
+      setCategories([]);
       setTotalSkuCount(0);
-      setShowProductForm(false);
       setLoading(false);
       setError(null);
       return;
@@ -329,49 +352,29 @@ export function AdminInventoryPageContent() {
 
     let active = true;
 
-    const loadInventory = async () => {
+    const loadInitialData = async () => {
       setLoading(true);
       setError(null);
 
       try {
-        const [productsPage, ordersPage, categoriesData] = await Promise.all([
-          productsApi.search({
-            page: 0,
-            size: PRODUCT_PAGE_SIZE,
-            sort: "id,desc",
-          }),
-          adminOrdersApi.getOrders({
-            page: 0,
-            size: ORDER_PAGE_SIZE,
-            sortBy: "createdAt",
-            sortDir: "DESC",
-          }),
+        const [categoryData] = await Promise.all([
           categoriesApi.getAll(),
+          fetchInventoryData(),
         ]);
 
         if (!active) {
           return;
         }
 
-        setProducts(productsPage.content);
-        setCategories(categoriesData);
-        setOrdersWindow(ordersPage.content);
-        setTotalSkuCount(productsPage.totalElements ?? productsPage.content.length);
-        if (categoriesData.length > 0) {
-          setProductForm((previous) =>
-            previous.categoryId
-              ? previous
-              : { ...previous, categoryId: String(categoriesData[0].id) }
-          );
-        }
+        setCategories(categoryData);
       } catch (loadError) {
         if (!active) {
           return;
         }
 
         setProducts([]);
-        setCategories([]);
         setOrdersWindow([]);
+        setCategories([]);
         setTotalSkuCount(0);
         setError(
           isApiError(loadError)
@@ -385,7 +388,7 @@ export function AdminInventoryPageContent() {
       }
     };
 
-    loadInventory();
+    loadInitialData();
 
     return () => {
       active = false;
@@ -397,7 +400,7 @@ export function AdminInventoryPageContent() {
       new Set(products.map((product) => toCategoryLabel(product.categoryName)))
     );
 
-    return ["ALL", ...uniqueCategories];
+    return ["ALL", ...uniqueCategories.slice(0, 3)];
   }, [products]);
 
   useEffect(() => {
@@ -454,6 +457,62 @@ export function AdminInventoryPageContent() {
       .slice(0, 8);
   }, [ordersWindow]);
 
+  const updateProductForm = (field: keyof ProductFormState, value: string) => {
+    setProductForm((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  };
+
+  const closeCreateModal = () => {
+    setIsCreateModalOpen(false);
+    setProductForm(INITIAL_PRODUCT_FORM);
+    setSubmitError(null);
+  };
+
+  const submitProduct = async () => {
+    const payload: AdminProductUpsertRequest = {
+      name: productForm.name.trim(),
+      price: Number(productForm.price),
+      description: productForm.description.trim(),
+      image: productForm.image.trim(),
+      stockQuantity: Number(productForm.stockQuantity),
+      categoryId: Number(productForm.categoryId),
+    };
+
+    if (!payload.name || !Number.isFinite(payload.price) || payload.price <= 0) {
+      setSubmitError("Please enter a valid product name and price.");
+      return;
+    }
+
+    if (!Number.isInteger(payload.stockQuantity) || payload.stockQuantity < 0) {
+      setSubmitError("Stock quantity must be 0 or greater.");
+      return;
+    }
+
+    if (!Number.isInteger(payload.categoryId) || payload.categoryId <= 0) {
+      setSubmitError("Please choose a category.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      await adminProductsApi.createProduct(payload);
+      await fetchInventoryData();
+      closeCreateModal();
+    } catch (submitProductError) {
+      setSubmitError(
+        isApiError(submitProductError)
+          ? submitProductError.message
+          : "Unable to create product right now."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-[#d8d4d4] px-4 py-10 md:px-8">
@@ -497,8 +556,22 @@ export function AdminInventoryPageContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[#d8d4d4] p-3 md:p-7">
-      <div className="mx-auto max-w-[1320px] overflow-hidden rounded-[3px] border border-[#e9e3dc] bg-[#fbfaf8]">
+    <>
+      <ProductCreateModal
+        open={isCreateModalOpen}
+        categories={categories}
+        form={productForm}
+        submitError={submitError}
+        submitting={isSubmitting}
+        onClose={closeCreateModal}
+        onChange={updateProductForm}
+        onSubmit={() => {
+          void submitProduct();
+        }}
+      />
+
+      <div className="min-h-screen bg-[#d8d4d4] p-3 md:p-7">
+        <div className="mx-auto max-w-[1320px] overflow-hidden rounded-[3px] border border-[#e9e3dc] bg-[#fbfaf8]">
         <header className="flex flex-col gap-4 border-b border-[#eee8e1] px-4 py-4 md:flex-row md:items-center md:justify-between md:px-7">
           <div className="flex flex-wrap items-center gap-8">
             <Link href="/" className="flex items-center gap-2">
@@ -622,11 +695,6 @@ export function AdminInventoryPageContent() {
               </div>
             ) : (
               <>
-                {actionError ? (
-                  <div className="mb-4 rounded-[14px] border border-[#efd0cc] bg-[#fbefec] px-4 py-3 text-[13px] text-[#8f3d35]">
-                    {actionError}
-                  </div>
-                ) : null}
                 <p className="text-[32px] leading-none text-[#b2adab] md:text-[36px]">
                   Inventory Management - Floral Boutique
                 </p>
@@ -695,8 +763,10 @@ export function AdminInventoryPageContent() {
                   ))}
                   <button
                     type="button"
-                    onClick={openCreateProductForm}
-                    disabled={categories.length === 0}
+                    onClick={() => {
+                      setSubmitError(null);
+                      setIsCreateModalOpen(true);
+                    }}
                     className="ml-auto inline-flex items-center gap-2 rounded-full bg-[#8d6030] px-4 py-2 text-[11px] font-medium text-white transition-colors hover:bg-[#724e26]"
                   >
                     <Plus className="h-3 w-3" />
@@ -715,10 +785,7 @@ export function AdminInventoryPageContent() {
                       const image = resolveProductImage(product.imageUrl);
 
                       return (
-                        <article
-                          key={product.id}
-                          className="rounded-[18px] border border-[#ece5dc] bg-[#fdfcfa] overflow-visible"
-                        >
+                        <article key={product.id}>
                           <div className="relative h-[205px] overflow-hidden rounded-[22px] bg-[#ece7e1]">
                             <Image
                               src={image}
@@ -728,188 +795,31 @@ export function AdminInventoryPageContent() {
                               className="object-cover"
                             />
                           </div>
-
-                          <div className="px-4 py-3">
-                            <div className="flex items-start justify-between gap-3">
+                          <div className="mt-2 flex items-start justify-between gap-3">
+                            <div>
                               <p
-                                className="line-clamp-2 text-[20px] leading-[1.1] text-[#2f2a26]"
+                                className="text-[20px] leading-[1.1] text-[#2f2a26]"
                                 style={{ fontFamily: "var(--font-noto-serif)" }}
                               >
                                 {product.name}
                               </p>
-                              <p className="mt-1 whitespace-nowrap text-[12px] text-[#62584f]">
-                                {formatCurrency(product.price)}
+                              <p className="mt-1 text-[10px] uppercase tracking-[1.1px] text-[#968c82]">
+                                Product ID: {product.id}
                               </p>
                             </div>
-                            <p className="mt-1 text-[11px] uppercase tracking-[1.1px] text-[#968c82]">
-                              SKU: PRD-{String(product.id).padStart(3, "0")}
+                            <p className="mt-1 text-[12px] text-[#62584f]">
+                              {formatCurrency(product.price)}
                             </p>
                           </div>
-
-                          <div className="flex items-center border-t border-[#ece5dc] px-4 py-3">
-                            <p className={`text-[12px] ${getStockStatusClassName(product.stockQuantity)}`}>
-                              {stock > 0
-                                ? `• ${String(stock).padStart(2, "0")} in stock`
-                                : "• Out of stock"}
-                            </p>
-                            <div className="ml-auto relative z-30">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setOpenActionProductId((current) =>
-                                    current === product.id ? null : product.id
-                                  )
-                                }
-                                className="inline-flex h-7 min-w-[22px] items-center justify-center text-[16px] leading-none text-[#7a726b] transition-colors hover:text-[#4f4841]"
-                                aria-label="Product actions"
-                              >
-                                ...
-                              </button>
-                              {openActionProductId === product.id ? (
-                                <div className="absolute right-0 top-[calc(100%+6px)] z-40 min-w-[130px] rounded-[10px] border border-[#e5ddd4] bg-white p-1 shadow-sm">
-                                  <button
-                                    type="button"
-                                    onClick={() => void openEditProductForm(product.id)}
-                                    className="w-full rounded-[8px] px-3 py-2 text-left text-[12px] text-[#5f564d] transition-colors hover:bg-[#f4efe9]"
-                                  >
-                                    Chỉnh sửa
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => void handleDeleteProduct(product.id)}
-                                    disabled={deletingProductId === product.id}
-                                    className="w-full rounded-[8px] px-3 py-2 text-left text-[12px] text-[#9d4040] transition-colors hover:bg-[#fbefec] disabled:cursor-not-allowed disabled:opacity-60"
-                                  >
-                                    {deletingProductId === product.id ? "Đang xóa..." : "Xóa"}
-                                  </button>
-                                </div>
-                              ) : null}
-                            </div>
-                          </div>
+                          <p className={`mt-2 text-[11px] ${getStockStatusClassName(product.stockQuantity)}`}>
+                            {stock > 0 ? `+ ${stock} in stock` : "• Out of stock"} (
+                            {getStockStatusLabel(product.stockQuantity)})
+                          </p>
                         </article>
                       );
                     })
                   )}
                 </section>
-
-                {showProductForm ? (
-                  <section className="mt-8 rounded-[16px] border border-[#e8e2d9] bg-[#fcfbf9] p-5">
-                    <div className="flex items-center justify-between gap-3">
-                      <h2
-                        className="text-[28px] leading-none text-[#2d2a26]"
-                        style={{ fontFamily: "var(--font-noto-serif)" }}
-                      >
-                        {formMode === "create" ? "Create Product" : "Edit Product"}
-                      </h2>
-                      <button
-                        type="button"
-                        onClick={closeProductForm}
-                        className="rounded-full border border-[#d9d1c8] px-3 py-1.5 text-[11px] text-[#5f564d] transition-colors hover:bg-[#f4efe9]"
-                      >
-                        Close
-                      </button>
-                    </div>
-
-                    {formError ? (
-                      <div className="mt-4 rounded-[12px] border border-[#efd0cc] bg-[#fbefec] px-4 py-3 text-[13px] text-[#8f3d35]">
-                        {formError}
-                      </div>
-                    ) : null}
-
-                    <div className="mt-4 grid gap-3 md:grid-cols-2">
-                      <label className="flex flex-col gap-1">
-                        <span className="text-[11px] text-[#7a726b]">Name</span>
-                        <input
-                          value={productForm.name}
-                          onChange={(event) => handleProductFormChange("name", event.target.value)}
-                          className="h-10 rounded-[10px] border border-[#ddd4ca] bg-white px-3 text-[13px] text-[#3d3731] outline-none"
-                        />
-                      </label>
-                      <label className="flex flex-col gap-1">
-                        <span className="text-[11px] text-[#7a726b]">Price</span>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={productForm.price}
-                          onChange={(event) => handleProductFormChange("price", event.target.value)}
-                          className="h-10 rounded-[10px] border border-[#ddd4ca] bg-white px-3 text-[13px] text-[#3d3731] outline-none"
-                        />
-                      </label>
-                      <label className="flex flex-col gap-1">
-                        <span className="text-[11px] text-[#7a726b]">Stock Quantity</span>
-                        <input
-                          type="number"
-                          min="0"
-                          step="1"
-                          value={productForm.stockQuantity}
-                          onChange={(event) =>
-                            handleProductFormChange("stockQuantity", event.target.value)
-                          }
-                          className="h-10 rounded-[10px] border border-[#ddd4ca] bg-white px-3 text-[13px] text-[#3d3731] outline-none"
-                        />
-                      </label>
-                      <label className="flex flex-col gap-1">
-                        <span className="text-[11px] text-[#7a726b]">Category</span>
-                        <select
-                          value={productForm.categoryId}
-                          onChange={(event) =>
-                            handleProductFormChange("categoryId", event.target.value)
-                          }
-                          className="h-10 rounded-[10px] border border-[#ddd4ca] bg-white px-3 text-[13px] text-[#3d3731] outline-none"
-                        >
-                          <option value="">Select category</option>
-                          {categories.map((category) => (
-                            <option key={category.id} value={category.id}>
-                              {category.name}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label className="flex flex-col gap-1 md:col-span-2">
-                        <span className="text-[11px] text-[#7a726b]">Image URL</span>
-                        <input
-                          value={productForm.image}
-                          onChange={(event) => handleProductFormChange("image", event.target.value)}
-                          className="h-10 rounded-[10px] border border-[#ddd4ca] bg-white px-3 text-[13px] text-[#3d3731] outline-none"
-                        />
-                      </label>
-                      <label className="flex flex-col gap-1 md:col-span-2">
-                        <span className="text-[11px] text-[#7a726b]">Description</span>
-                        <textarea
-                          value={productForm.description}
-                          onChange={(event) =>
-                            handleProductFormChange("description", event.target.value)
-                          }
-                          rows={4}
-                          className="rounded-[10px] border border-[#ddd4ca] bg-white px-3 py-2 text-[13px] text-[#3d3731] outline-none"
-                        />
-                      </label>
-                    </div>
-
-                    <div className="mt-4 flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => void handleSaveProduct()}
-                        disabled={isSavingProduct}
-                        className="inline-flex h-10 items-center justify-center rounded-full bg-[#8d6030] px-5 text-[12px] font-medium text-white transition-colors hover:bg-[#724e26] disabled:cursor-not-allowed disabled:opacity-70"
-                      >
-                        {isSavingProduct
-                          ? "Saving..."
-                          : formMode === "create"
-                            ? "Create Product"
-                            : "Save Changes"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={closeProductForm}
-                        className="inline-flex h-10 items-center justify-center rounded-full border border-[#d9d1c8] px-5 text-[12px] text-[#5f564d] transition-colors hover:bg-[#f4efe9]"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </section>
-                ) : null}
 
                 <section className="mt-10 overflow-hidden rounded-[16px] border border-[#eee8e1] bg-[#fcfbf9]">
                   <div className="border-b border-[#efebe5] px-5 py-4">
@@ -977,7 +887,8 @@ export function AdminInventoryPageContent() {
             )}
           </main>
         </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

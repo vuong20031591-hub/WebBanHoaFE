@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { Heart, Plus } from "lucide-react";
 import { CartItem, useCartStore } from "@/lib/cart";
-import { resolveProductImage } from "@/lib/mappers/product";
+import { DEFAULT_PRODUCT_IMAGE } from "@/lib/mappers/product";
 import { useFavoritesStore } from "@/lib/favorites";
 import { ProfileFavorite } from "@/lib/profile/types";
 
@@ -17,7 +17,7 @@ interface ProfileFavoriteCardProps {
 export function ProfileFavoriteCard({ item }: ProfileFavoriteCardProps) {
   const addItem = useCartStore((state) => state.addItem);
   const removeFavorite = useFavoritesStore((state) => state.removeFavorite);
-  const safeImage = resolveProductImage(item.image);
+  const safeImage = item.image || DEFAULT_PRODUCT_IMAGE;
 
   const handleAddToCart = () => {
     addItem({

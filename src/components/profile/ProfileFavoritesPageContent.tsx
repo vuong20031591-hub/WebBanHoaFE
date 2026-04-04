@@ -18,7 +18,7 @@ export function ProfileFavoritesPageContent() {
   const collection = {
     title: "Saved Favorites",
     countLabel: `${favorites.length} item${favorites.length === 1 ? "" : "s"}`,
-    ctaLabel: "Continue Shopping",
+    ctaLabel: "Browse Products",
     ctaHref: "/products",
     items: favorites.map((item) => ({
       id: String(item.productId),
@@ -71,7 +71,7 @@ export function ProfileFavoritesPageContent() {
                       href="/products"
                       className="inline-flex min-h-[52px] items-center justify-center rounded-[12px] bg-[#d0bb95] px-8 text-[14px] font-medium text-white transition-colors hover:bg-[#c2a571]"
                     >
-                      Continue Shopping
+                      Browse Products
                     </Link>
                   </div>
                 </div>

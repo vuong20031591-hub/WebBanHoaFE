@@ -1,7 +1,7 @@
 import { CartVariantItem, CartSyncState, ServerCartEntry } from "./types";
 import { CartDTO } from "../api/types";
 import { groupByProductId, sumQuantities, generateUUID } from "./utils";
-import { resolveProductImage } from "../mappers/product";
+import { DEFAULT_PRODUCT_IMAGE, resolveProductImage } from "../mappers/product";
 
 export async function mergeCartsOnLogin(
   localVariants: CartVariantItem[],
@@ -59,7 +59,7 @@ export async function mergeCartsOnLogin(
     if (localByProduct[productId]) {
       const variants = localByProduct[productId].map((variant) => ({
         ...variant,
-        productImage: resolveProductImage(variant.productImage),
+        productImage: variant.productImage || DEFAULT_PRODUCT_IMAGE,
       }));
       const currentSum = sumQuantities(variants);
 

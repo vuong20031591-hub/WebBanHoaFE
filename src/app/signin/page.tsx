@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Navbar, Footer } from "@/components/layout";
 import { useAuth } from "@/src/contexts/AuthContext";
+import type { AuthUser } from "@/lib/auth/types";
 
 /* ─────────────────────────────────────────────
    Asset URLs từ Figma MCP
@@ -47,6 +48,14 @@ function GoogleIcon() {
   );
 }
 
+function getPostLoginPath(user: AuthUser | null | undefined) {
+  if (!user) {
+    return "/";
+  }
+
+  return user.role?.toUpperCase() === "ADMIN" ? "/admin" : "/";
+}
+
 /* ─────────────────────────────────────────────
    Sign In Form
 ───────────────────────────────────────────── */
@@ -72,7 +81,7 @@ function SignInFormContent() {
 
   useEffect(() => {
     if (!authLoading && user) {
-      router.replace("/");
+      router.replace(getPostLoginPath(user));
     }
   }, [authLoading, user, router]);
 
@@ -84,7 +93,6 @@ function SignInFormContent() {
     setLoading(true);
     try {
       await signIn({ email, password }, rememberMe);
-      router.push("/");
     } catch (err) {
       const error = err as { response?: { data?: { message?: string } }; message?: string };
       setError(error.response?.data?.message || error.message || "Login failed");
