@@ -7,7 +7,6 @@ import {
   ClipboardList,
   Flower2,
   LayoutDashboard,
-  Megaphone,
   Package2,
   Search,
   Settings,
@@ -384,13 +383,6 @@ export function AdminOrdersPageContent() {
               >
                 <Users className="h-4 w-4" />
                 <span>Customers</span>
-              </button>
-              <button
-                type="button"
-                className="flex w-full items-center gap-3 rounded-r-full rounded-l-[6px] px-4 py-3 text-left text-[13px] text-[#4a433c] transition-colors hover:bg-[#f1ede7]"
-              >
-                <Megaphone className="h-4 w-4" />
-                <span>Marketing</span>
               </button>
               <button
                 type="button"

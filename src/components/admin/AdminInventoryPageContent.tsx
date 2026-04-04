@@ -2,20 +2,19 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   ClipboardList,
-  Flower2,
+  Eye,
   LayoutDashboard,
-  Megaphone,
+  MoreHorizontal,
   Package2,
+  Pencil,
   Plus,
-  Search,
+  RefreshCw,
   Settings,
-  ShoppingCart,
   Sparkles,
-  User,
+  Trash2,
   Users,
   X,
 } from "lucide-react";
@@ -25,14 +24,17 @@ import type {
   CategoryDTO,
   OrderDTO,
   ProductDTO,
+  ProductDetailDTO,
 } from "@/lib/api/types";
 import { formatCurrency } from "@/lib/currency";
 import { resolveProductImage } from "@/lib/mappers/product";
+import { Navbar } from "@/src/components/layout";
 import { useAuth } from "@/src/contexts";
 
 const LOW_STOCK_THRESHOLD = 15;
 const PRODUCT_PAGE_SIZE = 120;
 const ORDER_PAGE_SIZE = 30;
+const PRODUCT_GRID_PAGE_SIZE = 8;
 
 type InventoryMovement = {
   id: string;
@@ -51,6 +53,11 @@ type ProductFormState = {
   image: string;
   stockQuantity: string;
   categoryId: string;
+};
+
+type RecentlyDeletedProduct = {
+  id: number;
+  name: string;
 };
 
 const INITIAL_PRODUCT_FORM: ProductFormState = {
@@ -139,7 +146,34 @@ function formatInventoryDate(value: string): string {
   }).format(date);
 }
 
+function formatProductDetailDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "N/A";
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function toProductFormState(product: ProductDetailDTO): ProductFormState {
+  return {
+    name: product.name,
+    price: String(product.price),
+    description: product.description ?? "",
+    image: product.image ?? "",
+    stockQuantity: String(normalizeStock(product.stockQuantity)),
+    categoryId: String(product.categoryId),
+  };
+}
+
 function ProductCreateModal({
+  mode,
   open,
   categories,
   form,
@@ -149,6 +183,7 @@ function ProductCreateModal({
   onChange,
   onSubmit,
 }: {
+  mode: "create" | "edit";
   open: boolean;
   categories: CategoryDTO[];
   form: ProductFormState;
@@ -162,6 +197,14 @@ function ProductCreateModal({
     return null;
   }
 
+  const title = mode === "create" ? "New Botanical Element" : "Edit Botanical Element";
+  const subtitle =
+    mode === "create"
+      ? "Create a new product and publish it to both admin inventory and storefront."
+      : "Update product information and keep storefront inventory in sync.";
+  const submitLabel = mode === "create" ? "Create product" : "Save changes";
+  const submittingLabel = mode === "create" ? "Creating..." : "Saving...";
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4">
       <div className="w-full max-w-[620px] rounded-[24px] border border-[#e7dfd5] bg-[#fbfaf8] p-6 shadow-2xl">
@@ -171,11 +214,9 @@ function ProductCreateModal({
               className="text-[32px] leading-none text-[#2d2a26]"
               style={{ fontFamily: "var(--font-noto-serif)" }}
             >
-              New Botanical Element
+              {title}
             </h2>
-            <p className="mt-2 text-[13px] text-[#7c736c]">
-              Create a new product and publish it to both admin inventory and storefront.
-            </p>
+            <p className="mt-2 text-[13px] text-[#7c736c]">{subtitle}</p>
           </div>
           <button
             type="button"
@@ -279,7 +320,198 @@ function ProductCreateModal({
             disabled={submitting}
             className="inline-flex h-11 items-center justify-center rounded-full bg-[#8d6030] px-5 text-[12px] font-medium text-white transition-colors hover:bg-[#724e26] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {submitting ? "Creating..." : "Create product"}
+            {submitting ? submittingLabel : submitLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProductDetailModal({
+  open,
+  product,
+  loading,
+  error,
+  stockDraft,
+  stockSubmitting,
+  onClose,
+  onEdit,
+  onStockDraftChange,
+  onStockSubmit,
+}: {
+  open: boolean;
+  product: ProductDetailDTO | null;
+  loading: boolean;
+  error: string | null;
+  stockDraft: string;
+  stockSubmitting: boolean;
+  onClose: () => void;
+  onEdit: () => void;
+  onStockDraftChange: (value: string) => void;
+  onStockSubmit: () => void;
+}) {
+  if (!open) {
+    return null;
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4">
+      <div className="w-full max-w-[760px] rounded-[24px] border border-[#e7dfd5] bg-[#fbfaf8] p-6 shadow-2xl">
+        <div className="flex items-start justify-between gap-4">
+          <h2
+            className="text-[32px] leading-none text-[#2d2a26]"
+            style={{ fontFamily: "var(--font-noto-serif)" }}
+          >
+            Product Detail
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f2ede8] text-[#6e655d] transition-colors hover:bg-[#e7e0d8]"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="mt-6">
+          {loading ? (
+            <div className="h-48 animate-pulse rounded-[18px] bg-[#ece8e3]" />
+          ) : error ? (
+            <div className="rounded-[16px] border border-[#efd0cc] bg-[#fbefec] px-4 py-3 text-[13px] text-[#8f3d35]">
+              {error}
+            </div>
+          ) : !product ? (
+            <div className="rounded-[16px] border border-[#ece5dc] bg-[#fdfcfa] px-4 py-3 text-[13px] text-[#7b726a]">
+              Product detail is unavailable.
+            </div>
+          ) : (
+            <div className="grid gap-5 md:grid-cols-[260px_minmax(0,1fr)]">
+              <div className="relative h-[230px] overflow-hidden rounded-[18px] bg-[#ece7e1]">
+                <Image
+                  src={resolveProductImage(product.image)}
+                  alt={product.name}
+                  fill
+                  sizes="260px"
+                  className="object-cover"
+                />
+              </div>
+              <div>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p
+                      className="text-[28px] leading-[1.1] text-[#2f2a26]"
+                      style={{ fontFamily: "var(--font-noto-serif)" }}
+                    >
+                      {product.name}
+                    </p>
+                    <p className="mt-1 text-[10px] uppercase tracking-[1.1px] text-[#968c82]">
+                      Product ID: {product.id}
+                    </p>
+                  </div>
+                  <p className="mt-1 text-[14px] text-[#62584f]">{formatCurrency(product.price)}</p>
+                </div>
+
+                <div className="mt-3 space-y-1 text-[12px] text-[#5f564d]">
+                  <p>Category: {toCategoryLabel(product.categoryName)}</p>
+                  <p>
+                    Stock: {normalizeStock(product.stockQuantity)} ({getStockStatusLabel(product.stockQuantity)})
+                  </p>
+                  <p>Created: {formatProductDetailDate(product.createdAt)}</p>
+                  <p>Updated: {formatProductDetailDate(product.updatedAt)}</p>
+                </div>
+
+                <p className="mt-4 rounded-[14px] border border-[#ece5dc] bg-white/70 px-4 py-3 text-[13px] text-[#5f564d]">
+                  {product.description?.trim() ? product.description : "No description provided."}
+                </p>
+
+                <div className="mt-4 flex flex-wrap items-end gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    value={stockDraft}
+                    onChange={(event) => onStockDraftChange(event.target.value)}
+                    className="h-10 w-[120px] rounded-[12px] border border-[#e4ddd4] bg-white px-3 text-[11px] text-[#5f564d] outline-none transition-colors focus:border-[#8d6030]"
+                  />
+                  <button
+                    type="button"
+                    onClick={onStockSubmit}
+                    disabled={stockSubmitting}
+                    className="inline-flex h-10 items-center justify-center rounded-full bg-[#8d6030] px-4 text-[11px] font-medium text-white transition-colors hover:bg-[#724e26] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {stockSubmitting ? "Updating..." : "Update stock"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onEdit}
+                    className="inline-flex h-10 items-center justify-center rounded-full border border-[#ddd2c6] px-4 text-[11px] font-medium text-[#6a5c4e] transition-colors hover:bg-[#f3eee8]"
+                  >
+                    Edit product
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DeleteConfirmDialog({
+  open,
+  product,
+  deleting,
+  error,
+  onClose,
+  onConfirm,
+}: {
+  open: boolean;
+  product: ProductDTO | null;
+  deleting: boolean;
+  error: string | null;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  if (!open || !product) {
+    return null;
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4">
+      <div className="w-full max-w-[520px] rounded-[24px] border border-[#e7dfd5] bg-[#fbfaf8] p-6 shadow-2xl">
+        <h2
+          className="text-[30px] leading-none text-[#2d2a26]"
+          style={{ fontFamily: "var(--font-noto-serif)" }}
+        >
+          Delete Product
+        </h2>
+        <p className="mt-3 text-[13px] text-[#7c736c]">
+          This will soft-delete <span className="font-medium text-[#5f564d]">{product.name}</span>.
+        </p>
+
+        {error ? (
+          <div className="mt-4 rounded-[16px] border border-[#efd0cc] bg-[#fbefec] px-4 py-3 text-[13px] text-[#8f3d35]">
+            {error}
+          </div>
+        ) : null}
+
+        <div className="mt-6 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-11 items-center justify-center rounded-full border border-[#ddd2c6] px-5 text-[12px] font-medium text-[#6a5c4e] transition-colors hover:bg-[#f3eee8]"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={deleting}
+            className="inline-flex h-11 items-center justify-center rounded-full bg-[#b24343] px-5 text-[12px] font-medium text-white transition-colors hover:bg-[#983838] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {deleting ? "Deleting..." : "Confirm delete"}
           </button>
         </div>
       </div>
@@ -288,9 +520,7 @@ function ProductCreateModal({
 }
 
 export function AdminInventoryPageContent() {
-  const router = useRouter();
-  const { user, loading: authLoading, signOut } = useAuth();
-  const [isSigningOut, setIsSigningOut] = useState(false);
+  const { user, loading: authLoading } = useAuth();
   const [products, setProducts] = useState<ProductDTO[]>([]);
   const [ordersWindow, setOrdersWindow] = useState<OrderDTO[]>([]);
   const [categories, setCategories] = useState<CategoryDTO[]>([]);
@@ -298,21 +528,69 @@ export function AdminInventoryPageContent() {
   const [activeCategory, setActiveCategory] = useState("ALL");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [modalMode, setModalMode] = useState<"create" | "edit">("create");
+  const [editingProductId, setEditingProductId] = useState<number | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [productForm, setProductForm] = useState<ProductFormState>(INITIAL_PRODUCT_FORM);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editLoadingProductId, setEditLoadingProductId] = useState<number | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [detailProductId, setDetailProductId] = useState<number | null>(null);
+  const [detailProduct, setDetailProduct] = useState<ProductDetailDTO | null>(null);
+  const [isDetailLoading, setIsDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
+  const [detailStockDraft, setDetailStockDraft] = useState("0");
+  const [isDetailStockSubmitting, setIsDetailStockSubmitting] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<ProductDTO | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [recentlyDeletedProducts, setRecentlyDeletedProducts] = useState<RecentlyDeletedProduct[]>(
+    []
+  );
+  const [restoringProductId, setRestoringProductId] = useState<number | null>(null);
+  const [openActionMenuProductId, setOpenActionMenuProductId] = useState<number | null>(null);
+  const [currentProductPage, setCurrentProductPage] = useState(1);
 
   const isAdmin = user?.role?.toUpperCase() === "ADMIN";
 
-  const handleSignOut = async () => {
-    setIsSigningOut(true);
-    try {
-      await signOut();
-      router.push("/signin");
-    } finally {
-      setIsSigningOut(false);
+  const mapApiMessage = (value: unknown, fallback: string): string => {
+    if (isApiError(value)) {
+      return value.message;
     }
+
+    return fallback;
+  };
+
+  const toProductListItem = (detail: ProductDetailDTO): ProductDTO => ({
+    id: detail.id,
+    name: detail.name,
+    price: detail.price,
+    description: detail.description,
+    imageUrl: detail.image,
+    stockQuantity: detail.stockQuantity,
+    categoryName: detail.categoryName,
+  });
+
+  const syncProductsState = (updater: (current: ProductDTO[]) => ProductDTO[]) => {
+    setProducts((current) => {
+      const next = updater(current);
+      setTotalSkuCount(next.length);
+      return next;
+    });
+  };
+
+  const upsertProductInState = (detail: ProductDetailDTO) => {
+    const nextProduct = toProductListItem(detail);
+    syncProductsState((current) => {
+      const foundIndex = current.findIndex((product) => product.id === nextProduct.id);
+      if (foundIndex === -1) {
+        return [nextProduct, ...current];
+      }
+
+      return current.map((product, index) => (index === foundIndex ? nextProduct : product));
+    });
   };
 
   const fetchInventoryData = async () => {
@@ -376,11 +654,7 @@ export function AdminInventoryPageContent() {
         setOrdersWindow([]);
         setCategories([]);
         setTotalSkuCount(0);
-        setError(
-          isApiError(loadError)
-            ? loadError.message
-            : "Unable to load inventory data right now."
-        );
+        setError(mapApiMessage(loadError, "Unable to load inventory data right now."));
       } finally {
         if (active) {
           setLoading(false);
@@ -421,6 +695,30 @@ export function AdminInventoryPageContent() {
       ),
     [activeCategory, products]
   );
+
+  const totalProductPages = useMemo(
+    () => Math.max(1, Math.ceil(filteredProducts.length / PRODUCT_GRID_PAGE_SIZE)),
+    [filteredProducts.length]
+  );
+
+  useEffect(() => {
+    setCurrentProductPage(1);
+  }, [activeCategory]);
+
+  useEffect(() => {
+    if (currentProductPage > totalProductPages) {
+      setCurrentProductPage(totalProductPages);
+    }
+  }, [currentProductPage, totalProductPages]);
+
+  useEffect(() => {
+    setOpenActionMenuProductId(null);
+  }, [activeCategory, currentProductPage]);
+
+  const paginatedProducts = useMemo(() => {
+    const startIndex = (currentProductPage - 1) * PRODUCT_GRID_PAGE_SIZE;
+    return filteredProducts.slice(startIndex, startIndex + PRODUCT_GRID_PAGE_SIZE);
+  }, [currentProductPage, filteredProducts]);
 
   const lowStockCount = useMemo(
     () =>
@@ -466,8 +764,69 @@ export function AdminInventoryPageContent() {
 
   const closeCreateModal = () => {
     setIsCreateModalOpen(false);
+    setModalMode("create");
+    setEditingProductId(null);
     setProductForm(INITIAL_PRODUCT_FORM);
     setSubmitError(null);
+  };
+
+  const openCreateModal = () => {
+    setActionError(null);
+    setSubmitError(null);
+    setModalMode("create");
+    setEditingProductId(null);
+    setProductForm(INITIAL_PRODUCT_FORM);
+    setIsCreateModalOpen(true);
+  };
+
+  const openDetailModal = async (productId: number) => {
+    setOpenActionMenuProductId(null);
+    setIsDetailModalOpen(true);
+    setDetailProductId(productId);
+    setIsDetailLoading(true);
+    setDetailError(null);
+    setActionError(null);
+
+    try {
+      const detail = await productsApi.getById(productId);
+      setDetailProduct(detail);
+      setDetailStockDraft(String(normalizeStock(detail.stockQuantity)));
+    } catch (detailLoadError) {
+      setDetailProduct(null);
+      setDetailError(mapApiMessage(detailLoadError, "Unable to load product detail right now."));
+    } finally {
+      setIsDetailLoading(false);
+    }
+  };
+
+  const closeDetailModal = () => {
+    setIsDetailModalOpen(false);
+    setDetailProductId(null);
+    setDetailProduct(null);
+    setDetailError(null);
+    setDetailStockDraft("0");
+  };
+
+  const startEditProduct = async (productId: number) => {
+    setOpenActionMenuProductId(null);
+    setActionError(null);
+    setSubmitError(null);
+    setEditLoadingProductId(productId);
+
+    try {
+      const detail =
+        detailProductId === productId && detailProduct
+          ? detailProduct
+          : await productsApi.getById(productId);
+      setModalMode("edit");
+      setEditingProductId(productId);
+      setProductForm(toProductFormState(detail));
+      setIsCreateModalOpen(true);
+    } catch (editLoadError) {
+      setActionError(mapApiMessage(editLoadError, "Unable to open edit form right now."));
+    } finally {
+      setEditLoadingProductId(null);
+    }
   };
 
   const submitProduct = async () => {
@@ -495,21 +854,108 @@ export function AdminInventoryPageContent() {
       return;
     }
 
+    if (modalMode === "edit" && editingProductId === null) {
+      setSubmitError("Cannot update product because product id is missing.");
+      return;
+    }
+
     setIsSubmitting(true);
     setSubmitError(null);
+    setActionError(null);
 
     try {
-      await adminProductsApi.createProduct(payload);
-      await fetchInventoryData();
+      const savedProduct =
+        modalMode === "create"
+          ? await adminProductsApi.createProduct(payload)
+          : await adminProductsApi.updateProduct(editingProductId as number, payload);
+      upsertProductInState(savedProduct);
+
+      if (detailProductId === savedProduct.id) {
+        setDetailProduct(savedProduct);
+        setDetailStockDraft(String(normalizeStock(savedProduct.stockQuantity)));
+        setDetailError(null);
+      }
+
       closeCreateModal();
     } catch (submitProductError) {
-      setSubmitError(
-        isApiError(submitProductError)
-          ? submitProductError.message
-          : "Unable to create product right now."
-      );
+      setSubmitError(mapApiMessage(submitProductError, "Unable to save product right now."));
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const confirmDeleteProduct = async () => {
+    if (!deleteTarget) {
+      return;
+    }
+
+    setIsDeleting(true);
+    setDeleteError(null);
+    setActionError(null);
+
+    try {
+      await adminProductsApi.deleteProduct(deleteTarget.id);
+      setRecentlyDeletedProducts((current) =>
+        [{ id: deleteTarget.id, name: deleteTarget.name }, ...current.filter((item) => item.id !== deleteTarget.id)].slice(
+          0,
+          6
+        )
+      );
+      syncProductsState((current) => current.filter((product) => product.id !== deleteTarget.id));
+
+      if (detailProductId === deleteTarget.id) {
+        closeDetailModal();
+      }
+
+      setOpenActionMenuProductId(null);
+      setDeleteTarget(null);
+    } catch (deleteProductError) {
+      setDeleteError(mapApiMessage(deleteProductError, "Unable to delete product right now."));
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const restoreProduct = async (product: RecentlyDeletedProduct) => {
+    setRestoringProductId(product.id);
+    setActionError(null);
+
+    try {
+      const restoredProduct = await adminProductsApi.restoreProduct(product.id);
+      upsertProductInState(restoredProduct);
+      setRecentlyDeletedProducts((current) => current.filter((item) => item.id !== product.id));
+    } catch (restoreError) {
+      setActionError(mapApiMessage(restoreError, "Unable to restore product right now."));
+    } finally {
+      setRestoringProductId(null);
+    }
+  };
+
+  const submitDetailStock = async () => {
+    if (!detailProduct) {
+      return;
+    }
+
+    const stock = Number(detailStockDraft);
+
+    if (!Number.isInteger(stock) || stock < 0) {
+      setDetailError("Stock quantity must be a whole number and cannot be negative.");
+      return;
+    }
+
+    setIsDetailStockSubmitting(true);
+    setDetailError(null);
+    setActionError(null);
+
+    try {
+      const updated = await adminProductsApi.updateStock(detailProduct.id, stock);
+      setDetailProduct(updated);
+      setDetailStockDraft(String(normalizeStock(updated.stockQuantity)));
+      upsertProductInState(updated);
+    } catch (stockError) {
+      setDetailError(mapApiMessage(stockError, "Unable to update stock right now."));
+    } finally {
+      setIsDetailStockSubmitting(false);
     }
   };
 
@@ -555,9 +1001,14 @@ export function AdminInventoryPageContent() {
     );
   }
 
+  const visibleRangeStart =
+    filteredProducts.length === 0 ? 0 : (currentProductPage - 1) * PRODUCT_GRID_PAGE_SIZE + 1;
+  const visibleRangeEnd = Math.min(currentProductPage * PRODUCT_GRID_PAGE_SIZE, filteredProducts.length);
+
   return (
     <>
       <ProductCreateModal
+        mode={modalMode}
         open={isCreateModalOpen}
         categories={categories}
         form={productForm}
@@ -570,75 +1021,42 @@ export function AdminInventoryPageContent() {
         }}
       />
 
-      <div className="min-h-screen bg-[#d8d4d4] p-3 md:p-7">
-        <div className="mx-auto max-w-[1320px] overflow-hidden rounded-[3px] border border-[#e9e3dc] bg-[#fbfaf8]">
-        <header className="flex flex-col gap-4 border-b border-[#eee8e1] px-4 py-4 md:flex-row md:items-center md:justify-between md:px-7">
-          <div className="flex flex-wrap items-center gap-8">
-            <Link href="/" className="flex items-center gap-2">
-              <Flower2 className="h-4 w-4 text-[#c8a16a]" />
-              <span
-                className="text-[21px] text-[#2d2a26]"
-                style={{ fontFamily: "var(--font-noto-serif)" }}
-              >
-                Floral Boutique
-              </span>
-            </Link>
-            <div className="flex items-center gap-6 text-[13px] text-[#4d473f]">
-              <Link href="/products" className="transition-colors hover:text-[#8d6030]">
-                Shop All
-              </Link>
-              <Link
-                href="/products?view=categories"
-                className="transition-colors hover:text-[#8d6030]"
-              >
-                Categories
-              </Link>
-              <Link
-                href="/products?sort=latest"
-                className="transition-colors hover:text-[#8d6030]"
-              >
-                Latest
-              </Link>
-              <Link href="/our-story" className="transition-colors hover:text-[#8d6030]">
-                Our Story
-              </Link>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-[230px] items-center rounded-full bg-[#f2eeea] px-4">
-              <Search className="h-3.5 w-3.5 text-[#a8a09a]" />
-              <span className="ml-2 text-[12px] text-[#b3aba4]">Search arrangements...</span>
-            </div>
-            <button
-              type="button"
-              className="flex h-9 w-9 items-center justify-center rounded-full text-[#3f3934] transition-colors hover:bg-[#f2eeea]"
-              aria-label="Cart"
-            >
-              <ShoppingCart className="h-[18px] w-[18px]" />
-            </button>
-            <div className="relative group">
-              <Link
-                href="/profile"
-                className="flex h-9 w-9 items-center justify-center rounded-full text-[#3f3934] transition-colors hover:bg-[#f2eeea]"
-                aria-label="Profile"
-              >
-                <User className="h-[18px] w-[18px]" />
-              </Link>
-              <div className="pointer-events-none invisible absolute right-0 top-[calc(100%+8px)] z-50 w-[132px] translate-y-1 rounded-[12px] border border-[#e5ddd4] bg-[#fcfaf7] p-1 opacity-0 shadow-sm transition-all duration-150 group-hover:pointer-events-auto group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
-                <button
-                  type="button"
-                  onClick={handleSignOut}
-                  disabled={isSigningOut}
-                  className="w-full rounded-[9px] px-3 py-2 text-left text-[12px] font-medium text-[#5b4f43] transition-colors hover:bg-[#f1eeea] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isSigningOut ? "Đang thoát..." : "Đăng xuất"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </header>
+      <ProductDetailModal
+        open={isDetailModalOpen}
+        product={detailProduct}
+        loading={isDetailLoading}
+        error={detailError}
+        stockDraft={detailStockDraft}
+        stockSubmitting={isDetailStockSubmitting}
+        onClose={closeDetailModal}
+        onEdit={() => {
+          if (detailProduct) {
+            void startEditProduct(detailProduct.id);
+          }
+        }}
+        onStockDraftChange={setDetailStockDraft}
+        onStockSubmit={() => {
+          void submitDetailStock();
+        }}
+      />
 
-        <div className="grid md:grid-cols-[218px_minmax(0,1fr)]">
+      <DeleteConfirmDialog
+        open={Boolean(deleteTarget)}
+        product={deleteTarget}
+        deleting={isDeleting}
+        error={deleteError}
+        onClose={() => {
+          setDeleteTarget(null);
+          setDeleteError(null);
+        }}
+        onConfirm={() => {
+          void confirmDeleteProduct();
+        }}
+      />
+
+      <div className="min-h-screen bg-[#d8d4d4]">
+        <Navbar />
+        <div className="grid overflow-hidden border-t border-[#e9e3dc] bg-[#fbfaf8] md:grid-cols-[218px_minmax(0,1fr)]">
           <aside className="border-b border-[#eee8e1] px-4 py-6 md:min-h-[720px] md:border-b-0 md:border-r md:border-[#eee8e1] md:px-5">
             <nav className="space-y-2">
               {[
@@ -646,7 +1064,6 @@ export function AdminInventoryPageContent() {
                 { icon: ClipboardList, label: "Orders", href: "/admin/orders", active: false },
                 { icon: Package2, label: "Products", href: "/admin/products", active: true },
                 { icon: Users, label: "Customers", active: false },
-                { icon: Megaphone, label: "Marketing", active: false },
                 { icon: Settings, label: "Settings", active: false },
               ].map((item) => {
                 const className = `flex w-full items-center gap-3 rounded-full px-4 py-3 text-left text-[13px] transition-colors ${
@@ -695,10 +1112,6 @@ export function AdminInventoryPageContent() {
               </div>
             ) : (
               <>
-                <p className="text-[32px] leading-none text-[#b2adab] md:text-[36px]">
-                  Inventory Management - Floral Boutique
-                </p>
-
                 <section className="mt-5">
                   <h1
                     className="text-[46px] leading-[1.04] text-[#2d2a26]"
@@ -761,26 +1174,58 @@ export function AdminInventoryPageContent() {
                       {label === "ALL" ? "All Elements" : label}
                     </button>
                   ))}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSubmitError(null);
-                      setIsCreateModalOpen(true);
-                    }}
-                    className="ml-auto inline-flex items-center gap-2 rounded-full bg-[#8d6030] px-4 py-2 text-[11px] font-medium text-white transition-colors hover:bg-[#724e26]"
-                  >
-                    <Plus className="h-3 w-3" />
-                    New Botanical Element
-                  </button>
+                  <div className="ml-auto flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                    <button
+                      type="button"
+                      onClick={openCreateModal}
+                      className="inline-flex items-center justify-center gap-2 rounded-full bg-[#8d6030] px-4 py-2 text-[11px] font-medium text-white transition-colors hover:bg-[#724e26]"
+                    >
+                      <Plus className="h-3 w-3" />
+                      New Botanical Element
+                    </button>
+                  </div>
                 </section>
 
-                <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {actionError ? (
+                  <div className="mt-4 rounded-[16px] border border-[#efd0cc] bg-[#fbefec] px-4 py-3 text-[13px] text-[#8f3d35]">
+                    {actionError}
+                  </div>
+                ) : null}
+
+                {recentlyDeletedProducts.length > 0 ? (
+                  <section className="mt-4 rounded-[14px] border border-[#ece5dc] bg-[#fdfcfa] px-4 py-3">
+                    <p className="text-[11px] uppercase tracking-[1.1px] text-[#8f877f]">
+                      Recently deleted
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {recentlyDeletedProducts.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => {
+                            void restoreProduct(item);
+                          }}
+                          disabled={restoringProductId === item.id}
+                          className="inline-flex items-center gap-2 rounded-full border border-[#ddd2c6] bg-white px-3 py-1.5 text-[11px] text-[#6a5c4e] transition-colors hover:bg-[#f3eee8] disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          <RefreshCw className="h-3 w-3" />
+                          {restoringProductId === item.id ? "Restoring..." : `Restore ${item.name}`}
+                        </button>
+                      ))}
+                    </div>
+                  </section>
+                ) : null}
+
+                <section
+                  className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+                  onClick={() => setOpenActionMenuProductId(null)}
+                >
                   {filteredProducts.length === 0 ? (
                     <div className="col-span-full rounded-[14px] border border-[#ece5dc] bg-[#fdfcfa] px-5 py-6 text-[13px] text-[#7a726b]">
-                      No products found for this category filter.
+                      No products found for this filter combination.
                     </div>
                   ) : (
-                    filteredProducts.map((product) => {
+                    paginatedProducts.map((product) => {
                       const stock = normalizeStock(product.stockQuantity);
                       const image = resolveProductImage(product.imageUrl);
 
@@ -811,15 +1256,107 @@ export function AdminInventoryPageContent() {
                               {formatCurrency(product.price)}
                             </p>
                           </div>
-                          <p className={`mt-2 text-[11px] ${getStockStatusClassName(product.stockQuantity)}`}>
-                            {stock > 0 ? `+ ${stock} in stock` : "• Out of stock"} (
-                            {getStockStatusLabel(product.stockQuantity)})
+                          <p className="mt-1 text-[10px] uppercase tracking-[1px] text-[#9e948a]">
+                            {toCategoryLabel(product.categoryName)}
                           </p>
+                          <div className="relative mt-2 flex items-center justify-between">
+                            <p className={`text-[11px] ${getStockStatusClassName(product.stockQuantity)}`}>
+                              • {stock} in stock
+                            </p>
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setOpenActionMenuProductId((current) =>
+                                  current === product.id ? null : product.id
+                                );
+                              }}
+                              className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[#6c635b] transition-colors hover:bg-[#f1ece7]"
+                              aria-label={`Open actions for ${product.name}`}
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                            </button>
+
+                            {openActionMenuProductId === product.id ? (
+                              <div
+                                className="absolute right-0 top-[calc(100%+6px)] z-10 w-[154px] rounded-[12px] border border-[#e5ddd4] bg-[#fcfaf7] p-1 shadow-sm"
+                                onClick={(event) => event.stopPropagation()}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenActionMenuProductId(null);
+                                    void openDetailModal(product.id);
+                                  }}
+                                  className="flex w-full items-center gap-2 rounded-[8px] px-3 py-2 text-left text-[11px] text-[#5b4f43] transition-colors hover:bg-[#f1eeea]"
+                                >
+                                  <Eye className="h-3.5 w-3.5" />
+                                  Detail
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenActionMenuProductId(null);
+                                    void startEditProduct(product.id);
+                                  }}
+                                  disabled={editLoadingProductId === product.id}
+                                  className="flex w-full items-center gap-2 rounded-[8px] px-3 py-2 text-left text-[11px] text-[#5b4f43] transition-colors hover:bg-[#f1eeea] disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                  {editLoadingProductId === product.id ? "Loading..." : "Edit"}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenActionMenuProductId(null);
+                                    setDeleteTarget(product);
+                                    setDeleteError(null);
+                                    setActionError(null);
+                                  }}
+                                  className="flex w-full items-center gap-2 rounded-[8px] px-3 py-2 text-left text-[11px] text-[#9b4740] transition-colors hover:bg-[#faefed]"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                  Delete
+                                </button>
+                              </div>
+                            ) : null}
+                          </div>
                         </article>
                       );
                     })
                   )}
                 </section>
+
+                {filteredProducts.length > 0 ? (
+                  <section className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-[#ece5dc] bg-[#fdfcfa] px-4 py-3">
+                    <p className="text-[11px] text-[#7a726b]">
+                      Showing {visibleRangeStart}-{visibleRangeEnd} of {filteredProducts.length} products
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setCurrentProductPage((current) => Math.max(1, current - 1))}
+                        disabled={currentProductPage <= 1}
+                        className="inline-flex h-8 items-center justify-center rounded-full border border-[#ddd2c6] px-3 text-[11px] text-[#6a5c4e] transition-colors hover:bg-[#f3eee8] disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Previous
+                      </button>
+                      <span className="text-[11px] text-[#7a726b]">
+                        Page {currentProductPage}/{totalProductPages}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setCurrentProductPage((current) => Math.min(totalProductPages, current + 1))
+                        }
+                        disabled={currentProductPage >= totalProductPages}
+                        className="inline-flex h-8 items-center justify-center rounded-full border border-[#ddd2c6] px-3 text-[11px] text-[#6a5c4e] transition-colors hover:bg-[#f3eee8] disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </section>
+                ) : null}
 
                 <section className="mt-10 overflow-hidden rounded-[16px] border border-[#eee8e1] bg-[#fcfbf9]">
                   <div className="border-b border-[#efebe5] px-5 py-4">
@@ -886,7 +1423,6 @@ export function AdminInventoryPageContent() {
               </>
             )}
           </main>
-        </div>
         </div>
       </div>
     </>
