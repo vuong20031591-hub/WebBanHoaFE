@@ -2,6 +2,7 @@ export { ProfilePageContent } from "./ProfilePageContent";
 export { ProfileFavoritesPageContent } from "./ProfileFavoritesPageContent";
 export { ProfileSettingsPageContent } from "./ProfileSettingsPageContent";
 export { ProfileSecuritySettingsPageContent } from "./ProfileSecuritySettingsPageContent";
+export { ProfileAddressesPageContent } from "./ProfileAddressesPageContent";
 export { ProfileHeader } from "./ProfileHeader";
 export { ProfileTabs } from "./ProfileTabs";
 export { ProfileOrdersSection } from "./ProfileOrdersSection";

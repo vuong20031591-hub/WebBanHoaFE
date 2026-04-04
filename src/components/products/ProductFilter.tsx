@@ -21,7 +21,7 @@ export function ProductFilter({
   const divider = <div className="border-t border-[rgba(45,42,38,0.1)] my-4" />;
 
   return (
-    <aside className="w-[224px] shrink-0">
+    <aside className="w-full shrink-0 lg:w-[224px]">
       <p
         className="text-[#2d2a26] text-[16px] font-bold tracking-[3px] mb-4"
         style={{ fontFamily: "var(--font-noto-serif)" }}

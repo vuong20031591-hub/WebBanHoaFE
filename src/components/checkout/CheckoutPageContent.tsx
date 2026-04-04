@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { Footer, Navbar } from "@/components/layout";
-import { isApiError, ordersApi } from "@/lib/api";
+import { getUserRewards, isApiError, ordersApi } from "@/lib/api";
 import { useCartStore } from "@/lib/cart";
 import type { PaymentMethod as PaymentMethodType } from "@/lib/checkout/types";
+import { formatCurrency } from "@/lib/currency";
 import { useAuth } from "@/src/contexts";
 import { Breadcrumb } from "./Breadcrumb";
 import { OrderSummary } from "./OrderSummary";
@@ -53,10 +54,14 @@ function CheckoutCard({
 }
 
 export function CheckoutPageContent() {
+  const REDEEM_POINT_VALUE_VND = 1000;
+
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const [selectedPaymentMethod, setSelectedPaymentMethod] =
-    useState<PaymentMethodType>("qr");
+    useState<PaymentMethodType>("vietqr");
+  const [availablePoints, setAvailablePoints] = useState(0);
+  const [redeemPointsInput, setRedeemPointsInput] = useState(0);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -69,8 +74,57 @@ export function CheckoutPageContent() {
   const items = useCartStore((state) => state.variants);
   const note = useCartStore((state) => state.note);
   const clearCart = useCartStore((state) => state.clearCart);
-  const displayItems = hydrated ? items : [];
+  const displayItems = useMemo(() => (hydrated ? items : []), [hydrated, items]);
+  const cartSubtotal = useMemo(
+    () => displayItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
+    [displayItems]
+  );
   const featuredDeliveryDate = displayItems.find((item) => item.deliveryDate)?.deliveryDate;
+
+  const maxRedeemablePoints = useMemo(() => {
+    const maxByAmount = Math.floor(cartSubtotal / REDEEM_POINT_VALUE_VND);
+    return Math.max(0, Math.min(availablePoints, maxByAmount));
+  }, [availablePoints, cartSubtotal]);
+
+  const redeemedPoints = Math.max(0, Math.min(redeemPointsInput, maxRedeemablePoints));
+  const rewardsDiscount = redeemedPoints * REDEEM_POINT_VALUE_VND;
+
+  useEffect(() => {
+    if (!user) {
+      setAvailablePoints(0);
+      setRedeemPointsInput(0);
+      return;
+    }
+
+    let active = true;
+
+    const loadRewards = async () => {
+      try {
+        const rewards = await getUserRewards();
+        if (!active) {
+          return;
+        }
+        setAvailablePoints(rewards.points);
+      } catch {
+        if (!active) {
+          return;
+        }
+        setAvailablePoints(0);
+      }
+    };
+
+    loadRewards();
+
+    return () => {
+      active = false;
+    };
+  }, [user]);
+
+  useEffect(() => {
+    if (redeemPointsInput > maxRedeemablePoints) {
+      setRedeemPointsInput(maxRedeemablePoints);
+    }
+  }, [maxRedeemablePoints, redeemPointsInput]);
 
   const handlePlaceOrder = async () => {
     if (!user) {
@@ -83,13 +137,24 @@ export function CheckoutPageContent() {
 
     try {
       const order = await ordersApi.createFromCart({
-        paymentMethod: selectedPaymentMethod === "qr" ? "VIETQR" : "COD",
+        paymentMethod:
+          selectedPaymentMethod === "cod"
+            ? "COD"
+            : selectedPaymentMethod === "sepay"
+              ? "SEPAY"
+              : "VIETQR",
+        redeemPoints: redeemedPoints > 0 ? redeemedPoints : undefined,
       });
 
       clearCart();
 
-      if (selectedPaymentMethod === "qr") {
+      if (selectedPaymentMethod === "vietqr") {
         router.push(`/checkout/qr?orderId=${order.id}`);
+        return;
+      }
+
+      if (selectedPaymentMethod === "sepay") {
+        router.push(`/checkout/sepay?orderId=${order.id}`);
         return;
       }
 
@@ -213,6 +278,39 @@ export function CheckoutPageContent() {
                   </div>
                 </CheckoutCard>
 
+                <CheckoutCard
+                  eyebrow="Bloom Rewards"
+                  title="Redeem Your Points"
+                  description="Apply points before placing order. Redemption value: 1 point = 1,000 VND."
+                >
+                  <div className="rounded-[26px] bg-[#fcf7f2] px-6 py-5">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#ccb1a0]">
+                      Available points
+                    </p>
+                    <p className="mt-2 text-[22px] leading-none text-[#5e4f46]" style={{ fontFamily: "var(--font-cormorant)" }}>
+                      {availablePoints}
+                    </p>
+                    <label className="mt-5 block text-[12px] font-semibold uppercase tracking-[0.16em] text-[#8f7e73]">
+                      Points to redeem
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={maxRedeemablePoints}
+                      value={redeemPointsInput}
+                      onChange={(event) => {
+                        const value = Number(event.target.value);
+                        setRedeemPointsInput(Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0);
+                      }}
+                      className="mt-2 h-11 w-full rounded-[12px] border border-[rgba(185,158,140,0.25)] bg-white px-4 text-[14px] text-[#5b4a41] outline-none focus:border-[#c9ab8f]"
+                    />
+                    <div className="mt-3 flex items-center justify-between text-[13px] text-[#8f7e73]">
+                      <span>Max redeem now: {maxRedeemablePoints} points</span>
+                      <span className="font-medium text-[#166534]">-{formatCurrency(rewardsDiscount)}</span>
+                    </div>
+                  </div>
+                </CheckoutCard>
+
                 <div className="rounded-[36px] border border-[rgba(185,158,140,0.14)] bg-white px-8 py-8 shadow-[0_20px_55px_rgba(148,117,99,0.06)]">
                   <PaymentMethod
                     value={selectedPaymentMethod}
@@ -230,6 +328,8 @@ export function CheckoutPageContent() {
               <div>
                 <OrderSummary
                   items={displayItems}
+                  redeemedPoints={redeemedPoints}
+                  rewardsDiscount={rewardsDiscount}
                   onPlaceOrder={handlePlaceOrder}
                   isSubmitting={isSubmitting}
                 />

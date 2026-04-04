@@ -146,7 +146,7 @@ export function ProfileSettingsPageContent() {
         ].filter(Boolean);
         setPrimaryAddress(parts.join(", "));
       } else {
-        setPrimaryAddress("No address found. Add one in checkout.");
+        setPrimaryAddress("No address found. Add one in Address Book.");
       }
     } catch (err) {
       console.error("Failed to load address:", err);
@@ -331,6 +331,7 @@ export function ProfileSettingsPageContent() {
                   communicationPreferences={communicationPreferences}
                   cancelLabel="Cancel"
                   saveLabel="Save Changes"
+                  manageAddressesHref="/profile/addresses"
                   onSave={handleSaveSettings}
                 />
               </div>

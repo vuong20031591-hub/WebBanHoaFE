@@ -8,7 +8,7 @@ export interface ProfileMember {
   editHref: string;
 }
 
-export type ProfileTabId = "orders" | "favorites" | "settings";
+export type ProfileTabId = "orders" | "favorites" | "settings" | "addresses";
 
 export interface ProfileTab {
   id: ProfileTabId;
@@ -169,14 +169,6 @@ export interface ProfilePreferencesToggleOption {
   enabled: boolean;
 }
 
-export interface ProfilePreferencesRibbonColor {
-  id: string;
-  label: string;
-  color: string;
-  borderColor?: string;
-  selected: boolean;
-}
-
 export interface ProfilePreferencesPreview {
   image: string;
   alt: string;
@@ -191,8 +183,6 @@ export interface ProfilePreferencesRegionalSection {
 export interface ProfilePreferencesGiftingSection {
   title: string;
   toggles: ProfilePreferencesToggleOption[];
-  ribbonLabel: string;
-  ribbonColors: ProfilePreferencesRibbonColor[];
   preview: ProfilePreferencesPreview;
 }
 

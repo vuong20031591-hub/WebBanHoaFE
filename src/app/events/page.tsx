@@ -236,6 +236,7 @@ export default function EventsWeddingsPage() {
                         {SERVICES.map((service) => (
                             <div
                                 key={service.id}
+                                id={service.id}
                                 className="flex flex-col"
                                 style={{ marginTop: service.offsetTop ? "96px" : "0" }}
                             >
@@ -276,6 +277,8 @@ export default function EventsWeddingsPage() {
                         ))}
                     </div>
                 </section>
+
+                <div id="occasions" className="scroll-mt-24" />
 
                 {/* ── Testimonial ── */}
                 <section className="flex flex-col items-center px-8 py-32 pb-64">

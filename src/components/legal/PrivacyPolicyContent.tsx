@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Mail, MapPin, Phone, Flower2, ArrowRight } from 'lucide-react';
+import { Mail, Flower2, ArrowRight } from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 
@@ -135,11 +135,11 @@ export default function PrivacyPolicyContent() {
                 <div className="absolute inset-0 bg-[#7d562d0d] rounded-3xl" />
                 <div className="relative p-10 space-y-6">
                   <p className="text-base leading-[26px] text-[#4f4444] italic">
-                    "Like dew on a leaf, cookies provide the necessary moisture
-                    for a smooth experience."
+                    &ldquo;Like dew on a leaf, cookies provide the necessary moisture
+                    for a smooth experience.&rdquo;
                   </p>
                   <p className="text-base leading-[26px] text-[#4f4444]">
-                    We use "Cookies" to record your preferences and session
+                    We use &ldquo;Cookies&rdquo; to record your preferences and session
                     details. You can instruct your browser to refuse all cookies or
                     to indicate when a cookie is being sent, though some parts of
                     our Atelier may not function optimally without them.

@@ -1,4 +1,4 @@
-import axios, { AxiosError } from "axios";
+import axios from "axios";
 import { apiClient } from "@/lib/api/client";
 import type {
   AuthUser,
@@ -12,9 +12,7 @@ import type {
 } from "./types";
 
 const API_BASE_URL =
-  typeof window !== "undefined"
-    ? ""
-    : process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
+  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
 const authClient = axios.create({
   baseURL: API_BASE_URL,

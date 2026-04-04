@@ -54,38 +54,31 @@ const EMAIL_PREFERENCES: ProfileNotificationsPreference[] = [
     id: "order_updates",
     label: "Order Updates",
     description:
-      "Detailed summaries, tracking links, and delivery confirmations for every arrangement.",
+      "Channel: Email. Detailed summaries, tracking links, and delivery confirmations for every arrangement.",
     enabled: true,
   },
   {
     id: "seasonal_curations",
     label: "Seasonal Curations",
     description:
-      "Our lead floral artist’s monthly picks and early access to limited holiday collections.",
+      "Channel: Email. Our lead floral artist’s monthly picks and early access to limited holiday collections.",
     enabled: true,
   },
   {
     id: "boutique_news",
     label: "Boutique News",
     description:
-      "Occasional updates on workshop events, new flower varieties, and sustainability initiatives.",
+      "Channel: Email. Occasional updates on workshop events, new flower varieties, and sustainability initiatives.",
     enabled: false,
   },
 ];
 
-const PUSH_PREFERENCES: ProfileNotificationsPreference[] = [
+const SMS_PREFERENCES: ProfileNotificationsPreference[] = [
   {
     id: "delivery_alerts",
     label: "Delivery Alerts",
     description:
-      "Instant notifications when your bouquet is out for delivery and has been safely received.",
-    enabled: true,
-  },
-  {
-    id: "artist_updates",
-    label: "Artist Updates",
-    description:
-      "Be the first to know when your favorite florist releases a new signature series.",
+      "Channel: SMS. Instant notifications when your bouquet is out for delivery and has been safely received.",
     enabled: false,
   },
 ];
@@ -96,10 +89,10 @@ const EMAIL_SECTION: ProfileNotificationsSection = {
   preferences: EMAIL_PREFERENCES,
 };
 
-const PUSH_SECTION: ProfileNotificationsSection = {
-  title: "Push Notifications",
-  subtitle: "Real-time alerts delivered straight to your device.",
-  preferences: PUSH_PREFERENCES,
+const SMS_SECTION: ProfileNotificationsSection = {
+  title: "SMS Notifications",
+  subtitle: "Time-sensitive updates delivered to your phone number.",
+  preferences: SMS_PREFERENCES,
 };
 
 export function ProfileNotificationsSettingsPageContent() {
@@ -153,7 +146,7 @@ export function ProfileNotificationsSettingsPageContent() {
                 />
                 <ProfileNotificationsSettingsForm
                   emailSection={EMAIL_SECTION}
-                  pushSection={PUSH_SECTION}
+                  smsSection={SMS_SECTION}
                   discardLabel="Discard Changes"
                   updateLabel="Update Preferences"
                 />

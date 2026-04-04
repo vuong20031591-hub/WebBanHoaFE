@@ -1,12 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { ChevronDown } from "lucide-react";
 import {
   ProfilePreferencesGiftingSection,
   ProfilePreferencesRegionalSection,
-  ProfilePreferencesRibbonColor,
   ProfilePreferencesSelectField,
   ProfilePreferencesToggleOption,
 } from "@/lib/profile/types";
@@ -96,45 +95,6 @@ function PreferenceToggle({ option, onToggle }: PreferenceToggleProps) {
   );
 }
 
-function RibbonColorOption({
-  color,
-  onSelect,
-}: {
-  color: ProfilePreferencesRibbonColor;
-  onSelect: (id: string) => void;
-}) {
-  const selectedSwatchClassName = color.selected
-    ? "border-[rgba(74,58,61,0.32)] shadow-[0_0_0_3px_rgba(208,187,149,0.20)]"
-    : color.borderColor
-      ? ""
-      : "border-transparent";
-
-  return (
-    <button
-      type="button"
-      onClick={() => onSelect(color.id)}
-      className="flex w-8 flex-col items-center"
-    >
-      <span
-        className={`h-8 w-8 rounded-full border transition-transform duration-200 hover:scale-105 ${selectedSwatchClassName}`}
-        style={{
-          backgroundColor: color.color,
-          borderColor: color.selected
-            ? undefined
-            : color.borderColor ?? "transparent",
-        }}
-      />
-      <span
-        className={`mt-2 text-center text-[10px] font-light leading-[15px] ${
-          color.selected ? "text-[#57534e]" : "text-[#a8a29e]"
-        }`}
-      >
-        {color.label}
-      </span>
-    </button>
-  );
-}
-
 export function ProfilePreferencesSettingsForm({
   regionalSection,
   giftingSection,
@@ -149,20 +109,14 @@ export function ProfilePreferencesSettingsForm({
   const [toggleOptions, setToggleOptions] = useState(
     giftingSection.toggles.map((toggle) => ({ ...toggle }))
   );
-  const [ribbonColors, setRibbonColors] = useState(
-    giftingSection.ribbonColors.map((color) => ({ ...color }))
-  );
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  useEffect(() => {
-    loadPreferences();
-  }, []);
-
-  const loadPreferences = async () => {
+  const loadPreferences = useCallback(async () => {
     try {
       setLoading(true);
+      setMessage(null);
       const prefs = await getUserPreferences();
       
       setFieldValues((current) => ({
@@ -184,19 +138,19 @@ export function ProfilePreferencesSettingsForm({
           return toggle;
         })
       );
-
-      setRibbonColors((current) =>
-        current.map((color) => ({
-          ...color,
-          selected: color.id === prefs.ribbonColor,
-        }))
-      );
     } catch (err) {
-      console.error("Failed to load preferences:", err);
+      setMessage({
+        type: "error",
+        text: isApiError(err) ? err.message : "Failed to load preferences.",
+      });
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadPreferences();
+  }, [loadPreferences]);
 
   const handleFieldChange = (fieldId: string, value: string) => {
     setFieldValues((current) => ({
@@ -213,21 +167,8 @@ export function ProfilePreferencesSettingsForm({
     );
   };
 
-  const handleRibbonSelect = (colorId: string) => {
-    setRibbonColors((current) =>
-      current.map((color) => ({
-        ...color,
-        selected: color.id === colorId,
-      }))
-    );
-  };
-
   const handleReset = () => {
     loadPreferences();
-    setToggleOptions(giftingSection.toggles.map((toggle) => ({ ...toggle })));
-    setRibbonColors(
-      giftingSection.ribbonColors.map((color) => ({ ...color }))
-    );
     setMessage(null);
   };
 
@@ -239,7 +180,6 @@ export function ProfilePreferencesSettingsForm({
     try {
       const signatureWrapToggle = toggleOptions.find((t) => t.id === "signature_wrap");
       const ecoDeliveryToggle = toggleOptions.find((t) => t.id === "eco_delivery");
-      const selectedRibbon = ribbonColors.find((c) => c.selected);
 
       await updateUserPreferences({
         language: fieldValues.language,
@@ -248,7 +188,6 @@ export function ProfilePreferencesSettingsForm({
         timezone: fieldValues.timezone,
         signatureWrap: signatureWrapToggle?.enabled,
         ecoDelivery: ecoDeliveryToggle?.enabled,
-        ribbonColor: selectedRibbon?.id,
       });
 
       setMessage({ type: "success", text: "Preferences saved successfully." });
@@ -308,19 +247,6 @@ export function ProfilePreferencesSettingsForm({
                   onToggle={handleToggle}
                 />
               ))}
-            </div>
-
-            <div className="mt-10">
-              <p className={fieldLabelClassName}>{giftingSection.ribbonLabel}</p>
-              <div className="mt-[16px] flex flex-wrap gap-4">
-                {ribbonColors.map((color) => (
-                  <RibbonColorOption
-                    key={color.id}
-                    color={color}
-                    onSelect={handleRibbonSelect}
-                  />
-                ))}
-              </div>
             </div>
           </div>
 

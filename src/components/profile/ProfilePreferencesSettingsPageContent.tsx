@@ -60,7 +60,6 @@ const REGIONAL_SECTION: ProfilePreferencesRegionalSection = {
       options: [
         { id: "en", value: "en", label: "English (EN)" },
         { id: "vi", value: "vi", label: "Tiếng Việt (VI)" },
-        { id: "fr", value: "fr", label: "Français (FR)" },
       ],
     },
     {
@@ -71,7 +70,6 @@ const REGIONAL_SECTION: ProfilePreferencesRegionalSection = {
       options: [
         { id: "usd", value: "usd", label: "USD ($)" },
         { id: "vnd", value: "vnd", label: "VND (₫)" },
-        { id: "eur", value: "eur", label: "EUR (€)" },
       ],
     },
   ],
@@ -91,37 +89,6 @@ const GIFTING_SECTION: ProfilePreferencesGiftingSection = {
       label: "Eco-Friendly Delivery",
       description: "Minimize packaging where possible.",
       enabled: false,
-    },
-  ],
-  ribbonLabel: "Signature Ribbon Color",
-  ribbonColors: [
-    {
-      id: "blush",
-      label: "Blush",
-      color: "#efcfc9",
-      borderColor: "#e1c0b9",
-      selected: true,
-    },
-    {
-      id: "sage",
-      label: "Sage",
-      color: "#a9bea1",
-      borderColor: "#9db292",
-      selected: false,
-    },
-    {
-      id: "cream",
-      label: "Cream",
-      color: "#f4f1e9",
-      borderColor: "#ddd8cd",
-      selected: false,
-    },
-    {
-      id: "noir",
-      label: "Noir",
-      color: "#2d2a26",
-      borderColor: "#2d2a26",
-      selected: false,
     },
   ],
   preview: {

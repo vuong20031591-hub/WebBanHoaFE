@@ -1,11 +1,38 @@
 "use client";
 
+import { Banknote, QrCode, WalletCards } from "lucide-react";
 import type { PaymentMethod as PaymentMethodType } from "@/lib/checkout/types";
 
 interface PaymentMethodProps {
   onSelect: (method: PaymentMethodType) => void;
   value: PaymentMethodType;
 }
+
+const PAYMENT_OPTIONS: Array<{
+  id: PaymentMethodType;
+  label: string;
+  caption: string;
+  Icon: typeof QrCode;
+}> = [
+  {
+    id: "vietqr",
+    label: "VietQR",
+    caption: "Scan with any banking app",
+    Icon: QrCode,
+  },
+  {
+    id: "sepay",
+    label: "SePay",
+    caption: "Hosted transfer checkout",
+    Icon: WalletCards,
+  },
+  {
+    id: "cod",
+    label: "COD",
+    caption: "Pay when receiving flowers",
+    Icon: Banknote,
+  },
+];
 
 export function PaymentMethod({ onSelect, value }: PaymentMethodProps) {
   const handleSelect = (method: PaymentMethodType) => {
@@ -44,76 +71,45 @@ export function PaymentMethod({ onSelect, value }: PaymentMethodProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <button
-          type="button"
-          onClick={() => handleSelect("qr")}
-          className={`flex flex-col items-center gap-4 rounded-2xl p-6 transition ${
-            value === "qr"
-              ? "bg-white"
-              : "bg-[rgba(255,255,255,0.5)]"
-          }`}
-        >
-          <div
-            className={`flex h-10 w-10 items-center justify-center rounded-full ${
-              value === "qr" ? "bg-[#d4a373]" : "bg-[#f9fafb]"
-            }`}
-          >
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              className={value === "qr" ? "text-white" : "text-[#9ca3af]"}
-            >
-              <path
-                d="M3 11H11V3H3V11ZM5 5H9V9H5V5ZM3 21H11V13H3V21ZM5 15H9V19H5V15ZM13 3V11H21V3H13ZM19 9H15V5H19V9ZM19 19H21V21H19V19ZM13 13H15V15H13V13ZM15 15H17V17H15V15ZM13 17H15V19H13V17ZM15 19H17V21H15V19ZM17 17H19V19H17V17ZM17 13H19V15H17V13ZM19 15H21V17H19V15Z"
-                fill="currentColor"
-              />
-            </svg>
-          </div>
-          <span
-            className="text-[11px] font-bold leading-[16.5px] tracking-[1.1px] text-[#2c2825]"
-            style={{ fontFamily: "var(--font-inter)" }}
-          >
-            QR SCAN
-          </span>
-        </button>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        {PAYMENT_OPTIONS.map(({ id, label, caption, Icon }) => {
+          const isActive = value === id;
 
-        <button
-          type="button"
-          onClick={() => handleSelect("cash")}
-          className={`flex flex-col items-center gap-4 rounded-2xl p-6 transition ${
-            value === "cash"
-              ? "bg-white"
-              : "bg-[rgba(255,255,255,0.5)]"
-          }`}
-        >
-          <div
-            className={`flex h-10 w-10 items-center justify-center rounded-full ${
-              value === "cash" ? "bg-[#d4a373]" : "bg-[#f9fafb]"
-            }`}
-          >
-            <svg
-              width="22"
-              height="16"
-              viewBox="0 0 22 16"
-              fill="none"
-              className={value === "cash" ? "text-white" : "text-[#9ca3af]"}
+          return (
+            <button
+              key={id}
+              type="button"
+              onClick={() => handleSelect(id)}
+              className={`flex flex-col items-center gap-4 rounded-2xl border p-6 text-center transition ${
+                isActive
+                  ? "border-[#e2c3a5] bg-white shadow-[0_10px_24px_rgba(168,134,114,0.12)]"
+                  : "border-transparent bg-[rgba(255,255,255,0.5)] hover:bg-white"
+              }`}
             >
-              <path
-                d="M20 0H2C0.9 0 0 0.9 0 2V14C0 15.1 0.9 16 2 16H20C21.1 16 22 15.1 22 14V2C22 0.9 21.1 0 20 0ZM20 14H2V2H20V14ZM11 4C12.66 4 14 5.34 14 7C14 8.66 12.66 10 11 10C9.34 10 8 8.66 8 7C8 5.34 9.34 4 11 4ZM5 4C5 5.1 4.1 6 3 6V8C4.1 8 5 8.9 5 10H7C7 8.9 7.9 8 9 8V6C7.9 6 7 5.1 7 4H5ZM17 4C17 5.1 17.9 6 19 6V8C17.9 8 17 8.9 17 10H15C15 8.9 14.1 8 13 8V6C14.1 6 15 5.1 15 4H17Z"
-                fill="currentColor"
-              />
-            </svg>
-          </div>
-          <span
-            className="text-[11px] font-bold leading-[16.5px] tracking-[1.1px] text-[#2c2825]"
-            style={{ fontFamily: "var(--font-inter)" }}
-          >
-            CASH
-          </span>
-        </button>
+              <div
+                className={`flex h-10 w-10 items-center justify-center rounded-full ${
+                  isActive ? "bg-[#d4a373]" : "bg-[#f9fafb]"
+                }`}
+              >
+                <Icon className={isActive ? "h-5 w-5 text-white" : "h-5 w-5 text-[#9ca3af]"} />
+              </div>
+              <div>
+                <p
+                  className="text-[11px] font-bold leading-[16.5px] tracking-[1.1px] text-[#2c2825]"
+                  style={{ fontFamily: "var(--font-inter)" }}
+                >
+                  {label}
+                </p>
+                <p
+                  className="mt-1 text-[11px] leading-5 text-[#8b7c72]"
+                  style={{ fontFamily: "var(--font-inter)" }}
+                >
+                  {caption}
+                </p>
+              </div>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
