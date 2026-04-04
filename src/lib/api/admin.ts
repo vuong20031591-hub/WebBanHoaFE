@@ -47,6 +47,20 @@ export const adminOrdersApi = {
     });
     return data;
   },
+
+  async updateOrderStatus(
+    id: number,
+    status: "PENDING" | "CONFIRMED" | "CANCELLED"
+  ): Promise<OrderDTO> {
+    const { data } = await apiClient.put<OrderDTO>(
+      `/api/admin/orders/${id}/status`,
+      { status },
+      {
+        headers: ADMIN_HEADERS,
+      }
+    );
+    return data;
+  },
 };
 
 export const adminProductsApi = {
@@ -54,6 +68,48 @@ export const adminProductsApi = {
     const { data } = await apiClient.post<ProductDetailDTO>("/api/admin/products", request, {
       headers: ADMIN_HEADERS,
     });
+    return data;
+  },
+
+  async updateProduct(
+    id: number,
+    request: AdminProductUpsertRequest
+  ): Promise<ProductDetailDTO> {
+    const { data } = await apiClient.put<ProductDetailDTO>(
+      `/api/admin/products/${id}`,
+      request,
+      {
+        headers: ADMIN_HEADERS,
+      }
+    );
+    return data;
+  },
+
+  async deleteProduct(id: number): Promise<void> {
+    await apiClient.delete(`/api/admin/products/${id}`, {
+      headers: ADMIN_HEADERS,
+    });
+  },
+
+  async restoreProduct(id: number): Promise<ProductDetailDTO> {
+    const { data } = await apiClient.patch<ProductDetailDTO>(
+      `/api/admin/products/${id}/restore`,
+      undefined,
+      {
+        headers: ADMIN_HEADERS,
+      }
+    );
+    return data;
+  },
+
+  async updateStock(id: number, stockQuantity: number): Promise<ProductDetailDTO> {
+    const { data } = await apiClient.patch<ProductDetailDTO>(
+      `/api/admin/products/${id}/stock`,
+      { stockQuantity },
+      {
+        headers: ADMIN_HEADERS,
+      }
+    );
     return data;
   },
 };

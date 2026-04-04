@@ -2,19 +2,15 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   ClipboardList,
-  Flower2,
+  Eye,
   LayoutDashboard,
-  Megaphone,
   Package2,
   Search,
   Settings,
-  ShoppingCart,
   Sparkles,
-  User,
   Users,
   X,
 } from "lucide-react";
@@ -22,6 +18,7 @@ import { adminOrdersApi, isApiError, productsApi } from "@/lib/api";
 import type { OrderDTO, OrderPaymentMethod, ProductDTO } from "@/lib/api/types";
 import { formatCurrency } from "@/lib/currency";
 import { loadOrderProducts } from "@/lib/mappers";
+import { Navbar } from "@/src/components/layout";
 import { useAuth } from "@/src/contexts";
 
 const FALLBACK_IMAGE = "/images/hero-main.png";
@@ -36,8 +33,9 @@ let adminOrdersCache:
   | null = null;
 
 type StatusFilter = "ALL" | "PENDING" | "CONFIRMED" | "CANCELLED";
-type TimeWindow = "WEEK" | "MONTH";
+type OrderStatusValue = Exclude<StatusFilter, "ALL">;
 type OrderItemFormState = { productId: string; quantity: string };
+const ORDER_STATUS_VALUES: OrderStatusValue[] = ["PENDING", "CONFIRMED", "CANCELLED"];
 
 const INITIAL_ORDER_ITEM: OrderItemFormState = {
   productId: "",
@@ -77,10 +75,6 @@ function getStartOfWeek(baseDate: Date): Date {
   const dayIndex = (date.getDay() + 6) % 7;
   date.setDate(date.getDate() - dayIndex);
   return date;
-}
-
-function getStartOfMonth(baseDate: Date): Date {
-  return new Date(baseDate.getFullYear(), baseDate.getMonth(), 1);
 }
 
 function calculateWeeklyGrowth(orders: OrderDTO[]): {
@@ -185,6 +179,40 @@ function getFormattedDate(value: string): string {
     day: "numeric",
     year: "numeric",
   }).format(new Date(value));
+}
+
+function getFormattedDateTime(value: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+function isOrderStatusValue(status: string): status is OrderStatusValue {
+  return ORDER_STATUS_VALUES.includes(status as OrderStatusValue);
+}
+
+function isValidStatusTransition(current: OrderStatusValue, next: OrderStatusValue): boolean {
+  if (current === next) {
+    return true;
+  }
+
+  if (current === "CANCELLED") {
+    return false;
+  }
+
+  if (current === "PENDING") {
+    return next === "CONFIRMED" || next === "CANCELLED";
+  }
+
+  if (current === "CONFIRMED") {
+    return next === "CANCELLED";
+  }
+
+  return false;
 }
 
 function CreateOrderModal({
@@ -357,18 +385,147 @@ function CreateOrderModal({
   );
 }
 
+function OrderDetailModal({
+  open,
+  order,
+  coverImage,
+  statusUpdateError,
+  statusUpdating,
+  onClose,
+  onStatusChange,
+}: {
+  open: boolean;
+  order: OrderDTO | null;
+  coverImage: string;
+  statusUpdateError: string | null;
+  statusUpdating: boolean;
+  onClose: () => void;
+  onStatusChange: (order: OrderDTO, nextStatus: OrderStatusValue) => void;
+}) {
+  if (!open || !order) {
+    return null;
+  }
+
+  const orderStatus = isOrderStatusValue(order.status) ? order.status : "PENDING";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4">
+      <div className="w-full max-w-[760px] rounded-[24px] border border-[#e7dfd5] bg-[#fbfaf8] p-6 shadow-2xl">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2
+              className="text-[32px] leading-none text-[#2d2a26]"
+              style={{ fontFamily: "var(--font-noto-serif)" }}
+            >
+              Order #{order.id}
+            </h2>
+            <p className="mt-2 text-[13px] text-[#7c736c]">
+              Created {getFormattedDateTime(order.createdAt)} by {formatCustomerLabel(order.userId)}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f2ede8] text-[#6e655d] transition-colors hover:bg-[#e7e0d8]"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="mt-5 grid gap-5 md:grid-cols-[220px_minmax(0,1fr)]">
+          <div className="relative h-[180px] overflow-hidden rounded-[16px] bg-[#f1ece7]">
+            <Image src={coverImage} alt={`Order ${order.id}`} fill sizes="220px" className="object-cover" />
+          </div>
+          <div className="space-y-3">
+            <div className="grid gap-2 text-[12px] text-[#5f564d] sm:grid-cols-2">
+              <p>Customer ID: {order.userId}</p>
+              <p>Payment: {order.paymentMethod}</p>
+              <p>Total: {formatCurrency(order.totalAmount)}</p>
+              <p>Status: {formatOrderStatus(order.status)}</p>
+            </div>
+
+            <div className="max-w-[220px]">
+              <label className="mb-1 block text-[11px] uppercase tracking-[1.1px] text-[#8e857d]">
+                Update status
+              </label>
+              <select
+                value={orderStatus}
+                disabled={statusUpdating}
+                onChange={(event) => onStatusChange(order, event.target.value as OrderStatusValue)}
+                className="h-9 w-full rounded-full border border-[#e5ddd4] bg-white px-3 text-[11px] text-[#6d6358] outline-none"
+              >
+                {ORDER_STATUS_VALUES.map((statusValue) => (
+                  <option key={statusValue} value={statusValue}>
+                    {formatOrderStatus(statusValue)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {statusUpdateError ? (
+              <p className="rounded-[12px] border border-[#efd0cc] bg-[#fbefec] px-3 py-2 text-[12px] text-[#8f3d35]">
+                {statusUpdateError}
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="mt-6 overflow-hidden rounded-[16px] border border-[#e8e2d9] bg-[#fcfbf9]">
+          <div className="border-b border-[#ece6de] px-5 py-3">
+            <h3
+              className="text-[26px] leading-none text-[#2d2a26]"
+              style={{ fontFamily: "var(--font-noto-serif)" }}
+            >
+              Items
+            </h3>
+          </div>
+          <div className="max-h-[280px] overflow-auto">
+            <table className="min-w-full">
+              <thead>
+                <tr className="border-b border-[#f1ede8] text-left text-[10px] uppercase tracking-[1.2px] text-[#b4aaa0]">
+                  <th className="px-5 py-3 font-medium">Product</th>
+                  <th className="px-2 py-3 font-medium">Qty</th>
+                  <th className="px-2 py-3 font-medium">Price</th>
+                  <th className="px-5 py-3 text-right font-medium">Subtotal</th>
+                </tr>
+              </thead>
+              <tbody>
+                {order.items.map((item) => (
+                  <tr
+                    key={`${order.id}-${item.id}`}
+                    className="border-b border-[#f4f0eb] text-[13px] text-[#3d3731] last:border-none"
+                  >
+                    <td className="px-5 py-3">{item.productName}</td>
+                    <td className="px-2 py-3">{item.quantity}</td>
+                    <td className="px-2 py-3">{formatCurrency(item.price)}</td>
+                    <td className="px-5 py-3 text-right">{formatCurrency(item.subtotal)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function AdminOrderManagementPageContent() {
-  const router = useRouter();
-  const { user, loading: authLoading, signOut } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
   const [orders, setOrders] = useState<OrderDTO[]>([]);
   const [availableProducts, setAvailableProducts] = useState<ProductDTO[]>([]);
   const [coverByOrderId, setCoverByOrderId] = useState<Record<number, string>>({});
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
-  const [timeWindow, setTimeWindow] = useState<TimeWindow>("WEEK");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isSigningOut, setIsSigningOut] = useState(false);
+  const [statusUpdateError, setStatusUpdateError] = useState<string | null>(null);
+  const [updatingOrderId, setUpdatingOrderId] = useState<number | null>(null);
+  const [detailOrderId, setDetailOrderId] = useState<number | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [customerEmail, setCustomerEmail] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<OrderPaymentMethod>("COD");
@@ -378,16 +535,6 @@ export function AdminOrderManagementPageContent() {
   const [reloadToken, setReloadToken] = useState(0);
 
   const isAdmin = user?.role?.toUpperCase() === "ADMIN";
-
-  const handleSignOut = async () => {
-    setIsSigningOut(true);
-    try {
-      await signOut();
-      router.push("/signin");
-    } finally {
-      setIsSigningOut(false);
-    }
-  };
 
   const mapLoadErrorMessage = (loadError: unknown): string => {
     if (isApiError(loadError)) {
@@ -521,8 +668,9 @@ export function AdminOrderManagementPageContent() {
   }, [authLoading, isAdmin, user, reloadToken]);
 
   const filteredOrders = useMemo(() => {
-    const now = new Date();
-    const thresholdDate = timeWindow === "WEEK" ? getStartOfWeek(now) : getStartOfMonth(now);
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+    const start = startDate ? new Date(`${startDate}T00:00:00`) : null;
+    const end = endDate ? new Date(`${endDate}T23:59:59.999`) : null;
 
     return orders.filter((order) => {
       if (statusFilter !== "ALL" && order.status !== statusFilter) {
@@ -534,11 +682,26 @@ export function AdminOrderManagementPageContent() {
         return false;
       }
 
-      return createdAt >= thresholdDate;
-    });
-  }, [orders, statusFilter, timeWindow]);
+      if (start && createdAt < start) {
+        return false;
+      }
 
-  const visibleOrders = useMemo(() => filteredOrders.slice(0, 6), [filteredOrders]);
+      if (end && createdAt > end) {
+        return false;
+      }
+
+      if (!normalizedSearch) {
+        return true;
+      }
+
+      const customerLabel = formatCustomerLabel(order.userId).toLowerCase();
+      const itemNames = order.items.map((item) => item.productName.toLowerCase()).join(" ");
+      const haystack = `${order.id} ${order.userId.toLowerCase()} ${customerLabel} ${itemNames}`;
+      return haystack.includes(normalizedSearch);
+    });
+  }, [orders, statusFilter, searchTerm, startDate, endDate]);
+
+  const visibleOrders = filteredOrders;
   const weeklyGrowth = useMemo(() => calculateWeeklyGrowth(orders), [orders]);
 
   const activeArrangements = useMemo(
@@ -549,6 +712,20 @@ export function AdminOrderManagementPageContent() {
     () => orders.filter((order) => order.status === "PENDING").length,
     [orders]
   );
+  const cancelledArrangements = useMemo(
+    () => orders.filter((order) => order.status === "CANCELLED").length,
+    [orders]
+  );
+  const detailOrder = useMemo(
+    () => orders.find((order) => order.id === detailOrderId) ?? null,
+    [detailOrderId, orders]
+  );
+  const dateRangeError = useMemo(() => {
+    if (!startDate || !endDate) {
+      return null;
+    }
+    return startDate > endDate ? "Start date cannot be later than end date." : null;
+  }, [startDate, endDate]);
 
   const closeCreateModal = () => {
     setIsCreateModalOpen(false);
@@ -629,6 +806,51 @@ export function AdminOrderManagementPageContent() {
     }
   };
 
+  const updateOrderInState = (updatedOrder: OrderDTO) => {
+    setOrders((current) => {
+      const nextOrders = current.map((order) =>
+        order.id === updatedOrder.id ? updatedOrder : order
+      );
+      adminOrdersCache = {
+        expiresAt: Date.now() + ADMIN_ORDERS_CACHE_TTL_MS,
+        orders: nextOrders,
+        coverByOrderId,
+      };
+      return nextOrders;
+    });
+  };
+
+  const handleUpdateOrderStatus = async (order: OrderDTO, nextStatus: OrderStatusValue) => {
+    setStatusUpdateError(null);
+
+    if (!isOrderStatusValue(order.status)) {
+      setStatusUpdateError("Current order status is invalid.");
+      return;
+    }
+
+    if (!isValidStatusTransition(order.status, nextStatus)) {
+      setStatusUpdateError(
+        `Invalid status transition from ${order.status} to ${nextStatus}.`
+      );
+      return;
+    }
+
+    if (order.status === nextStatus) {
+      return;
+    }
+
+    setUpdatingOrderId(order.id);
+
+    try {
+      const updatedOrder = await adminOrdersApi.updateOrderStatus(order.id, nextStatus);
+      updateOrderInState(updatedOrder);
+    } catch (statusError) {
+      setStatusUpdateError(mapLoadErrorMessage(statusError));
+    } finally {
+      setUpdatingOrderId(null);
+    }
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-[#d8d4d4] px-4 py-10 md:px-8">
@@ -692,75 +914,24 @@ export function AdminOrderManagementPageContent() {
         }}
       />
 
-      <div className="min-h-screen bg-[#d8d4d4] p-3 md:p-7">
-        <div className="mx-auto max-w-[1320px] overflow-hidden rounded-[3px] border border-[#e9e3dc] bg-[#fbfaf8]">
-        <header className="flex flex-col gap-4 border-b border-[#eee8e1] px-4 py-4 md:flex-row md:items-center md:justify-between md:px-7">
-          <div className="flex flex-wrap items-center gap-8">
-            <Link href="/" className="flex items-center gap-2">
-              <Flower2 className="h-4 w-4 text-[#c8a16a]" />
-              <span
-                className="text-[21px] text-[#2d2a26]"
-                style={{ fontFamily: "var(--font-noto-serif)" }}
-              >
-                Floral Boutique
-              </span>
-            </Link>
-            <div className="flex items-center gap-6 text-[13px] text-[#4d473f]">
-              <Link href="/products" className="transition-colors hover:text-[#8d6030]">
-                Shop All
-              </Link>
-              <Link
-                href="/products?view=categories"
-                className="transition-colors hover:text-[#8d6030]"
-              >
-                Categories
-              </Link>
-              <Link
-                href="/products?sort=latest"
-                className="transition-colors hover:text-[#8d6030]"
-              >
-                Latest
-              </Link>
-              <Link href="/our-story" className="transition-colors hover:text-[#8d6030]">
-                Our Story
-              </Link>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-[230px] items-center rounded-full bg-[#f2eeea] px-4">
-              <Search className="h-3.5 w-3.5 text-[#a8a09a]" />
-              <span className="ml-2 text-[12px] text-[#b3aba4]">Search arrangements...</span>
-            </div>
-            <button
-              type="button"
-              className="flex h-9 w-9 items-center justify-center rounded-full text-[#3f3934] transition-colors hover:bg-[#f2eeea]"
-              aria-label="Cart"
-            >
-              <ShoppingCart className="h-[18px] w-[18px]" />
-            </button>
-            <div className="relative group">
-              <Link
-                href="/profile"
-                className="flex h-9 w-9 items-center justify-center rounded-full text-[#3f3934] transition-colors hover:bg-[#f2eeea]"
-                aria-label="Profile"
-              >
-                <User className="h-[18px] w-[18px]" />
-              </Link>
-              <div className="pointer-events-none invisible absolute right-0 top-[calc(100%+8px)] z-50 w-[132px] translate-y-1 rounded-[12px] border border-[#e5ddd4] bg-[#fcfaf7] p-1 opacity-0 shadow-sm transition-all duration-150 group-hover:pointer-events-auto group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
-                <button
-                  type="button"
-                  onClick={handleSignOut}
-                  disabled={isSigningOut}
-                  className="w-full rounded-[9px] px-3 py-2 text-left text-[12px] font-medium text-[#5b4f43] transition-colors hover:bg-[#f1eeea] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isSigningOut ? "Đang thoát..." : "Đăng xuất"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </header>
+      <OrderDetailModal
+        open={Boolean(detailOrder)}
+        order={detailOrder}
+        coverImage={detailOrder ? coverByOrderId[detailOrder.id] ?? FALLBACK_IMAGE : FALLBACK_IMAGE}
+        statusUpdateError={statusUpdateError}
+        statusUpdating={Boolean(detailOrder && updatingOrderId === detailOrder.id)}
+        onClose={() => {
+          setDetailOrderId(null);
+          setStatusUpdateError(null);
+        }}
+        onStatusChange={(order, nextStatus) => {
+          void handleUpdateOrderStatus(order, nextStatus);
+        }}
+      />
 
-        <div className="grid md:grid-cols-[218px_minmax(0,1fr)]">
+      <div className="min-h-screen bg-[#d8d4d4]">
+        <Navbar />
+        <div className="grid overflow-hidden border-t border-[#e9e3dc] bg-[#fbfaf8] md:grid-cols-[218px_minmax(0,1fr)]">
           <aside className="border-b border-[#eee8e1] px-4 py-6 md:min-h-[720px] md:border-b-0 md:border-r md:border-[#eee8e1] md:px-5">
             <nav className="space-y-2">
               {[
@@ -768,7 +939,6 @@ export function AdminOrderManagementPageContent() {
                 { icon: ClipboardList, label: "Orders", href: "/admin/orders", active: true },
                 { icon: Package2, label: "Products", href: "/admin/products", active: false },
                 { icon: Users, label: "Customers", active: false },
-                { icon: Megaphone, label: "Marketing", active: false },
                 { icon: Settings, label: "Settings", active: false },
               ].map((item) => {
                 const className = `flex w-full items-center gap-3 rounded-full px-4 py-3 text-left text-[13px] transition-colors ${
@@ -837,13 +1007,6 @@ export function AdminOrderManagementPageContent() {
                   <div className="flex items-center gap-3">
                     <button
                       type="button"
-                      className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f1ede7] text-[#6d6358] transition-colors hover:bg-[#e7e1d8]"
-                      aria-label="Search orders"
-                    >
-                      <Search className="h-4 w-4" />
-                    </button>
-                    <button
-                      type="button"
                       onClick={() => {
                         setSubmitError(null);
                         setIsCreateModalOpen(true);
@@ -856,23 +1019,23 @@ export function AdminOrderManagementPageContent() {
                   </div>
                 </div>
 
-                <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                   <article className="rounded-[14px] border border-[#ece5dc] bg-[#fdfcfa] px-5 py-4">
                     <p className="text-[9px] font-semibold uppercase tracking-[1.6px] text-[#8f867e]">
-                      IN ARRANGEMENTS
+                      TOTAL ORDERS
                     </p>
                     <p
                       className="mt-1 text-[46px] leading-none text-[#2e2924]"
                       style={{ fontFamily: "var(--font-noto-serif)" }}
                     >
-                      {String(activeArrangements).padStart(2, "0")}
+                      {String(orders.length).padStart(2, "0")}
                     </p>
-                    <p className="mt-1 text-[12px] text-[#756c64]">Active arrangements</p>
+                    <p className="mt-1 text-[12px] text-[#756c64]">All loaded records</p>
                   </article>
 
                   <article className="rounded-[14px] border border-[#ece5dc] bg-[#fdfcfa] px-5 py-4">
                     <p className="text-[9px] font-semibold uppercase tracking-[1.6px] text-[#8f867e]">
-                      TRANSIT
+                      IN PROGRESS
                     </p>
                     <p
                       className="mt-1 text-[46px] leading-none text-[#2e2924]"
@@ -880,53 +1043,96 @@ export function AdminOrderManagementPageContent() {
                     >
                       {String(pendingArrangements).padStart(2, "0")}
                     </p>
-                    <p className="mt-1 text-[12px] text-[#756c64]">En route to recipient</p>
+                    <p className="mt-1 text-[12px] text-[#756c64]">Pending confirmation</p>
                   </article>
 
-                  <article className="rounded-[14px] border border-[#bdd0b0] bg-[#c6dcb8] px-5 py-4">
+                  <article className="rounded-[14px] border border-[#cfe2c7] bg-[#d8ead0] px-5 py-4">
                     <p className="text-[9px] font-semibold uppercase tracking-[1.6px] text-[#4e6642]">
-                      WEEKLY GROWTH
+                      DELIVERED
                     </p>
                     <p
-                      className="mt-1 text-[44px] leading-none text-[#32492a]"
+                      className="mt-1 text-[46px] leading-none text-[#32492a]"
                       style={{ fontFamily: "var(--font-noto-serif)" }}
                     >
-                      {weeklyGrowth.growthPercent >= 0 ? "+" : ""}
-                      {Math.round(weeklyGrowth.growthPercent)}%
+                      {String(activeArrangements).padStart(2, "0")}
                     </p>
-                    <p className="mt-1 text-[12px] text-[#516949]">Volume vs last week</p>
+                    <p className="mt-1 text-[12px] text-[#516949]">Confirmed orders</p>
+                  </article>
+
+                  <article className="rounded-[14px] border border-[#ecd5d3] bg-[#f7e8e6] px-5 py-4">
+                    <p className="text-[9px] font-semibold uppercase tracking-[1.6px] text-[#8a4c46]">
+                      CANCELLED
+                    </p>
+                    <p
+                      className="mt-1 text-[46px] leading-none text-[#8a4c46]"
+                      style={{ fontFamily: "var(--font-noto-serif)" }}
+                    >
+                      {String(cancelledArrangements).padStart(2, "0")}
+                    </p>
+                    <p className="mt-1 text-[12px] text-[#8a4c46]">No longer active</p>
                   </article>
                 </section>
 
                 <section className="overflow-hidden rounded-[16px] border border-[#e8e2d9] bg-[#fcfbf9]">
-                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#ece6de] px-5 py-4">
-                    <h2
-                      className="text-[32px] leading-none text-[#2d2a26]"
-                      style={{ fontFamily: "var(--font-noto-serif)" }}
-                    >
-                      Recent Commissions
-                    </h2>
-                    <div className="flex items-center gap-2">
+                  <div className="border-b border-[#ece6de] px-5 py-4">
+                    <div className="flex flex-wrap items-end justify-between gap-3">
+                      <h2
+                        className="text-[32px] leading-none text-[#2d2a26]"
+                        style={{ fontFamily: "var(--font-noto-serif)" }}
+                      >
+                        Order List
+                      </h2>
+                      <p className="text-[12px] text-[#7f756d]">
+                        {weeklyGrowth.growthPercent >= 0 ? "+" : ""}
+                        {Math.round(weeklyGrowth.growthPercent)}% vs last week
+                      </p>
+                    </div>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                       <select
                         value={statusFilter}
                         onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
-                        className="h-8 rounded-full border border-[#e5ddd4] bg-white px-3 text-[11px] text-[#6d6358] outline-none"
+                        className="h-9 rounded-full border border-[#e5ddd4] bg-white px-3 text-[11px] text-[#6d6358] outline-none"
                       >
                         <option value="ALL">All Status</option>
                         <option value="PENDING">In Progress</option>
                         <option value="CONFIRMED">Delivered</option>
                         <option value="CANCELLED">Cancelled</option>
                       </select>
-                      <select
-                        value={timeWindow}
-                        onChange={(event) => setTimeWindow(event.target.value as TimeWindow)}
-                        className="h-8 rounded-full border border-[#e5ddd4] bg-white px-3 text-[11px] text-[#6d6358] outline-none"
-                      >
-                        <option value="WEEK">This Week</option>
-                        <option value="MONTH">This Month</option>
-                      </select>
+                      <input
+                        type="date"
+                        value={startDate}
+                        onChange={(event) => setStartDate(event.target.value)}
+                        className="h-9 rounded-full border border-[#e5ddd4] bg-white px-3 text-[11px] text-[#6d6358] outline-none"
+                      />
+                      <input
+                        type="date"
+                        value={endDate}
+                        onChange={(event) => setEndDate(event.target.value)}
+                        className="h-9 rounded-full border border-[#e5ddd4] bg-white px-3 text-[11px] text-[#6d6358] outline-none"
+                      />
+                      <div className="flex h-9 items-center rounded-full border border-[#e5ddd4] bg-white px-3">
+                        <Search className="h-3.5 w-3.5 text-[#9c9188]" />
+                        <input
+                          value={searchTerm}
+                          onChange={(event) => setSearchTerm(event.target.value)}
+                          placeholder="Search by order id, customer, product..."
+                          className="ml-2 w-full bg-transparent text-[11px] text-[#6d6358] outline-none placeholder:text-[#b1a79f]"
+                        />
+                      </div>
                     </div>
                   </div>
+
+                  {dateRangeError ? (
+                    <div className="border-b border-[#ece6de] bg-[#fbefec] px-5 py-3 text-[12px] text-[#8f3d35]">
+                      {dateRangeError}
+                    </div>
+                  ) : null}
+
+                  {statusUpdateError ? (
+                    <div className="border-b border-[#ece6de] bg-[#fbefec] px-5 py-3 text-[12px] text-[#8f3d35]">
+                      {statusUpdateError}
+                    </div>
+                  ) : null}
 
                   <div className="overflow-x-auto">
                     <table className="min-w-full">
@@ -934,16 +1140,17 @@ export function AdminOrderManagementPageContent() {
                         <tr className="border-b border-[#f1ede8] text-left text-[10px] uppercase tracking-[1.2px] text-[#b4aaa0]">
                           <th className="px-5 py-3 font-medium">Arrangement</th>
                           <th className="px-2 py-3 font-medium">Recipient</th>
-                          <th className="px-2 py-3 font-medium">Delivery Date</th>
+                          <th className="px-2 py-3 font-medium">Created</th>
                           <th className="px-2 py-3 font-medium">Status</th>
-                          <th className="px-5 py-3 text-right font-medium">Value</th>
+                          <th className="px-2 py-3 text-right font-medium">Value</th>
+                          <th className="px-5 py-3 text-right font-medium">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {visibleOrders.length === 0 ? (
                           <tr>
                             <td
-                              colSpan={5}
+                              colSpan={6}
                               className="px-5 py-8 text-center text-[13px] text-[#8f877f]"
                             >
                               No commissions match the selected filters.
@@ -955,6 +1162,9 @@ export function AdminOrderManagementPageContent() {
                             const itemSummary = `${order.items.length} arrangement${
                               order.items.length > 1 ? "s" : ""
                             }`;
+                            const orderStatus = isOrderStatusValue(order.status)
+                              ? order.status
+                              : "PENDING";
 
                             return (
                               <tr
@@ -976,9 +1186,7 @@ export function AdminOrderManagementPageContent() {
                                       <p className="line-clamp-1 text-[13px] font-medium text-[#3d3731]">
                                         {firstItem?.productName ?? `Order #${order.id}`}
                                       </p>
-                                      <p className="text-[10px] text-[#9a9087]">
-                                        {itemSummary}
-                                      </p>
+                                      <p className="text-[10px] text-[#9a9087]">{itemSummary}</p>
                                     </div>
                                   </div>
                                 </td>
@@ -989,14 +1197,47 @@ export function AdminOrderManagementPageContent() {
                                   {getFormattedDate(order.createdAt)}
                                 </td>
                                 <td className="px-2 py-3">
-                                  <span
-                                    className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-[0.8px] ${getOrderStatusClassName(order.status)}`}
+                                  <select
+                                    value={orderStatus}
+                                    disabled={updatingOrderId === order.id}
+                                    onChange={(event) => {
+                                      void handleUpdateOrderStatus(
+                                        order,
+                                        event.target.value as OrderStatusValue
+                                      );
+                                    }}
+                                    className={`h-8 rounded-full border px-3 text-[10px] font-semibold tracking-[0.8px] outline-none ${getOrderStatusClassName(order.status)} ${
+                                      updatingOrderId === order.id
+                                        ? "cursor-not-allowed opacity-70"
+                                        : ""
+                                    }`}
                                   >
-                                    {formatOrderStatus(order.status)}
-                                  </span>
+                                    {ORDER_STATUS_VALUES.map((statusValue) => (
+                                      <option
+                                        key={statusValue}
+                                        value={statusValue}
+                                        disabled={!isValidStatusTransition(orderStatus, statusValue)}
+                                      >
+                                        {formatOrderStatus(statusValue)}
+                                      </option>
+                                    ))}
+                                  </select>
                                 </td>
-                                <td className="px-5 py-3 text-right font-medium">
+                                <td className="px-2 py-3 text-right font-medium">
                                   {formatCurrency(order.totalAmount)}
+                                </td>
+                                <td className="px-5 py-3 text-right">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setStatusUpdateError(null);
+                                      setDetailOrderId(order.id);
+                                    }}
+                                    className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#ddd2c6] px-3 text-[11px] text-[#6d6358] transition-colors hover:bg-[#f3eee8]"
+                                  >
+                                    <Eye className="h-3.5 w-3.5" />
+                                    Detail
+                                  </button>
                                 </td>
                               </tr>
                             );
@@ -1006,19 +1247,13 @@ export function AdminOrderManagementPageContent() {
                     </table>
                   </div>
 
-                  <div className="border-t border-[#ece6de] px-5 py-4 text-center">
-                    <Link
-                      href="/admin/orders"
-                      className="text-[12px] text-[#7b6f62] transition-colors hover:text-[#5f4f3e]"
-                    >
-                      View Complete Order History →
-                    </Link>
+                  <div className="border-t border-[#ece6de] px-5 py-4 text-[12px] text-[#7b6f62]">
+                    Showing {visibleOrders.length} of {orders.length} orders
                   </div>
                 </section>
               </div>
             )}
           </main>
-        </div>
         </div>
       </div>
     </>

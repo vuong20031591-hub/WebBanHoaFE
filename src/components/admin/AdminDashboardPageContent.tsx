@@ -2,29 +2,24 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   AlertTriangle,
   ClipboardList,
   DollarSign,
-  Flower2,
   LayoutDashboard,
-  Megaphone,
   MoreHorizontal,
   Package2,
-  Search,
   Settings,
   ShoppingBag,
-  ShoppingCart,
   Star,
-  User,
   Users,
 } from "lucide-react";
 import { adminOrdersApi, isApiError, productsApi } from "@/lib/api";
 import type { AdminOrderStatsDTO, OrderDTO, ProductDTO } from "@/lib/api/types";
 import { formatCurrency } from "@/lib/currency";
 import { loadOrderProducts } from "@/lib/mappers";
+import { Navbar } from "@/src/components/layout";
 import { useAuth } from "@/src/contexts";
 
 const WEEKDAY_LABELS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"] as const;
@@ -152,27 +147,15 @@ function getOrderStatusClassName(status: string): string {
 }
 
 export function AdminDashboardPageContent() {
-  const router = useRouter();
-  const { user, loading: authLoading, signOut } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [stats, setStats] = useState<AdminOrderStatsDTO | null>(null);
   const [ordersWindow, setOrdersWindow] = useState<OrderDTO[]>([]);
   const [lowStockProducts, setLowStockProducts] = useState<ProductDTO[]>([]);
   const [coverByOrderId, setCoverByOrderId] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isSigningOut, setIsSigningOut] = useState(false);
 
   const isAdmin = user?.role?.toUpperCase() === "ADMIN";
-
-  const handleSignOut = async () => {
-    setIsSigningOut(true);
-    try {
-      await signOut();
-      router.push("/signin");
-    } finally {
-      setIsSigningOut(false);
-    }
-  };
 
   useEffect(() => {
     if (authLoading) {
@@ -355,83 +338,16 @@ export function AdminDashboardPageContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[#d8d4d4] p-3 md:p-7">
-      <div className="mx-auto max-w-[1320px] overflow-hidden rounded-[3px] border border-[#e9e3dc] bg-[#fbfaf8]">
-        <header className="flex flex-col gap-4 border-b border-[#eee8e1] px-4 py-4 md:flex-row md:items-center md:justify-between md:px-7">
-          <div className="flex flex-wrap items-center gap-8">
-            <Link href="/" className="flex items-center gap-2">
-              <Flower2 className="h-4 w-4 text-[#c8a16a]" />
-              <span
-                className="text-[21px] text-[#2d2a26]"
-                style={{ fontFamily: "var(--font-noto-serif)" }}
-              >
-                Floral Boutique
-              </span>
-            </Link>
-            <div className="flex items-center gap-6 text-[13px] text-[#4d473f]">
-              <Link href="/products" className="transition-colors hover:text-[#8d6030]">
-                Shop All
-              </Link>
-              <Link
-                href="/products?view=categories"
-                className="transition-colors hover:text-[#8d6030]"
-              >
-                Categories
-              </Link>
-              <Link
-                href="/products?sort=latest"
-                className="transition-colors hover:text-[#8d6030]"
-              >
-                Latest
-              </Link>
-              <Link href="/our-story" className="transition-colors hover:text-[#8d6030]">
-                Our Story
-              </Link>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-[230px] items-center rounded-full bg-[#f2eeea] px-4">
-              <Search className="h-3.5 w-3.5 text-[#a8a09a]" />
-              <span className="ml-2 text-[12px] text-[#b3aba4]">Search arrangements...</span>
-            </div>
-            <button
-              type="button"
-              className="flex h-9 w-9 items-center justify-center rounded-full text-[#3f3934] transition-colors hover:bg-[#f2eeea]"
-              aria-label="Cart"
-            >
-              <ShoppingCart className="h-[18px] w-[18px]" />
-            </button>
-            <div className="relative group">
-              <Link
-                href="/profile"
-                className="flex h-9 w-9 items-center justify-center rounded-full text-[#3f3934] transition-colors hover:bg-[#f2eeea]"
-                aria-label="Profile"
-              >
-                <User className="h-[18px] w-[18px]" />
-              </Link>
-              <div className="pointer-events-none invisible absolute right-0 top-[calc(100%+8px)] z-50 w-[132px] translate-y-1 rounded-[12px] border border-[#e5ddd4] bg-[#fcfaf7] p-1 opacity-0 shadow-sm transition-all duration-150 group-hover:pointer-events-auto group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
-                <button
-                  type="button"
-                  onClick={handleSignOut}
-                  disabled={isSigningOut}
-                  className="w-full rounded-[9px] px-3 py-2 text-left text-[12px] font-medium text-[#5b4f43] transition-colors hover:bg-[#f1eeea] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isSigningOut ? "Đang thoát..." : "Đăng xuất"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        <div className="grid md:grid-cols-[218px_minmax(0,1fr)]">
-          <aside className="border-b border-[#eee8e1] px-4 py-6 md:min-h-[720px] md:border-b-0 md:border-r md:border-[#eee8e1] md:px-5">
+    <div className="min-h-screen bg-[#d8d4d4]">
+      <Navbar />
+      <div className="grid overflow-hidden border-t border-[#e9e3dc] bg-[#fbfaf8] md:grid-cols-[218px_minmax(0,1fr)]">
+        <aside className="border-b border-[#eee8e1] px-4 py-6 md:min-h-[720px] md:border-b-0 md:border-r md:border-[#eee8e1] md:px-5">
             <nav className="space-y-2">
               {[
                 { icon: LayoutDashboard, label: "Dashboard", href: "/admin", active: true },
                 { icon: ClipboardList, label: "Orders", href: "/admin/orders", active: false },
                 { icon: Package2, label: "Products", href: "/admin/products", active: false },
                 { icon: Users, label: "Customers", active: false },
-                { icon: Megaphone, label: "Marketing", active: false },
                 { icon: Settings, label: "Settings", active: false },
               ].map((item) => {
                 const className = `flex w-full items-center gap-3 rounded-full px-4 py-3 text-left text-[13px] transition-colors ${
@@ -770,7 +686,6 @@ export function AdminDashboardPageContent() {
               </div>
             )}
           </main>
-        </div>
       </div>
     </div>
   );
