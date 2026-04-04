@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import { apiClient } from "@/lib/api/client";
 import type {
   AuthUser,
@@ -21,7 +21,38 @@ const authClient = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  timeout: 5000,
 });
+
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries = 5,
+  initialDelayMs = 1000
+): Promise<T> {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+
+      const isNetworkError =
+        axios.isAxiosError(error) &&
+        (!error.response || error.code === "ECONNREFUSED" || error.code === "ECONNABORTED");
+
+      if (!isNetworkError || attempt === maxRetries) {
+        throw error;
+      }
+
+      const delayMs = initialDelayMs * Math.pow(2, attempt);
+      console.log(`Retry attempt ${attempt + 1}/${maxRetries} after ${delayMs}ms...`);
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+
+  throw lastError;
+}
 
 export const authApi = {
   async register(data: RegisterRequest): Promise<AuthUser> {
@@ -35,16 +66,18 @@ export const authApi = {
   },
 
   async loginWithGoogleToken(supabaseAccessToken: string): Promise<LoginResponse> {
-    const response = await authClient.post<LoginResponse>(
-      "/api/auth/oauth/google",
-      {},
-      {
-        headers: {
-          Authorization: `Bearer ${supabaseAccessToken}`,
-        },
-      }
-    );
-    return response.data;
+    return retryWithBackoff(async () => {
+      const response = await authClient.post<LoginResponse>(
+        "/api/auth/oauth/google",
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${supabaseAccessToken}`,
+          },
+        }
+      );
+      return response.data;
+    });
   },
 
   async me(token: string): Promise<AuthUser> {
