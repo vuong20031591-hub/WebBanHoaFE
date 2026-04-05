@@ -347,8 +347,8 @@ export function AdminDashboardPageContent() {
                 { icon: LayoutDashboard, label: "Dashboard", href: "/admin", active: true },
                 { icon: ClipboardList, label: "Orders", href: "/admin/orders", active: false },
                 { icon: Package2, label: "Products", href: "/admin/products", active: false },
-                { icon: Users, label: "Customers", active: false },
-                { icon: Settings, label: "Settings", active: false },
+                { icon: Users, label: "Customers", href: "/admin/customers", active: false },
+                { icon: Settings, label: "Settings", href: "/admin/settings", active: false },
               ].map((item) => {
                 const className = `flex w-full items-center gap-3 rounded-full px-4 py-3 text-left text-[13px] transition-colors ${
                   item.active

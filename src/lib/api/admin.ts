@@ -1,8 +1,11 @@
 import { apiClient } from "./client";
 import {
+  AdminCollaboratorDTO,
   AdminCreateOrderRequest,
   AdminOrderStatsDTO,
   AdminProductUpsertRequest,
+  AdminUserDTO,
+  CollaboratorBadge,
   OrderDTO,
   PagedResponse,
   ProductDetailDTO,
@@ -13,10 +16,28 @@ export interface AdminOrderQueryParams {
   startDate?: string;
   endDate?: string;
   userId?: string;
+  includeUserProfile?: boolean;
   page?: number;
   size?: number;
   sortBy?: string;
   sortDir?: "ASC" | "DESC";
+}
+
+export interface AdminUserQueryParams {
+  role?: "USER" | "ADMIN";
+}
+
+export interface InviteCollaboratorPayload {
+  userId: number;
+  badge: CollaboratorBadge;
+  positionTitle: string;
+  positionDescription?: string;
+}
+
+export interface UpdateCollaboratorPayload {
+  badge: CollaboratorBadge;
+  positionTitle: string;
+  positionDescription?: string;
 }
 
 const ADMIN_HEADERS = {
@@ -111,5 +132,73 @@ export const adminProductsApi = {
       }
     );
     return data;
+  },
+};
+
+export const adminUsersApi = {
+  async getUsers(params: AdminUserQueryParams = {}): Promise<AdminUserDTO[]> {
+    const { data } = await apiClient.get<AdminUserDTO[]>("/api/admin/users", {
+      params,
+      headers: ADMIN_HEADERS,
+    });
+    return data;
+  },
+
+  async updateUserRole(id: number, role: "USER" | "ADMIN"): Promise<AdminUserDTO> {
+    const { data } = await apiClient.patch<AdminUserDTO>(
+      `/api/admin/users/${id}/role`,
+      { role },
+      {
+        headers: ADMIN_HEADERS,
+      }
+    );
+    return data;
+  },
+};
+
+export const adminCollaboratorsApi = {
+  async getCollaborators(): Promise<AdminCollaboratorDTO[]> {
+    const { data } = await apiClient.get<AdminCollaboratorDTO[]>("/api/admin/collaborators", {
+      headers: ADMIN_HEADERS,
+    });
+    return data;
+  },
+
+  async getInviteCandidates(): Promise<AdminUserDTO[]> {
+    const { data } = await apiClient.get<AdminUserDTO[]>("/api/admin/collaborators/candidates", {
+      headers: ADMIN_HEADERS,
+    });
+    return data;
+  },
+
+  async inviteCollaborator(payload: InviteCollaboratorPayload): Promise<AdminCollaboratorDTO> {
+    const { data } = await apiClient.post<AdminCollaboratorDTO>(
+      "/api/admin/collaborators",
+      payload,
+      {
+        headers: ADMIN_HEADERS,
+      }
+    );
+    return data;
+  },
+
+  async updateCollaborator(
+    id: number,
+    payload: UpdateCollaboratorPayload
+  ): Promise<AdminCollaboratorDTO> {
+    const { data } = await apiClient.patch<AdminCollaboratorDTO>(
+      `/api/admin/collaborators/${id}`,
+      payload,
+      {
+        headers: ADMIN_HEADERS,
+      }
+    );
+    return data;
+  },
+
+  async removeCollaborator(id: number): Promise<void> {
+    await apiClient.delete(`/api/admin/collaborators/${id}`, {
+      headers: ADMIN_HEADERS,
+    });
   },
 };

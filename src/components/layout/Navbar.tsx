@@ -120,7 +120,7 @@ export function Navbar() {
 
   return (
     <nav className="sticky top-0 z-50 border-b border-[#eee3dc]/90 bg-[#fcfaf7]/95 backdrop-blur">
-      <div className="mx-auto flex h-[82px] max-w-[1280px] items-center justify-between px-6 sm:px-8 lg:px-10">
+      <div className="flex h-[82px] w-full items-center justify-between px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
         <div className="flex shrink-0 items-center gap-8 lg:gap-12">
           <Link href="/" className="flex shrink-0 items-center gap-2">
             <Flower2 className="h-6 w-6 text-[#d0bb95]" />
