@@ -1,0 +1,154 @@
+name: WebBanHoaFE CI-CD
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: webbanhoa-fe-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: Frontend CI (Next.js)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint frontend
+        run: npm run lint
+
+      - name: Build frontend
+        env:
+          NEXT_PUBLIC_API_BASE_URL: ${{ secrets.NEXT_PUBLIC_API_BASE_URL != '' && secrets.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080' }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL != '' && secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://example.supabase.co' }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY != '' && secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'test-anon-key' }}
+        run: npm run build
+
+  docker-build-push:
+    name: Build and push frontend image
+    runs-on: ubuntu-latest
+    needs:
+      - ci
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v5
+
+      - name: Validate Docker Hub secrets
+        run: |
+          if [ -z "${{ secrets.DOCKERHUB_USERNAME }}" ] || [ -z "${{ secrets.DOCKERHUB_TOKEN }}" ]; then
+            echo "Missing DOCKERHUB_USERNAME or DOCKERHUB_TOKEN secret."
+            exit 1
+          fi
+
+      - name: Prepare image name
+        id: image
+        shell: bash
+        run: |
+          REPO_BASE="$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')"
+          if [ -n "${{ secrets.DOCKER_IMAGE_FE }}" ]; then
+            IMAGE_NAME="${{ secrets.DOCKER_IMAGE_FE }}"
+          else
+            IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/${REPO_BASE}-fe"
+          fi
+          echo "name=${IMAGE_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.image.outputs.name }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,prefix=sha-
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+          build-args: |
+            NEXT_PUBLIC_API_BASE_URL=${{ secrets.NEXT_PUBLIC_API_BASE_URL != '' && secrets.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080' }}
+            NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL != '' && secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://example.supabase.co' }}
+            NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY != '' && secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'test-anon-key' }}
+
+  deploy:
+    name: Deploy frontend image
+    runs-on: ubuntu-latest
+    needs:
+      - docker-build-push
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Validate deploy secret
+        run: |
+          if [ -z "${{ secrets.DEPLOY_URL_FE }}" ]; then
+            echo "Missing DEPLOY_URL_FE secret."
+            exit 1
+          fi
+
+      - name: Trigger frontend deployment webhook
+        shell: bash
+        env:
+          DEPLOY_URL: ${{ secrets.DEPLOY_URL_FE }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+        run: |
+          REPO_BASE="$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')"
+          SLOT="${{ secrets.DEPLOY_SLOT_FE }}"
+          CONTAINER_PORT="${{ secrets.DEPLOY_CONTAINER_PORT_FE }}"
+
+          if [ -z "$SLOT" ]; then SLOT=2; fi
+          if [ -z "$CONTAINER_PORT" ]; then CONTAINER_PORT=3000; fi
+
+          if [ -n "${{ secrets.DOCKER_IMAGE_FE }}" ]; then
+            IMAGE_REPO="${{ secrets.DOCKER_IMAGE_FE }}"
+          else
+            IMAGE_REPO="${DOCKERHUB_USERNAME}/${REPO_BASE}-fe"
+          fi
+
+          RESPONSE=$(curl -sS -w "\n%{http_code}" -X POST "${DEPLOY_URL}?repo=${IMAGE_REPO}&tag=latest&slot=${SLOT}&container_port=${CONTAINER_PORT}&strict_container_port=0")
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          CODE=$(echo "$RESPONSE" | tail -n1)
+
+          echo "Webhook HTTP: $CODE"
+          echo "::group::Webhook response"
+          echo "$BODY" | python3 -m json.tool 2>/dev/null || echo "$BODY"
+          echo "::endgroup::"
+
+          if [ "$CODE" -lt 200 ] || [ "$CODE" -ge 300 ]; then
+            echo "Deploy frontend failed."
+            exit 1
+          fi
