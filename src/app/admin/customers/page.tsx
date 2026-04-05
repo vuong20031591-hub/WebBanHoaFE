@@ -1,4 +1,4 @@
-"use client";
+import { AdminCustomersPageContent } from "@/components/admin";
 
 import Image from "next/image";
 import Link from "next/link";

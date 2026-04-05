@@ -1,13 +1,10 @@
 "use client";
 
-import Image from "next/image";
 import { useState, useEffect, useCallback } from "react";
 import { ChevronDown } from "lucide-react";
 import {
-  ProfilePreferencesGiftingSection,
   ProfilePreferencesRegionalSection,
   ProfilePreferencesSelectField,
-  ProfilePreferencesToggleOption,
 } from "@/lib/profile/types";
 import {
   getUserPreferences,
@@ -17,7 +14,6 @@ import {
 
 interface ProfilePreferencesSettingsFormProps {
   regionalSection: ProfilePreferencesRegionalSection;
-  giftingSection: ProfilePreferencesGiftingSection;
   saveLabel: string;
   resetLabel: string;
 }
@@ -26,11 +22,6 @@ interface PreferenceSelectFieldProps {
   field: ProfilePreferencesSelectField;
   value: string;
   onChange: (value: string) => void;
-}
-
-interface PreferenceToggleProps {
-  option: ProfilePreferencesToggleOption;
-  onToggle: (id: string) => void;
 }
 
 const fieldLabelClassName =
@@ -65,39 +56,8 @@ function PreferenceSelectField({
   );
 }
 
-function PreferenceToggle({ option, onToggle }: PreferenceToggleProps) {
-  return (
-    <div className="flex items-start justify-between gap-6">
-      <div className="max-w-[360px]">
-        <p className="text-[14px] font-medium leading-5 text-[#44403c]">
-          {option.label}
-        </p>
-        <p className="mt-0.5 text-[12px] font-light leading-4 text-[#a8a29e]">
-          {option.description}
-        </p>
-      </div>
-
-      <button
-        type="button"
-        aria-pressed={option.enabled}
-        onClick={() => onToggle(option.id)}
-        className={`relative mt-2 h-5 w-10 shrink-0 rounded-full transition-all duration-300 ease-in-out hover:opacity-90 active:scale-95 ${
-          option.enabled ? "bg-[#d0bb95]" : "bg-[#e7e5e4]"
-        }`}
-      >
-        <span
-          className={`absolute left-1 top-1/2 h-3 w-3 -translate-y-1/2 rounded-full bg-white transition-transform duration-300 ease-in-out ${
-            option.enabled ? "translate-x-5" : "translate-x-0"
-          }`}
-        />
-      </button>
-    </div>
-  );
-}
-
 export function ProfilePreferencesSettingsForm({
   regionalSection,
-  giftingSection,
   saveLabel,
   resetLabel,
 }: ProfilePreferencesSettingsFormProps) {
@@ -105,9 +65,6 @@ export function ProfilePreferencesSettingsForm({
     Object.fromEntries(
       regionalSection.fields.map((field) => [field.id, field.value])
     )
-  );
-  const [toggleOptions, setToggleOptions] = useState(
-    giftingSection.toggles.map((toggle) => ({ ...toggle }))
   );
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -118,7 +75,7 @@ export function ProfilePreferencesSettingsForm({
       setLoading(true);
       setMessage(null);
       const prefs = await getUserPreferences();
-      
+
       setFieldValues((current) => ({
         ...current,
         language: prefs.language,
@@ -126,18 +83,6 @@ export function ProfilePreferencesSettingsForm({
         theme: prefs.theme,
         timezone: prefs.timezone,
       }));
-
-      setToggleOptions((current) =>
-        current.map((toggle) => {
-          if (toggle.id === "signature_wrap") {
-            return { ...toggle, enabled: prefs.signatureWrap };
-          }
-          if (toggle.id === "eco_delivery") {
-            return { ...toggle, enabled: prefs.ecoDelivery };
-          }
-          return toggle;
-        })
-      );
     } catch (err) {
       setMessage({
         type: "error",
@@ -159,14 +104,6 @@ export function ProfilePreferencesSettingsForm({
     }));
   };
 
-  const handleToggle = (toggleId: string) => {
-    setToggleOptions((current) =>
-      current.map((toggle) =>
-        toggle.id === toggleId ? { ...toggle, enabled: !toggle.enabled } : toggle
-      )
-    );
-  };
-
   const handleReset = () => {
     loadPreferences();
     setMessage(null);
@@ -178,16 +115,11 @@ export function ProfilePreferencesSettingsForm({
     setSaving(true);
 
     try {
-      const signatureWrapToggle = toggleOptions.find((t) => t.id === "signature_wrap");
-      const ecoDeliveryToggle = toggleOptions.find((t) => t.id === "eco_delivery");
-
       await updateUserPreferences({
         language: fieldValues.language,
         currency: fieldValues.currency.toUpperCase(),
         theme: fieldValues.theme,
         timezone: fieldValues.timezone,
-        signatureWrap: signatureWrapToggle?.enabled,
-        ecoDelivery: ecoDeliveryToggle?.enabled,
       });
 
       setMessage({ type: "success", text: "Preferences saved successfully." });
@@ -229,50 +161,10 @@ export function ProfilePreferencesSettingsForm({
         </div>
       </section>
 
-      <section className="mt-20">
-        <h2
-          className="text-[20px] font-light leading-7 text-[#4a3a3d]"
-          style={{ fontFamily: "var(--font-noto-serif)" }}
-        >
-          {giftingSection.title}
-        </h2>
-
-        <div className="mt-8 grid gap-10 xl:grid-cols-[minmax(0,496px)_224px] xl:gap-16">
-          <div>
-            <div className="space-y-6">
-              {toggleOptions.map((toggle) => (
-                <PreferenceToggle
-                  key={toggle.id}
-                  option={toggle}
-                  onToggle={handleToggle}
-                />
-              ))}
-            </div>
-          </div>
-
-          <div className="relative h-[299px] overflow-hidden rounded-[24px] bg-[#f5f5f4]">
-            <Image
-              src={giftingSection.preview.image}
-              alt={giftingSection.preview.alt}
-              fill
-              className="object-cover"
-              sizes="224px"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-[rgba(45,42,38,0.30)] via-transparent to-transparent" />
-            <div className="absolute bottom-4 left-0 right-0 flex justify-center">
-              <span className="text-[9px] font-medium leading-[13.5px] tracking-[1.8px] text-[rgba(255,255,255,0.9)]">
-                {giftingSection.preview.label}
-              </span>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {message && (
         <p
-          className={`mt-6 text-[13px] ${
-            message.type === "success" ? "text-[#166534]" : "text-[#b91c1c]"
-          }`}
+          className={`mt-6 text-[13px] ${message.type === "success" ? "text-[#166534]" : "text-[#b91c1c]"
+            }`}
         >
           {message.text}
         </p>
