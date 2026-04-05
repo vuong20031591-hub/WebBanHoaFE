@@ -1,0 +1,38 @@
+
+> web-ban-hoa@0.1.0 dev
+> next dev
+
+▲ Next.js 16.1.7 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://10.0.229.59:3000
+- Environments: .env.local
+
+✓ Starting...
+Creating turbopack project {
+  dir: 'C:\\Users\\cuong\\OneDrive\\Desktop\\DA_KTDH\\WebBanHoaFE',
+  testMode: true
+}
+✓ Ready in 1850ms
+○ Compiling /checkout/complete ...
+ GET /checkout/complete?orderId=50 200 in 5.7s (compile: 5.1s, render: 596ms)
+ GET / 200 in 891ms (compile: 763ms, render: 128ms)
+ GET / 200 in 77ms (compile: 7ms, render: 70ms)
+ GET / 200 in 85ms (compile: 5ms, render: 80ms)
+ GET / 200 in 87ms (compile: 8ms, render: 78ms)
+ GET / 200 in 73ms (compile: 3ms, render: 70ms)
+ GET / 200 in 69ms (compile: 3ms, render: 66ms)
+ GET / 200 in 75ms (compile: 4ms, render: 71ms)
+ GET / 200 in 88ms (compile: 5ms, render: 83ms)
+ GET / 200 in 82ms (compile: 4ms, render: 78ms)
+ GET / 200 in 78ms (compile: 4ms, render: 74ms)
+ GET / 200 in 69ms (compile: 3ms, render: 66ms)
+ GET / 200 in 81ms (compile: 4ms, render: 77ms)
+ GET / 200 in 80ms (compile: 4ms, render: 76ms)
+ GET /checkout/complete?orderId=50 200 in 126ms (compile: 5ms, render: 121ms)
+ GET /checkout/complete?orderId=50 200 in 75ms (compile: 5ms, render: 70ms)
+ GET /profile 200 in 903ms (compile: 865ms, render: 38ms)
+ GET /signin 200 in 718ms (compile: 690ms, render: 28ms)
+ GET /forgot-password 200 in 528ms (compile: 508ms, render: 21ms)
+ GET /forgot-password 200 in 99ms (compile: 5ms, render: 94ms)
+ GET /signin 200 in 27ms (compile: 4ms, render: 23ms)
+ GET /signin 200 in 115ms (compile: 3ms, render: 112ms)

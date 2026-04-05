@@ -5,6 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { Mail, MapPin, ArrowUpRight } from "lucide-react";
 import { Navbar, Footer } from "@/components/layout";
+import { isApiError } from "@/lib/api";
+import { submitEventInquiry } from "@/lib/api/inquiries";
 
 /* ─────────────────────────────────────────────
    Data
@@ -50,22 +52,67 @@ const EVENT_TYPES = [
     "Other",
 ];
 
+function getTodayDateString() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+}
+
 /* ─────────────────────────────────────────────
    Inquiry Form
 ───────────────────────────────────────────── */
 function InquiryForm() {
+    const todayDate = getTodayDateString();
     const [form, setForm] = useState({
         name: "", email: "", eventType: EVENT_TYPES[0], eventDate: "", vision: "",
     });
     const [loading, setLoading] = useState(false);
     const [sent, setSent] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setError(null);
+
+        if (!form.name.trim() || !form.email.trim() || !form.eventDate || !form.vision.trim()) {
+            setError("Please complete all required fields before sending.");
+            return;
+        }
+
+        if (form.eventDate < todayDate) {
+            setError("Event date cannot be earlier than today.");
+            return;
+        }
+
         setLoading(true);
-        await new Promise((r) => setTimeout(r, 1000));
-        setLoading(false);
-        setSent(true);
+        try {
+            await submitEventInquiry({
+                fullName: form.name.trim(),
+                email: form.email.trim(),
+                eventType: form.eventType,
+                eventDate: form.eventDate,
+                vision: form.vision.trim(),
+            });
+            setSent(true);
+            setForm({
+                name: "",
+                email: "",
+                eventType: EVENT_TYPES[0],
+                eventDate: "",
+                vision: "",
+            });
+        } catch (submitError) {
+            setError(
+                isApiError(submitError)
+                    ? submitError.message
+                    : "Unable to send inquiry right now. Please try again."
+            );
+        } finally {
+            setLoading(false);
+        }
     };
 
     if (sent) {
@@ -89,12 +136,19 @@ function InquiryForm() {
 
     return (
         <form onSubmit={handleSubmit} className="flex flex-col gap-8">
+            {error ? (
+                <div className="rounded-[12px] border border-[#efc9c3] bg-[#fff1ee] px-4 py-3 text-[14px] text-[#9c3f35]">
+                    {error}
+                </div>
+            ) : null}
+
             {/* Row 1: Name + Email */}
             <div className="flex gap-6">
                 <FormField label="Full Name">
                     <input
                         type="text" placeholder="Your full name" value={form.name}
                         onChange={(e) => setForm({ ...form, name: e.target.value })}
+                        required
                         className="w-full h-14 bg-[#efeeea] rounded-[12px] px-4 text-[16px] text-[#1b1c1a] placeholder-[#9ca3af] outline-none focus:ring-2 focus:ring-[rgba(125,86,45,0.2)] transition-all"
                         style={{ fontFamily: "var(--font-inter)" }}
                     />
@@ -103,6 +157,7 @@ function InquiryForm() {
                     <input
                         type="email" placeholder="your@email.com" value={form.email}
                         onChange={(e) => setForm({ ...form, email: e.target.value })}
+                        required
                         className="w-full h-14 bg-[#efeeea] rounded-[12px] px-4 text-[16px] text-[#1b1c1a] placeholder-[#9ca3af] outline-none focus:ring-2 focus:ring-[rgba(125,86,45,0.2)] transition-all"
                         style={{ fontFamily: "var(--font-inter)" }}
                     />
@@ -131,7 +186,9 @@ function InquiryForm() {
                 <FormField label="Event Date">
                     <input
                         type="date" value={form.eventDate}
+                        min={todayDate}
                         onChange={(e) => setForm({ ...form, eventDate: e.target.value })}
+                        required
                         className="w-full h-14 bg-[#efeeea] rounded-[12px] px-4 text-[16px] text-[#1b1c1a] outline-none focus:ring-2 focus:ring-[rgba(125,86,45,0.2)] transition-all"
                         style={{ fontFamily: "var(--font-inter)" }}
                     />
@@ -145,6 +202,7 @@ function InquiryForm() {
                     value={form.vision}
                     onChange={(e) => setForm({ ...form, vision: e.target.value })}
                     rows={5}
+                    required
                     className="w-full bg-[#efeeea] rounded-[12px] px-4 py-4 text-[16px] text-[#1b1c1a] placeholder-[#9ca3af] outline-none focus:ring-2 focus:ring-[rgba(125,86,45,0.2)] transition-all resize-none"
                     style={{ fontFamily: "var(--font-inter)" }}
                 />

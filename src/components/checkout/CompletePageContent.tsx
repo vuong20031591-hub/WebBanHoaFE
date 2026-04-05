@@ -2,12 +2,12 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { BadgeCheck, Quote, ReceiptText, Sparkles, Truck } from "lucide-react";
 import { Footer, Navbar } from "@/components/layout";
 import { formatCurrency } from "@/lib/currency";
-import { isApiError, ordersApi } from "@/lib/api";
+import { isApiError, ordersApi, paymentsApi } from "@/lib/api";
 import {
   formatOrderDate,
   formatOrderStatus,
@@ -63,6 +63,7 @@ function calculateEarnedPoints(amount: number): number {
 }
 
 export function CompletePageContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const { locale } = useLocale();
   const { user, loading: authLoading } = useAuth();
@@ -167,6 +168,31 @@ export function CompletePageContent() {
       try {
         const nextOrder =
           orderId > 0 ? await ordersApi.getById(orderId) : await ordersApi.getLatest();
+
+        const requiresOnlinePayment =
+          nextOrder.paymentMethod === "VIETQR" || nextOrder.paymentMethod === "SEPAY";
+        const hasNothingToPay = nextOrder.totalAmount <= 0;
+
+        if (requiresOnlinePayment && !hasNothingToPay) {
+          let canShowCompletion = nextOrder.status === "CONFIRMED";
+
+          if (!canShowCompletion) {
+            const reconciliation = await paymentsApi.reconcile(nextOrder.id);
+            canShowCompletion =
+              reconciliation.paid ||
+              reconciliation.orderStatus === "CONFIRMED";
+          }
+
+          if (!canShowCompletion) {
+            if (nextOrder.paymentMethod === "VIETQR") {
+              router.replace(`/checkout/qr?orderId=${nextOrder.id}`);
+            } else {
+              router.replace(`/checkout/tracking?orderId=${nextOrder.id}`);
+            }
+            return;
+          }
+        }
+
         const productsById = await loadOrderProducts(
           nextOrder.items.map((item) => item.productId)
         );
@@ -203,7 +229,7 @@ export function CompletePageContent() {
     return () => {
       active = false;
     };
-  }, [authLoading, orderId, user]);
+  }, [authLoading, orderId, router, user]);
 
   const featuredItems = items.slice(0, 2);
   const thankYouNote = buildThankYouNote(items, locale);
