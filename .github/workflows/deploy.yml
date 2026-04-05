@@ -3,14 +3,17 @@ name: WebBanHoaFE CI-CD
 on:
   push:
     branches:
-      - main
+      - feat/test-deploy
   pull_request:
     branches:
-      - main
+      - feat/test-deploy
   workflow_dispatch:
 
 permissions:
   contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 concurrency:
   group: webbanhoa-fe-${{ github.ref }}
