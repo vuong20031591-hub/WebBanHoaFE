@@ -1,11 +1,14 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { ChatLive, Footer, Navbar } from "@/components/layout";
-import { CartItem, useCartStore, cartSyncEngine } from "@/lib/cart";
+import { CartItem, CartNote, useCartStore, cartSyncEngine } from "@/lib/cart";
 import { productsApi } from "@/lib/api";
 import { mapProductDTOsToProducts } from "@/lib/mappers";
+import { useAuth, useLocale } from "@/src/contexts";
 import { CartItemsTable } from "./CartItemsTable";
+import { CartNoteCard } from "./CartNoteCard";
 import { CartRecommendations } from "./CartRecommendations";
 import { CartSummary } from "./CartSummary";
 import { CartRecommendation } from "./constants";
@@ -24,6 +27,8 @@ function subscribeToCartHydration(onStoreChange: () => void) {
 }
 
 export function CartPageContent() {
+  const { locale } = useLocale();
+  const { user, loading: authLoading } = useAuth();
   const [recommendations, setRecommendations] = useState<CartRecommendation[]>([]);
   const hydrated = useSyncExternalStore(
     subscribeToCartHydration,
@@ -31,8 +36,11 @@ export function CartPageContent() {
     () => false
   );
   const variants = useCartStore((state) => state.variants);
+  const note = useCartStore((state) => state.note);
   const updateQuantity = useCartStore((state) => state.updateQuantity);
   const removeItem = useCartStore((state) => state.removeItem);
+  const setNote = useCartStore((state) => state.setNote);
+  const clearNote = useCartStore((state) => state.clearNote);
 
   const displayItems = hydrated ? variants : EMPTY_ITEMS;
   const hasItems = displayItems.length > 0;
@@ -41,6 +49,23 @@ export function CartPageContent() {
     0
   );
   const total = subtotal;
+
+  const copy =
+    locale === "vi"
+      ? {
+          title: "Gio hoa cua ban",
+          signInTitle: "Dang nhap de xem gio hang",
+          signInSubtitle:
+            "Noi dung gio hang va thanh toan chi hien cho tai khoan dang dang nhap.",
+          goToSignIn: "Den trang dang nhap",
+        }
+      : {
+          title: "Your Flower Cart",
+          signInTitle: "Sign in to view your cart",
+          signInSubtitle:
+            "Cart contents and checkout only appear for the account that is currently signed in.",
+          goToSignIn: "Go to Sign In",
+        };
 
   useEffect(() => {
     let active = true;
@@ -94,6 +119,10 @@ export function CartPageContent() {
     removeItem(item.localId);
   };
 
+  const handleSaveNote = (nextNote: CartNote) => {
+    setNote(nextNote);
+  };
+
   const handleRetry = (productId: number) => {
     cartSyncEngine.retryProduct(productId);
   };
@@ -109,29 +138,58 @@ export function CartPageContent() {
                 className="text-center text-[48px] font-light leading-[48px] text-[var(--color-cart-ink)]"
                 style={{ fontFamily: "var(--font-cormorant)" }}
               >
-                Your Flower Cart
+                {copy.title}
               </h1>
               <div className="mt-4 h-px w-20 bg-[rgba(201,166,148,0.3)]" />
             </div>
-            <div className="grid gap-10 xl:grid-cols-[1fr_380px] xl:gap-20">
-              <div className="space-y-10">
-                <CartItemsTable
-                  isHydrating={!hydrated}
-                  items={displayItems}
-                  onDecrease={handleDecrease}
-                  onIncrease={handleIncrease}
-                  onRemove={handleRemove}
-                  onRetry={handleRetry}
-                />
+            {!authLoading && !user ? (
+              <div className="mx-auto max-w-[720px] rounded-[36px] bg-white px-10 py-12 text-center shadow-[0_24px_60px_rgba(138,109,93,0.08)]">
+                <h2
+                  className="text-[30px] font-medium leading-[38px] text-[#2c2825]"
+                  style={{ fontFamily: "var(--font-cormorant)" }}
+                >
+                  {copy.signInTitle}
+                </h2>
+                <p className="mt-4 text-[14px] leading-6 text-[#7c6d64]">
+                  {copy.signInSubtitle}
+                </p>
+                <Link
+                  href="/signin"
+                  className="mt-8 inline-flex min-h-[52px] items-center justify-center rounded-full bg-[#a88672] px-8 text-[14px] font-medium text-white transition-colors hover:bg-[#916f5b]"
+                >
+                  {copy.goToSignIn}
+                </Link>
               </div>
-              <CartSummary
-                hasItems={hasItems}
-                isHydrating={!hydrated}
-                subtotal={subtotal}
-                total={total}
-              />
-            </div>
-            <CartRecommendations recommendations={recommendations} />
+            ) : (
+              <>
+                <div className="grid gap-10 xl:grid-cols-[1fr_380px] xl:gap-20">
+                  <div className="space-y-10">
+                    <CartItemsTable
+                      isHydrating={!hydrated}
+                      items={displayItems}
+                      onDecrease={handleDecrease}
+                      onIncrease={handleIncrease}
+                      onRemove={handleRemove}
+                      onRetry={handleRetry}
+                    />
+                    {hasItems ? (
+                      <CartNoteCard
+                        note={note}
+                        onClear={clearNote}
+                        onSave={handleSaveNote}
+                      />
+                    ) : null}
+                  </div>
+                  <CartSummary
+                    hasItems={hasItems}
+                    isHydrating={!hydrated}
+                    subtotal={subtotal}
+                    total={total}
+                  />
+                </div>
+                <CartRecommendations recommendations={recommendations} />
+              </>
+            )}
           </div>
         </section>
       </main>

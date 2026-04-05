@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { ChatLive, Footer, Navbar } from "@/components/layout";
 import { authApi } from "@/lib/auth/client";
 import { getUserAddresses } from "@/lib/api";
@@ -9,67 +9,62 @@ import {
   ProfileSettingsNavItem,
   ProfileRewardsCard,
 } from "@/lib/profile/types";
-import { useAuth } from "@/src/contexts";
+import { useAuth, useLocale } from "@/src/contexts";
 import {
   ProfileSettingsForm,
   SaveProfileSettingsPayload,
 } from "./ProfileSettingsForm";
 import { ProfileSettingsSidebar } from "./ProfileSettingsSidebar";
 
-const SETTINGS_NAVIGATION: ProfileSettingsNavItem[] = [
-  {
-    id: "account",
-    label: "Account",
-    icon: "account",
-    active: true,
-    href: "/profile/settings",
-  },
-  {
-    id: "security",
-    label: "Security",
-    icon: "security",
-    active: false,
-    href: "/profile/settings/security",
-  },
-  {
-    id: "notifications",
-    label: "Notifications",
-    icon: "notifications",
-    active: false,
-    href: "/profile/settings/notifications",
-  },
-  {
-    id: "preferences",
-    label: "Preferences",
-    icon: "preferences",
-    active: false,
-    href: "/profile/settings/preferences",
-  },
-];
-
-const REWARDS_CARD: ProfileRewardsCard = {
-  title: "Bloom Rewards",
-  description: "You have 450 points to spend on your next bouquet.",
-  ctaLabel: "View Details",
-};
-
 export function ProfileSettingsPageContent() {
   const { user, loading, refreshUser } = useAuth();
+  const { t } = useLocale();
   const [primaryAddress, setPrimaryAddress] = useState<string>("");
   const [loadingAddress, setLoadingAddress] = useState(true);
 
-  useEffect(() => {
-    if (user) {
-      loadPrimaryAddress();
-    }
-  }, [user]);
+  const settingsNavigation: ProfileSettingsNavItem[] = [
+    {
+      id: "account",
+      label: t("profile.nav.account"),
+      icon: "account",
+      active: true,
+      href: "/profile/settings",
+    },
+    {
+      id: "security",
+      label: t("profile.nav.security"),
+      icon: "security",
+      active: false,
+      href: "/profile/settings/security",
+    },
+    {
+      id: "notifications",
+      label: t("profile.nav.notifications"),
+      icon: "notifications",
+      active: false,
+      href: "/profile/settings/notifications",
+    },
+    {
+      id: "preferences",
+      label: t("profile.nav.preferences"),
+      icon: "preferences",
+      active: false,
+      href: "/profile/settings/preferences",
+    },
+  ];
 
-  const loadPrimaryAddress = async () => {
+  const rewardsCard: ProfileRewardsCard = {
+    title: t("profile.rewards.title"),
+    description: t("profile.rewards.description"),
+    ctaLabel: t("profile.rewards.cta"),
+  };
+
+  const loadPrimaryAddress = useCallback(async () => {
     try {
       setLoadingAddress(true);
       const addresses = await getUserAddresses();
       const primary = addresses.find((addr) => addr.isDefault);
-
+      
       if (primary) {
         const parts = [
           primary.address,
@@ -88,31 +83,39 @@ export function ProfileSettingsPageContent() {
         ].filter(Boolean);
         setPrimaryAddress(parts.join(", "));
       } else {
-        setPrimaryAddress("No address found. Add one in Address Book.");
+        setPrimaryAddress(t("profile.settings.noAddressFound"));
       }
     } catch (err) {
       console.error("Failed to load address:", err);
-      setPrimaryAddress("Unable to load address.");
+      setPrimaryAddress(t("profile.settings.addressLoadError"));
     } finally {
       setLoadingAddress(false);
     }
-  };
+  }, [t]);
+
+  useEffect(() => {
+    if (user) {
+      void loadPrimaryAddress();
+    }
+  }, [loadPrimaryAddress, user]);
 
   const accountInfo = {
     photo: "/images/hero-main.png",
-    changePhotoLabel: "Photo update coming soon",
-    fullName: user?.fullName?.trim() || "Flower Member",
-    email: user?.email?.trim() || "No email found",
+    changePhotoLabel: t("profile.settings.photoUpdateSoon"),
+    fullName: user?.fullName?.trim() || t("profile.settings.fallbackName"),
+    email: user?.email?.trim() || t("profile.settings.noEmailFound"),
     phone: user?.phone?.trim() || "",
-    address: loadingAddress ? "Loading address..." : primaryAddress,
+    address: loadingAddress ? t("profile.settings.loadingAddress") : primaryAddress,
   };
 
   const handleSaveSettings = async (payload: SaveProfileSettingsPayload) => {
     try {
+      // Update user profile (fullName, phone)
       await authApi.updateProfile({
         fullName: payload.fullName,
         phone: payload.phone,
       });
+      console.log("Profile updated:", payload.fullName, payload.phone);
 
       // Update or create address
       if (payload.address && payload.address.trim()) {
@@ -122,7 +125,7 @@ export function ProfileSettingsPageContent() {
 
           // Parse address: "street, ward, district, city" or just "full address"
           const addressParts = payload.address.split(",").map((s) => s.trim()).filter(Boolean);
-
+          
           let addressData;
           if (addressParts.length >= 4) {
             // Full format: street, ward, district, city
@@ -185,9 +188,13 @@ export function ProfileSettingsPageContent() {
         }
       }
 
+      // Refresh user data from backend
       await refreshUser();
+      console.log("User refreshed");
 
+      // Reload address from backend
       await loadPrimaryAddress();
+      console.log("Data reloaded");
     } catch (err) {
       console.error("Save failed:", err);
       throw err;
@@ -202,16 +209,16 @@ export function ProfileSettingsPageContent() {
           <div className="mx-auto max-w-[1160px]">
             <header className="pb-12 lg:pb-16">
               <p className="text-[10px] font-bold uppercase tracking-[1.6px] text-[#d0bb95]">
-                Account
+                {t("profile.settings.accountBadge")}
               </p>
               <h1
                 className="mt-4 text-[44px] font-light leading-none text-[#2d2a26]"
                 style={{ fontFamily: "var(--font-noto-serif)" }}
               >
-                Account Settings
+                {t("profile.settings.title")}
               </h1>
               <p className="mt-3 text-[14px] leading-6 text-[#5c6b5e]">
-                You can review your current account information here.
+                {t("profile.settings.subtitle")}
               </p>
             </header>
 
@@ -223,32 +230,35 @@ export function ProfileSettingsPageContent() {
                   className="text-[32px] leading-[1.1] text-[#2d2a26]"
                   style={{ fontFamily: "var(--font-noto-serif)" }}
                 >
-                  Sign in to manage your settings
+                  {t("profile.settings.signInTitle")}
                 </h2>
                 <p className="mx-auto mt-3 max-w-[560px] text-[14px] leading-6 text-[#5c6b5e]">
-                  Settings are available only for authenticated users.
+                  {t("profile.settings.signInSubtitle")}
                 </p>
                 <div className="mt-8">
                   <Link
                     href="/signin"
                     className="inline-flex min-h-[52px] items-center justify-center rounded-[12px] bg-[#d0bb95] px-8 text-[14px] font-medium text-white transition-colors hover:bg-[#c2a571]"
                   >
-                    Go to Sign In
+                    {t("profile.common.goToSignIn")}
                   </Link>
                 </div>
               </div>
             ) : (
               <div className="grid gap-8 xl:grid-cols-[300px_minmax(0,1fr)]">
                 <ProfileSettingsSidebar
-                  navigation={SETTINGS_NAVIGATION}
-                  rewards={REWARDS_CARD}
+                  navigation={settingsNavigation}
+                  rewards={rewardsCard}
                 />
                 <ProfileSettingsForm
                   key={`${user.id}-${user.phone}-${primaryAddress}`}
                   accountInfo={accountInfo}
-                  cancelLabel="Cancel"
-                  saveLabel="Save Changes"
-                  manageAddressesHref="/profile/addresses"
+                  communicationTitle={t("profile.settings.notificationsTitle")}
+                  communicationSubtitle={t("profile.settings.notificationsSubtitle")}
+                  communicationPreferences={[]}
+                  cancelLabel={t("profile.settings.cancel")}
+                  saveLabel={t("profile.settings.saveChanges")}
+                  manageNotificationsHref="/profile/settings/notifications"
                   onSave={handleSaveSettings}
                 />
               </div>

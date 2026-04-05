@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useLocale } from "@/src/contexts";
 
 interface BreadcrumbProps {
   currentStep: "bag" | "details" | "complete";
@@ -8,11 +9,17 @@ interface BreadcrumbProps {
 
 export function Breadcrumb({ currentStep }: BreadcrumbProps) {
   const router = useRouter();
-  
+  const { locale } = useLocale();
+
+  const labels =
+    locale === "vi"
+      ? { bag: "GIO", details: "CHI TIET", complete: "HOAN TAT" }
+      : { bag: "BAG", details: "DETAILS", complete: "COMPLETE" };
+
   const steps = [
-    { id: "bag", label: "BAG", path: "/cart" },
-    { id: "details", label: "DETAILS", path: "/checkout" },
-    { id: "complete", label: "COMPLETE", path: null },
+    { id: "bag", label: labels.bag, path: "/cart" },
+    { id: "details", label: labels.details, path: "/checkout" },
+    { id: "complete", label: labels.complete, path: null },
   ];
 
   const getStepColor = (stepId: string) => {

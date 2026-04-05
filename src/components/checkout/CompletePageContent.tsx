@@ -17,7 +17,7 @@ import {
   OrderDisplayItem,
 } from "@/lib/mappers";
 import { OrderDTO } from "@/lib/api/types";
-import { useAuth } from "@/src/contexts";
+import { useAuth, useLocale } from "@/src/contexts";
 
 function StateCard({
   title,
@@ -44,20 +44,107 @@ function StateCard({
   );
 }
 
-function buildThankYouNote(items: OrderDisplayItem[]): string {
-  const firstItem = items[0]?.productName ?? "these blooms";
+function buildThankYouNote(items: OrderDisplayItem[], locale: "en" | "vi"): string {
+  const firstItem = items[0]?.productName ?? (locale === "vi" ? "nhung bo hoa nay" : "these blooms");
+
+  if (locale === "vi") {
+    return `Mong ${firstItem.toLowerCase()} mang den su am ap va ve dep cho khong gian cua ban. Cam on ban da tin tuong Floral Boutique trong khoanh khac dac biet nay.`;
+  }
 
   return `May ${firstItem.toLowerCase()} bring warmth and beauty to your space. Thank you for trusting Floral Boutique to prepare something memorable for this moment.`;
 }
 
+function calculateEarnedPoints(amount: number): number {
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return 0;
+  }
+
+  return Math.floor(amount / 1000);
+}
+
 export function CompletePageContent() {
   const searchParams = useSearchParams();
+  const { locale } = useLocale();
   const { user, loading: authLoading } = useAuth();
   const [order, setOrder] = useState<OrderDTO | null>(null);
   const [items, setItems] = useState<OrderDisplayItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const orderId = Number(searchParams.get("orderId") || "0");
+  const copy =
+    locale === "vi"
+      ? {
+          signInTitle: "Dang nhap de xem don hang",
+          signInDesc: "Xac nhan don hang su dung du lieu backend thuc va can phien dang nhap hop le.",
+          goToSignIn: "Den trang dang nhap",
+          loadError: "Khong the tai don hang",
+          noRecentOrder: "Khong tim thay don gan day",
+          noRecentOrderDesc: "Hay dat hang tu gio hang de xem trang xac nhan don thuc te tai day.",
+          continueShopping: "Tiep tuc mua sam",
+          heroTitle: "Cam on ban da chon su tinh te",
+          heroSubtitle: "Don hang #{id} cua ban da duoc ghi nhan va dang duoc chuan bi can than.",
+          giftSummary: "Tom tat mon qua cua ban",
+          itemsOrdered: "{count} san pham",
+          premiumBox: "Hop cao cap",
+          pointsUnit: "diem",
+          quantity: "So luong",
+          personalTouch: "Dau an ca nhan",
+          dearBloom: "Gui ban yeu hoa,",
+          foreverYours: "Than ai",
+          paymentMethod: "Phuong thuc thanh toan",
+          whatsNext: "Tiep theo la gi?",
+          whatsNextDesc:
+            "Cac nghe nhan hoa cua chung toi dang thuc hien bo hoa cua ban. Chung toi se tiep tuc cap nhat trang thai don va giao hang.",
+          orderStatus: "Trang thai don hang",
+          totalPaid: "Tong da thanh toan",
+          confirmedOn: "Da xac nhan vao {date} voi xac thuc thanh toan an toan.",
+          rewardsTitle: "Bloom Rewards",
+          pointsEarned: "Diem nhan duoc tu don nay",
+          pointsRedeemed: "Diem da dung cho don nay",
+          rewardsDiscount: "Giam gia tu diem",
+          rewardsFormula:
+            "Cong thuc hien tai: moi 1,000 VND thanh toan se duoc 1 diem, va moi 1 diem giam 1,000 VND cho don tiep theo.",
+          tracking: "Theo doi don hang",
+          deliveryUpdate: "Cap nhat giao hang",
+          deliveryUpdateDesc:
+            "Chung toi se tiep tuc dong bo trang thai backend tu xac nhan den giao hang.",
+        }
+      : {
+          signInTitle: "Sign in to view your order",
+          signInDesc: "Order confirmation uses real backend data and requires an authenticated session.",
+          goToSignIn: "Go to Sign In",
+          loadError: "Unable to load order",
+          noRecentOrder: "No recent order found",
+          noRecentOrderDesc: "Place an order from your cart to see the real confirmation summary here.",
+          continueShopping: "Continue Shopping",
+          heroTitle: "Thank you for choosing elegance",
+          heroSubtitle: "Your order #{id} has been received and is now being prepared with thoughtful care.",
+          giftSummary: "Summary of your gift",
+          itemsOrdered: "{count} items ordered",
+          premiumBox: "Premium box",
+          pointsUnit: "pts",
+          quantity: "Quantity",
+          personalTouch: "A Personal Touch",
+          dearBloom: "Dear Bloom Lover,",
+          foreverYours: "Forever Yours",
+          paymentMethod: "Payment Method",
+          whatsNext: "What's next?",
+          whatsNextDesc:
+            "Our florists are now hand-crafting your arrangement. We'll keep monitoring the order status and delivery progress for you.",
+          orderStatus: "Order Status",
+          totalPaid: "Total Paid",
+          confirmedOn: "Confirmed on {date} with secure payment verification.",
+          rewardsTitle: "Bloom Rewards",
+          pointsEarned: "Points earned from this payment",
+          pointsRedeemed: "Points redeemed on this order",
+          rewardsDiscount: "Discount from rewards",
+          rewardsFormula:
+            "Formula in the current system: every 1,000 VND paid earns 1 point, and every 1 point can be used as 1,000 VND off on a future order.",
+          tracking: "Order Tracking",
+          deliveryUpdate: "Delivery Update",
+          deliveryUpdateDesc:
+            "We'll keep this order refreshed with real backend status as it moves from confirmation to delivery.",
+        };
 
   useEffect(() => {
     if (authLoading) {
@@ -119,7 +206,8 @@ export function CompletePageContent() {
   }, [authLoading, orderId, user]);
 
   const featuredItems = items.slice(0, 2);
-  const thankYouNote = buildThankYouNote(items);
+  const thankYouNote = buildThankYouNote(items, locale);
+  const earnedPoints = calculateEarnedPoints(order?.totalAmount ?? 0);
 
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#fffaf6_0%,#f9f2eb_52%,#fffdfb_100%)] text-[#3e342d]">
@@ -131,14 +219,14 @@ export function CompletePageContent() {
           ) : !user ? (
             <div className="mx-auto max-w-[760px]">
               <StateCard
-                title="Sign in to view your order"
-                description="Order confirmation uses real backend data and requires an authenticated session."
+                title={copy.signInTitle}
+                description={copy.signInDesc}
                 action={
                   <Link
                     href="/signin"
                     className="inline-flex min-h-[52px] items-center justify-center rounded-full bg-[#a88672] px-8 text-[14px] font-medium text-white transition-colors hover:bg-[#916f5b]"
                   >
-                    Go to Sign In
+                    {copy.goToSignIn}
                   </Link>
                 }
               />
@@ -146,17 +234,16 @@ export function CompletePageContent() {
           ) : !order ? (
             <div className="mx-auto max-w-[760px]">
               <StateCard
-                title={error ? "Unable to load order" : "No recent order found"}
+                title={error ? copy.loadError : copy.noRecentOrder}
                 description={
-                  error ??
-                  "Place an order from your cart to see the real confirmation summary here."
+                  error ?? copy.noRecentOrderDesc
                 }
                 action={
                   <Link
                     href="/products"
                     className="inline-flex min-h-[52px] items-center justify-center rounded-full bg-[#a88672] px-8 text-[14px] font-medium text-white transition-colors hover:bg-[#916f5b]"
                   >
-                    Continue Shopping
+                    {copy.continueShopping}
                   </Link>
                 }
               />
@@ -171,11 +258,10 @@ export function CompletePageContent() {
                   className="mt-8 text-[46px] leading-none text-[#4a3b34] sm:text-[64px]"
                   style={{ fontFamily: "var(--font-cormorant)" }}
                 >
-                  Thank you for choosing elegance
+                  {copy.heroTitle}
                 </h1>
                 <p className="mx-auto mt-4 max-w-[520px] text-[14px] leading-7 text-[#ab998c]">
-                  Your order #{order.id} has been received and is now being prepared with
-                  thoughtful care.
+                  {copy.heroSubtitle.replace("{id}", String(order.id))}
                 </p>
               </section>
 
@@ -187,11 +273,11 @@ export function CompletePageContent() {
                         className="text-[28px] leading-none text-[#56463f]"
                         style={{ fontFamily: "var(--font-cormorant)" }}
                       >
-                        Summary of your gift
+                        {copy.giftSummary}
                       </p>
                     </div>
                     <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#c6b0a2]">
-                      {items.length} items ordered
+                      {copy.itemsOrdered.replace("{count}", String(items.length))}
                     </p>
                   </div>
 
@@ -219,7 +305,7 @@ export function CompletePageContent() {
                             {item.productName}
                           </h2>
                           <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#c2ada0]">
-                            Premium box / Quantity {item.quantity}
+                            {copy.premiumBox} / {copy.quantity} {item.quantity}
                           </p>
                         </div>
                       </article>
@@ -231,7 +317,7 @@ export function CompletePageContent() {
                       className="text-[28px] leading-none text-[#56463f]"
                       style={{ fontFamily: "var(--font-cormorant)" }}
                     >
-                      A Personal Touch
+                      {copy.personalTouch}
                     </p>
 
                     <div className="relative mt-6 rounded-[30px] border border-[rgba(185,158,140,0.14)] bg-white px-8 py-8 shadow-[0_20px_55px_rgba(148,117,99,0.08)]">
@@ -240,7 +326,7 @@ export function CompletePageContent() {
                         className="text-[16px] italic leading-8 text-[#b5a39a]"
                         style={{ fontFamily: "var(--font-cormorant)" }}
                       >
-                        Dear Bloom Lover,
+                        {copy.dearBloom}
                       </p>
                       <p
                         className="mt-5 max-w-[620px] text-[31px] leading-[1.35] text-[#726055]"
@@ -252,7 +338,7 @@ export function CompletePageContent() {
                         className="mt-6 text-right text-[16px] italic text-[#c0aea3]"
                         style={{ fontFamily: "var(--font-cormorant)" }}
                       >
-                        Forever Yours
+                        {copy.foreverYours}
                       </p>
                     </div>
                   </div>
@@ -263,7 +349,7 @@ export function CompletePageContent() {
                     <div className="flex items-center gap-3 text-[#caa88e]">
                       <ReceiptText className="h-5 w-5" />
                       <p className="text-[11px] font-semibold uppercase tracking-[0.26em]">
-                        Payment Method
+                        {copy.paymentMethod}
                       </p>
                     </div>
 
@@ -271,7 +357,7 @@ export function CompletePageContent() {
                       className="mt-4 text-[24px] leading-none text-[#645148]"
                       style={{ fontFamily: "var(--font-cormorant)" }}
                     >
-                      {formatPaymentMethod(order.paymentMethod)}
+                      {formatPaymentMethod(order.paymentMethod, locale)}
                     </p>
 
                     <div className="mt-8 border-t border-[#f3e8e0] pt-7">
@@ -279,37 +365,60 @@ export function CompletePageContent() {
                         className="text-[30px] leading-none text-[#56463f]"
                         style={{ fontFamily: "var(--font-cormorant)" }}
                       >
-                        What&apos;s next?
+                        {copy.whatsNext}
                       </p>
                       <p className="mt-4 text-[14px] leading-7 text-[#9d8a7d]">
-                        Our florists are now hand-crafting your arrangement. We&apos;ll keep
-                        monitoring the order status and delivery progress for you.
+                        {copy.whatsNextDesc}
                       </p>
                     </div>
 
                     <div className="mt-8 rounded-[24px] bg-[#fcf7f2] px-6 py-6">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#cab0a0]">
-                        Order Status
+                        {copy.orderStatus}
                       </p>
                       <p
                         className="mt-3 text-[28px] leading-none text-[#645148]"
                         style={{ fontFamily: "var(--font-cormorant)" }}
                       >
-                        {formatOrderStatus(order.status)}
+                        {formatOrderStatus(order.status, locale)}
                       </p>
 
                       <p className="mt-6 text-[11px] font-semibold uppercase tracking-[0.24em] text-[#cab0a0]">
-                        Total Paid
+                        {copy.totalPaid}
                       </p>
                       <p
                         className="mt-2 text-[42px] leading-none text-[#8f7060]"
                         style={{ fontFamily: "var(--font-cormorant)" }}
                       >
-                        {formatCurrency(order.totalAmount)}
+                        {formatCurrency(order.totalAmount, locale)}
                       </p>
                       <p className="mt-3 text-[12px] leading-6 text-[#a59286]">
-                        Confirmed on {formatOrderDate(order.updatedAt)} with secure payment
-                        verification.
+                        {copy.confirmedOn.replace("{date}", formatOrderDate(order.updatedAt, locale))}
+                      </p>
+                    </div>
+
+                    <div className="mt-8 rounded-[24px] bg-[#fcf7f2] px-6 py-6">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#cab0a0]">
+                        {copy.rewardsTitle}
+                      </p>
+                      <div className="mt-4 space-y-4 text-[13px] text-[#7b6a5f]">
+                        <div className="flex items-center justify-between gap-3">
+                          <span>{copy.pointsEarned}</span>
+                          <span className="font-semibold text-[#166534]">+{earnedPoints} {copy.pointsUnit}</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <span>{copy.pointsRedeemed}</span>
+                          <span className="font-semibold text-[#6f5c50]">{order.redeemedPoints} {copy.pointsUnit}</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <span>{copy.rewardsDiscount}</span>
+                          <span className="font-semibold text-[#166534]">
+                            -{formatCurrency(order.rewardsDiscountAmount, locale)}
+                          </span>
+                        </div>
+                      </div>
+                      <p className="mt-4 text-[12px] leading-6 text-[#a59286]">
+                        {copy.rewardsFormula}
                       </p>
                     </div>
 
@@ -318,14 +427,14 @@ export function CompletePageContent() {
                         href={`/checkout/tracking?orderId=${order.id}`}
                         className="inline-flex min-h-[56px] items-center justify-center gap-2 rounded-full bg-[#a88672] px-6 text-[14px] font-medium text-white transition-colors hover:bg-[#916f5b]"
                       >
-                        Order Tracking
+                        {copy.tracking}
                         <Truck className="h-4 w-4" />
                       </Link>
                       <Link
                         href="/products"
                         className="inline-flex min-h-[56px] items-center justify-center rounded-full border border-[rgba(173,145,124,0.18)] bg-white px-6 text-[14px] font-medium text-[#5d4a40] transition-colors hover:bg-[#fff7f1]"
                       >
-                        Continue Shopping
+                        {copy.continueShopping}
                       </Link>
                     </div>
 
@@ -333,12 +442,11 @@ export function CompletePageContent() {
                       <div className="flex items-center gap-2 text-[#d0a383]">
                         <Sparkles className="h-4 w-4" />
                         <p className="text-[11px] font-semibold uppercase tracking-[0.22em]">
-                          Delivery Update
+                          {copy.deliveryUpdate}
                         </p>
                       </div>
                       <p className="mt-3 text-[13px] leading-6 text-[#9d8a7d]">
-                        We&apos;ll keep this order refreshed with real backend status as it moves
-                        from confirmation to delivery.
+                        {copy.deliveryUpdateDesc}
                       </p>
                     </div>
                   </div>

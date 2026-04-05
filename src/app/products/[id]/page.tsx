@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import {
   CalendarDays,
@@ -11,6 +11,7 @@ import {
   PackageSearch,
   ShieldCheck,
   Truck,
+  X,
 } from "lucide-react";
 import { createCartItem, useCartStore } from "@/lib/cart";
 import { formatCurrency } from "@/lib/currency";
@@ -19,6 +20,7 @@ import { mapProductDTOsToProducts, mapProductDetailDTOToProduct } from "@/lib/ma
 import { DEFAULT_PRODUCT_IMAGE } from "@/lib/mappers/product";
 import { Navbar, Footer } from "@/components/layout";
 import { Product } from "@/lib/products";
+import { useAuth, useLocale } from "@/src/contexts";
 
 const RIBBONS = [
   { label: "Red", bg: "#e8305e" },
@@ -27,7 +29,7 @@ const RIBBONS = [
   { label: "Gold", bg: "#d4af37" },
 ] as const;
 
-function RelatedProductCard({ product }: { product: Product }) {
+function RelatedProductCard({ product, locale }: { product: Product; locale: "en" | "vi" }) {
   const safeImage = product.image || DEFAULT_PRODUCT_IMAGE;
   return (
     <Link href={`/products/${product.id}`} className="flex flex-col gap-6 group">
@@ -51,7 +53,7 @@ function RelatedProductCard({ product }: { product: Product }) {
           className="text-[#9a8c81] text-[11px] font-medium tracking-[1.1px] uppercase text-center"
           style={{ fontFamily: "var(--font-inter)" }}
         >
-          {formatCurrency(product.price)}
+          {formatCurrency(product.price, locale)}
         </p>
       </div>
     </Link>
@@ -60,6 +62,9 @@ function RelatedProductCard({ product }: { product: Product }) {
 
 function ProductDetailContent() {
   const params = useParams();
+  const router = useRouter();
+  const { locale } = useLocale();
+  const { user } = useAuth();
   const id = Number(params?.id);
   const addItem = useCartStore((state) => state.addItem);
   const [product, setProduct] = useState<Product | null>(null);
@@ -70,6 +75,52 @@ function ProductDetailContent() {
   const [selectedSize, setSelectedSize] = useState<"classic" | "deluxe" | "grand">("deluxe");
   const [selectedRibbon, setSelectedRibbon] = useState(0);
   const [deliveryDate, setDeliveryDate] = useState("");
+  const [giftNote, setGiftNote] = useState("");
+
+  const copy =
+    locale === "vi"
+      ? {
+          notFound: "Khong tim thay san pham",
+          backToShop: "Quay lai cua hang",
+          home: "Trang chu",
+          shop: "Cua hang",
+          updated: "Cap nhat tu cua hang",
+          selectSize: "Chon kich thuoc bo hoa",
+          ribbon: "Chon mau no",
+          deliveryDate: "Ngay giao",
+          giftNote: "Loi nhan tang kem",
+          personalization: "Ca nhan hoa",
+          notePlaceholder: "Viet loi nhan chan thanh cua ban tai day...",
+          maxChars: "{count} / Toi da 250 ky tu",
+          signInOrder: "Dang nhap de dat hang",
+          addToCart: "Them vao gio",
+          storeDelivery: "Giao tu cua hang",
+          realStock: "Ton kho thuc",
+          secure: "An toan",
+          similar: "San pham tuong tu",
+          viewAll: "Xem tat ca",
+        }
+      : {
+          notFound: "Product not found",
+          backToShop: "Back to Shop",
+          home: "Home",
+          shop: "Shop",
+          updated: "Updated from store",
+          selectSize: "Select Arrangement Size",
+          ribbon: "Ribbon Selection",
+          deliveryDate: "Delivery Date",
+          giftNote: "Gift Note",
+          personalization: "Personalization",
+          notePlaceholder: "Type your heartfelt message here...",
+          maxChars: "{count} / Max 250 characters",
+          signInOrder: "Sign In To Order",
+          addToCart: "Add to Cart",
+          storeDelivery: "Store Delivery",
+          realStock: "Real Stock",
+          secure: "Secure",
+          similar: "Similar products",
+          viewAll: "View All",
+        };
 
   useEffect(() => {
     if (!Number.isFinite(id)) {
@@ -163,14 +214,14 @@ function ProductDetailContent() {
             className="text-[#5c6b5e] text-[18px] font-light"
             style={{ fontFamily: "var(--font-noto-serif)" }}
           >
-            {error ?? "Product not found"}
+            {error ?? copy.notFound}
           </p>
           <Link
             href="/products"
             className="mt-4 px-8 py-3 bg-[#d0bb95] text-white text-[14px] rounded-full hover:bg-[#c2a571] transition-colors"
             style={{ fontFamily: "var(--font-inter)" }}
           >
-            Back to Shop
+            {copy.backToShop}
           </Link>
         </main>
         <Footer />
@@ -181,9 +232,15 @@ function ProductDetailContent() {
   const images = [product.image || DEFAULT_PRODUCT_IMAGE];
 
   const handleAddToCart = () => {
+    if (!user) {
+      router.push("/signin");
+      return;
+    }
+
     addItem(
       createCartItem(product, {
         deliveryDate: deliveryDate || undefined,
+        giftNote: giftNote.trim() || undefined,
         ribbon: RIBBONS[selectedRibbon]?.label,
         size: selectedSize,
         availableStock: product.stockQuantity ?? null,
@@ -202,7 +259,7 @@ function ProductDetailContent() {
               className="text-[#9a8c81] text-[11px] tracking-[1.65px] uppercase hover:text-[#2d2a26] transition-colors"
               style={{ fontFamily: "var(--font-inter)" }}
             >
-              Home
+              {copy.home}
             </Link>
             <span className="text-[#9a8c81] text-[11px]">/</span>
             <Link
@@ -210,7 +267,7 @@ function ProductDetailContent() {
               className="text-[#9a8c81] text-[11px] tracking-[1.65px] uppercase hover:text-[#2d2a26] transition-colors"
               style={{ fontFamily: "var(--font-inter)" }}
             >
-              Shop
+              {copy.shop}
             </Link>
             <span className="text-[#9a8c81] text-[11px]">/</span>
             <span
@@ -241,10 +298,11 @@ function ProductDetailContent() {
                     key={src}
                     type="button"
                     onClick={() => setActiveImg(index)}
-                    className={`relative rounded-tl-[1000px] rounded-tr-[1000px] overflow-hidden border-2 transition-all ${activeImg === index
-                      ? "border-[#2d2a26]"
-                      : "border-[rgba(255,255,255,0.4)] hover:border-[rgba(45,42,38,0.3)]"
-                      }`}
+                    className={`relative rounded-tl-[1000px] rounded-tr-[1000px] overflow-hidden border-2 transition-all ${
+                      activeImg === index
+                        ? "border-[#2d2a26]"
+                        : "border-[rgba(255,255,255,0.4)] hover:border-[rgba(45,42,38,0.3)]"
+                    }`}
                     style={{ paddingBottom: "36%" }}
                   >
                     <Image
@@ -274,13 +332,13 @@ function ProductDetailContent() {
                   className="text-[#2d2a26] text-[24px] font-light tracking-[-0.6px]"
                   style={{ fontFamily: "var(--font-inter)" }}
                 >
-                  {formatCurrency(product.price)}
+                  {formatCurrency(product.price, locale)}
                 </span>
                 <span
                   className="text-[#9a8c81] text-[10px] tracking-[1px] uppercase"
                   style={{ fontFamily: "var(--font-inter)" }}
                 >
-                  Cập nhật từ cửa hàng
+                  {copy.updated}
                 </span>
               </div>
 
@@ -299,7 +357,7 @@ function ProductDetailContent() {
                     className="text-[rgba(45,42,38,0.4)] text-[10px] font-semibold tracking-[2px] uppercase"
                     style={{ fontFamily: "var(--font-inter)" }}
                   >
-                    Select Arrangement Size
+                    {copy.selectSize}
                   </p>
                   <div className="flex gap-3">
                     {(["classic", "deluxe", "grand"] as const).map((size) => (
@@ -307,10 +365,11 @@ function ProductDetailContent() {
                         key={size}
                         type="button"
                         onClick={() => setSelectedSize(size)}
-                        className={`px-8 py-3 rounded-full text-[11px] tracking-[1.1px] uppercase border transition-colors ${selectedSize === size
-                          ? "bg-[#2d2a26] border-[#2d2a26] text-white"
-                          : "border-[rgba(45,42,38,0.1)] text-[#2d2a26] hover:border-[rgba(45,42,38,0.4)]"
-                          }`}
+                        className={`px-8 py-3 rounded-full text-[11px] tracking-[1.1px] uppercase border transition-colors ${
+                          selectedSize === size
+                            ? "bg-[#2d2a26] border-[#2d2a26] text-white"
+                            : "border-[rgba(45,42,38,0.1)] text-[#2d2a26] hover:border-[rgba(45,42,38,0.4)]"
+                        }`}
                         style={{ fontFamily: "var(--font-inter)" }}
                       >
                         {size.charAt(0).toUpperCase() + size.slice(1)}
@@ -324,7 +383,7 @@ function ProductDetailContent() {
                     className="text-[rgba(45,42,38,0.4)] text-[10px] font-semibold tracking-[2px] uppercase"
                     style={{ fontFamily: "var(--font-inter)" }}
                   >
-                    Ribbon Selection
+                    {copy.ribbon}
                   </p>
                   <div className="flex gap-4">
                     {RIBBONS.map((ribbon, index) => (
@@ -349,7 +408,7 @@ function ProductDetailContent() {
                     className="text-[rgba(45,42,38,0.4)] text-[10px] font-semibold tracking-[2px] uppercase"
                     style={{ fontFamily: "var(--font-inter)" }}
                   >
-                    Delivery Date
+                    {copy.deliveryDate}
                   </p>
                   <label className="relative w-[256px] border-b border-[rgba(45,42,38,0.2)] pb-2 cursor-pointer">
                     <input
@@ -363,15 +422,67 @@ function ProductDetailContent() {
                   </label>
                 </div>
 
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-end justify-between">
+                    <p
+                      className="text-[rgba(45,42,38,0.4)] text-[10px] font-semibold tracking-[2px] uppercase"
+                      style={{ fontFamily: "var(--font-inter)" }}
+                    >
+                      {copy.giftNote}
+                    </p>
+                    <p
+                      className="text-[#9a8c81] text-[9px] tracking-[0.9px] uppercase"
+                      style={{ fontFamily: "var(--font-inter)" }}
+                    >
+                      {copy.personalization}
+                    </p>
+                  </div>
+                  <div className="relative">
+                    <div className="relative -rotate-1 bg-[rgba(252,250,247,0.8)] border border-[rgba(45,42,38,0.07)] rounded-sm shadow-sm overflow-hidden">
+                      <div className="rotate-1">
+                        <textarea
+                          value={giftNote}
+                          onChange={(event) =>
+                            setGiftNote(event.target.value.slice(0, 250))
+                          }
+                          placeholder={copy.notePlaceholder}
+                          rows={5}
+                          className="w-full bg-transparent px-8 py-8 text-[20px] text-[#2d2a26] outline-none resize-none placeholder-[rgba(0,0,0,0.3)]"
+                          style={{ fontFamily: "cursive, var(--font-noto-serif)" }}
+                        />
+                        {giftNote ? (
+                          <button
+                            type="button"
+                            onClick={() => setGiftNote("")}
+                            className="absolute top-2 right-2 w-9 h-9 flex items-center justify-center opacity-40 hover:opacity-70 transition-opacity"
+                          >
+                            <X className="w-5 h-5" />
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                    <p
+                      className="text-[#9a8c81] text-[9px] tracking-[0.9px] uppercase text-right mt-2"
+                      style={{ fontFamily: "var(--font-inter)" }}
+                    >
+                      {copy.maxChars.replace("{count}", String(giftNote.length))}
+                    </p>
+                  </div>
+                </div>
+
                 <div className="flex flex-col gap-4 pt-8">
                   <button
                     type="button"
-                    onClick={handleAddToCart}
-                    className="w-full py-6 bg-[#2d2a26] text-white text-[12px] font-medium tracking-[2.4px] uppercase rounded-full hover:bg-[#1a1815] transition-colors"
-                    style={{ fontFamily: "var(--font-inter)" }}
-                  >
-                    {cartQuantity > 0 ? `Add to Cart (${cartQuantity})` : "Add to Cart"}
-                  </button>
+                  onClick={handleAddToCart}
+                  className="w-full py-6 bg-[#2d2a26] text-white text-[12px] font-medium tracking-[2.4px] uppercase rounded-full hover:bg-[#1a1815] transition-colors"
+                  style={{ fontFamily: "var(--font-inter)" }}
+                >
+                  {!user
+                    ? copy.signInOrder
+                    : cartQuantity > 0
+                      ? `${copy.addToCart} (${cartQuantity})`
+                      : copy.addToCart}
+                </button>
                   <div className="flex items-center justify-between px-2">
                     <div className="flex items-center gap-2">
                       <Truck className="w-3.5 h-3.5 text-[#9a8c81] shrink-0" />
@@ -379,7 +490,7 @@ function ProductDetailContent() {
                         className="text-[#9a8c81] text-[10px] font-medium tracking-[1px] uppercase"
                         style={{ fontFamily: "var(--font-inter)" }}
                       >
-                        Store Delivery
+                        {copy.storeDelivery}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -388,7 +499,7 @@ function ProductDetailContent() {
                         className="text-[#9a8c81] text-[10px] font-medium tracking-[1px] uppercase"
                         style={{ fontFamily: "var(--font-inter)" }}
                       >
-                        Real Stock
+                        {copy.realStock}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -397,7 +508,7 @@ function ProductDetailContent() {
                         className="text-[#9a8c81] text-[10px] font-medium tracking-[1px] uppercase"
                         style={{ fontFamily: "var(--font-inter)" }}
                       >
-                        Secure
+                        {copy.secure}
                       </span>
                     </div>
                   </div>
@@ -413,14 +524,14 @@ function ProductDetailContent() {
                   className="text-[#2d2a26] text-[36px] font-light leading-[40px]"
                   style={{ fontFamily: "var(--font-noto-serif)" }}
                 >
-                  Similar products
+                  {copy.similar}
                 </h2>
                 <Link
                   href="/products"
                   className="text-[#9a8c81] text-[11px] tracking-[2.2px] uppercase border-b border-[#9a8c81] pb-1 hover:text-[#2d2a26] hover:border-[#2d2a26] transition-colors"
                   style={{ fontFamily: "var(--font-inter)" }}
                 >
-                  View All
+                  {copy.viewAll}
                 </Link>
               </div>
               <div className="grid grid-cols-4 gap-12">
@@ -428,6 +539,7 @@ function ProductDetailContent() {
                   <RelatedProductCard
                     key={relatedProduct.id}
                     product={relatedProduct}
+                    locale={locale}
                   />
                 ))}
               </div>

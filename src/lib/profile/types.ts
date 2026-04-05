@@ -106,6 +106,7 @@ export interface ProfileSecurityToggleOption {
   label: string;
   description: string;
   enabled: boolean;
+  disabled?: boolean;
 }
 
 export interface ProfileSecuritySettingsPageData {
@@ -169,21 +170,9 @@ export interface ProfilePreferencesToggleOption {
   enabled: boolean;
 }
 
-export interface ProfilePreferencesPreview {
-  image: string;
-  alt: string;
-  label: string;
-}
-
 export interface ProfilePreferencesRegionalSection {
   title: string;
   fields: ProfilePreferencesSelectField[];
-}
-
-export interface ProfilePreferencesGiftingSection {
-  title: string;
-  toggles: ProfilePreferencesToggleOption[];
-  preview: ProfilePreferencesPreview;
 }
 
 export interface ProfilePreferencesSettingsPageData {
@@ -192,7 +181,6 @@ export interface ProfilePreferencesSettingsPageData {
   navigation: ProfileSettingsNavItem[];
   rewards: ProfileRewardsCard;
   regionalSection: ProfilePreferencesRegionalSection;
-  giftingSection: ProfilePreferencesGiftingSection;
   saveLabel: string;
   resetLabel: string;
 }

@@ -16,6 +16,7 @@ import {
 import { ProductCard, ProductFilter } from "@/components/products";
 import { Navbar, Footer } from "@/components/layout";
 import { ContactSection } from "@/components/home";
+import { useLocale } from "@/src/contexts";
 
 const PAGE_SIZE = 6;
 
@@ -38,6 +39,7 @@ const EMPTY_PAGE_STATE: ProductPageState = {
 };
 
 function ProductsPageContent() {
+  const { t } = useLocale();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -85,20 +87,20 @@ function ProductsPageContent() {
   const headingTitle = selectedCategoryName
     ? selectedCategoryName
     : showCategoryLanding
-      ? "All Categories"
+      ? t("products.page.title.allCategories")
       : isCategoriesView
-        ? "Categories"
+        ? t("products.page.title.categories")
       : isLatestView
-        ? "Latest Products"
-        : "All Products";
+        ? t("products.page.title.latestProducts")
+        : t("products.page.title.allProducts");
 
   const headingDescription = showCategoryLanding
-    ? "Explore our curated collections, tailored to suit every occasion and style."
+    ? t("products.page.desc.allCategories")
     : isCategoriesView
-      ? "Browse floral collections by category and pick the perfect arrangement."
+      ? t("products.page.desc.categories")
     : isLatestView
-      ? "Fresh arrivals curated for this week, ready to brighten every moment."
-      : "Designed to breathe life into every corner of your home with organic textures and timeless grace.";
+      ? t("products.page.desc.latestProducts")
+      : t("products.page.desc.allProducts");
 
   useEffect(() => {
     let active = true;
@@ -233,7 +235,7 @@ function ProductsPageContent() {
         setError(
           isApiError(fetchError)
             ? fetchError.message
-            : "Unable to load products right now."
+            : t("products.page.loadErrorTitle")
         );
       } finally {
         if (active) {
@@ -255,6 +257,7 @@ function ProductsPageContent() {
     filters.name,
     isLatestView,
     showCategoryLanding,
+    t,
   ]);
 
   const buildParams = useCallback(
@@ -349,7 +352,7 @@ function ProductsPageContent() {
             className="text-[#d0bb95] text-[10px] font-bold tracking-[4px] uppercase mb-4"
             style={{ fontFamily: "var(--font-inter)" }}
           >
-            THE CURATED GALLERY
+            {t("products.page.galleryTagline")}
           </p>
           <h1
             className="text-black text-[38px] font-light leading-[1.1] tracking-[2px] sm:text-[54px] sm:tracking-[3px] lg:text-[72px] lg:leading-[72px] lg:tracking-[4px]"
@@ -390,7 +393,7 @@ function ProductsPageContent() {
                 </div>
               ) : categories.length === 0 ? (
                 <div className="flex h-[280px] items-center justify-center rounded-[24px] bg-white/55">
-                  <p className="text-[14px] text-[#7b7268]">No categories available right now.</p>
+                  <p className="text-[14px] text-[#7b7268]">{t("products.page.noCategories")}</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
@@ -440,7 +443,7 @@ function ProductsPageContent() {
                     className="mb-3 text-[12px] font-semibold uppercase tracking-[1.6px] text-[#6f655a]"
                     style={{ fontFamily: "var(--font-inter)" }}
                   >
-                    Browse Categories
+                    {t("products.page.browseCategories")}
                   </p>
                   <div className="flex flex-wrap gap-2">
                     <button
@@ -452,7 +455,7 @@ function ProductsPageContent() {
                           : "bg-[#f1ede7] text-[#5f5548] hover:bg-[#e9e2d9]"
                       }`}
                     >
-                      All categories
+                      {t("products.page.allCategories")}
                     </button>
                     {categories.map((category) => {
                       const isActive = filters.categoryId === String(category.id);
@@ -483,7 +486,7 @@ function ProductsPageContent() {
                     className="text-[#2d2a26] text-[24px] font-light"
                     style={{ fontFamily: "var(--font-noto-serif)" }}
                   >
-                    Unable to load products
+                    {t("products.page.loadErrorTitle")}
                   </p>
                   <p className="max-w-[440px] text-[14px] leading-6 text-[#5c6b5e]">
                     {error}
@@ -505,7 +508,7 @@ function ProductsPageContent() {
                     className="text-[#5c6b5e] text-[18px] font-light"
                     style={{ fontFamily: "var(--font-noto-serif)" }}
                   >
-                    No arrangements found
+                    {t("products.page.noArrangements")}
                   </p>
                 </div>
               ) : (

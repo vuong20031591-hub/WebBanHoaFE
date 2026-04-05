@@ -6,16 +6,9 @@ import { ChatLive, Footer, Navbar } from "@/components/layout";
 import { isApiError, ordersApi } from "@/lib/api";
 import { loadOrderProducts, mapOrderToProfileOrder } from "@/lib/mappers";
 import { ProfileOrder } from "@/lib/profile/types";
-import { useAuth } from "@/src/contexts";
+import { useAuth, useLocale } from "@/src/contexts";
 import { ProfileOrdersSection } from "./ProfileOrdersSection";
 import { ProfileTabs } from "./ProfileTabs";
-
-const PROFILE_TABS = [
-  { id: "orders", label: "My Orders", href: "/profile", active: true },
-  { id: "favorites", label: "Favorites", href: "/profile/favorites", active: false },
-  { id: "settings", label: "Settings", href: "/profile/settings", active: false },
-  { id: "addresses", label: "Addresses", href: "/profile/addresses", active: false },
-] as const;
 
 function ProfileStateCard({
   title,
@@ -43,6 +36,7 @@ function ProfileStateCard({
 }
 
 export function ProfilePageContent() {
+  const { locale, t } = useLocale();
   const { user, loading: authLoading } = useAuth();
   const [orders, setOrders] = useState<ProfileOrder[]>([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
@@ -75,7 +69,7 @@ export function ProfilePageContent() {
           return;
         }
 
-        setOrders(data.map((order) => mapOrderToProfileOrder(order, productsById)));
+        setOrders(data.map((order) => mapOrderToProfileOrder(order, productsById, locale)));
       } catch (fetchError) {
         if (!active) {
           return;
@@ -85,7 +79,7 @@ export function ProfilePageContent() {
         setError(
           isApiError(fetchError)
             ? fetchError.message
-            : "Unable to load orders right now."
+            : t("profile.orders.unableToLoadFallback")
         );
       } finally {
         if (active) {
@@ -99,7 +93,23 @@ export function ProfilePageContent() {
     return () => {
       active = false;
     };
-  }, [authLoading, user]);
+  }, [authLoading, locale, t, user]);
+
+  const profileTabs = [
+    { id: "orders", label: t("profile.orders.tabOrders"), href: "/profile", active: true },
+    {
+      id: "favorites",
+      label: t("profile.orders.tabFavorites"),
+      href: "/profile/favorites",
+      active: false,
+    },
+    {
+      id: "settings",
+      label: t("profile.orders.tabSettings"),
+      href: "/profile/settings",
+      active: false,
+    },
+  ] as const;
 
   return (
     <div className="min-h-screen bg-[#f7f3ed]">
@@ -109,34 +119,34 @@ export function ProfilePageContent() {
           <div className="mx-auto max-w-[1100px]">
             <header className="pb-12 lg:pb-16">
               <p className="text-[10px] font-bold uppercase tracking-[1.6px] text-[#d0bb95]">
-                Account
+                {t("profile.settings.accountBadge")}
               </p>
               <h1
                 className="mt-4 text-[44px] font-light leading-none text-[#2d2a26]"
                 style={{ fontFamily: "var(--font-noto-serif)" }}
               >
-                Your Orders
+                {t("profile.orders.title")}
               </h1>
               <p className="mt-3 text-[14px] leading-6 text-[#5c6b5e]">
-                This page now reads real order history from the backend order API.
+                {t("profile.orders.subtitle")}
               </p>
             </header>
 
-            <ProfileTabs tabs={[...PROFILE_TABS]} />
+            <ProfileTabs tabs={[...profileTabs]} />
 
             {authLoading || isLoadingOrders ? (
               <div className="mt-12 h-[320px] rounded-[32px] bg-white/60 animate-pulse" />
             ) : !user ? (
               <div className="pt-12 lg:pt-16">
                 <ProfileStateCard
-                  title="Sign in to view orders"
-                  description="Order history is only available for authenticated users because the backend order API is protected."
+                  title={t("profile.orders.signInTitle")}
+                  description={t("profile.orders.signInSubtitle")}
                   action={
                     <Link
                       href="/signin"
                       className="inline-flex min-h-[52px] items-center justify-center rounded-[12px] bg-[#d0bb95] px-8 text-[14px] font-medium text-white transition-colors hover:bg-[#c2a571]"
                     >
-                      Go to Sign In
+                      {t("profile.common.goToSignIn")}
                     </Link>
                   }
                 />
@@ -144,7 +154,7 @@ export function ProfilePageContent() {
             ) : error ? (
               <div className="pt-12 lg:pt-16">
                 <ProfileStateCard
-                  title="Unable to load orders"
+                  title={t("profile.orders.loadErrorTitle")}
                   description={error}
                 />
               </div>

@@ -39,6 +39,12 @@ export interface ForgotPasswordRequest {
   email: string;
 }
 
+export interface ForgotPasswordResponse {
+  deliveryMethod: "email" | "none";
+  message: string;
+  debugCode: string | null;
+}
+
 export interface ResetPasswordWithCodeRequest {
   email: string;
   code: string;

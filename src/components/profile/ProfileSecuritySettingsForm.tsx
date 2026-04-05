@@ -1,11 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { isApiError } from "@/lib/api";
 import {
   ProfileSecurityPasswordField,
   ProfileSecurityToggleOption,
 } from "@/lib/profile/types";
+import {
+  getPasswordValidationMessage,
+  PASSWORD_REQUIREMENTS_MESSAGE,
+} from "@/lib/auth/validation";
 
 interface ProfileSecuritySettingsFormProps {
   passwordSectionTitle: string;
@@ -18,7 +22,15 @@ interface ProfileSecuritySettingsFormProps {
   cancelLabel: string;
   saveLabel: string;
   onUpdatePassword?: (payload: UpdatePasswordPayload) => Promise<void>;
-  onSaveTwoFactor?: (options: ProfileSecurityToggleOption[]) => Promise<void>;
+  onSaveTwoFactor?: (
+    options: ProfileSecurityToggleOption[]
+  ) => Promise<string | void>;
+  twoFactorCountdownSeconds?: number | null;
+  onStopTwoFactorCountdown?: () => Promise<string | void>;
+  isStoppingTwoFactorCountdown?: boolean;
+  twoFactorVerificationPending?: boolean;
+  twoFactorVerificationHint?: string;
+  onVerifyTwoFactorCode?: (code: string) => Promise<string | void>;
 }
 
 export interface UpdatePasswordPayload {
@@ -84,6 +96,12 @@ export function ProfileSecuritySettingsForm({
   saveLabel,
   onUpdatePassword,
   onSaveTwoFactor,
+  twoFactorCountdownSeconds = null,
+  onStopTwoFactorCountdown,
+  isStoppingTwoFactorCountdown = false,
+  twoFactorVerificationPending = false,
+  twoFactorVerificationHint,
+  onVerifyTwoFactorCode,
 }: ProfileSecuritySettingsFormProps) {
   const [passwordState, setPasswordState] = useState<PasswordState>({
     currentPassword: "",
@@ -97,6 +115,18 @@ export function ProfileSecuritySettingsForm({
   const [settingsMessage, setSettingsMessage] = useState<FormMessage>(null);
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [twoFactorCode, setTwoFactorCode] = useState("");
+  const [isVerifyingTwoFactor, setIsVerifyingTwoFactor] = useState(false);
+
+  useEffect(() => {
+    setTwoFactorState(twoFactorOptions.map((option) => ({ ...option })));
+  }, [twoFactorOptions]);
+
+  useEffect(() => {
+    if (!twoFactorVerificationPending) {
+      setTwoFactorCode("");
+    }
+  }, [twoFactorVerificationPending]);
 
   const handleCancel = () => {
     setPasswordState({
@@ -126,7 +156,9 @@ export function ProfileSecuritySettingsForm({
   const handleToggle = (id: string) => {
     setTwoFactorState((current) =>
       current.map((option) =>
-        option.id === id ? { ...option, enabled: !option.enabled } : option
+        option.id === id && !option.disabled
+          ? { ...option, enabled: !option.enabled }
+          : option
       )
     );
   };
@@ -158,10 +190,11 @@ export function ProfileSecuritySettingsForm({
       return;
     }
 
-    if (newPassword.length < 6) {
+    const passwordError = getPasswordValidationMessage(newPassword);
+    if (passwordError) {
       setPasswordMessage({
         tone: "error",
-        text: "New password must be at least 6 characters.",
+        text: passwordError,
       });
       return;
     }
@@ -224,10 +257,10 @@ export function ProfileSecuritySettingsForm({
 
     setIsSavingSettings(true);
     try {
-      await onSaveTwoFactor(twoFactorState);
+      const nextMessage = await onSaveTwoFactor(twoFactorState);
       setSettingsMessage({
         tone: "success",
-        text: "Security preferences saved.",
+        text: nextMessage || "Security preferences saved.",
       });
     } catch (error) {
       setSettingsMessage({
@@ -238,6 +271,63 @@ export function ProfileSecuritySettingsForm({
       });
     } finally {
       setIsSavingSettings(false);
+    }
+  };
+
+  const handleVerifyTwoFactorCode = async () => {
+    if (!onVerifyTwoFactorCode) {
+      return;
+    }
+
+    const normalizedCode = twoFactorCode.replace(/\D/g, "").slice(0, 6);
+    if (normalizedCode.length !== 6) {
+      setSettingsMessage({
+        tone: "error",
+        text: "Please enter the 6-digit verification code.",
+      });
+      return;
+    }
+
+    setIsVerifyingTwoFactor(true);
+    setSettingsMessage(null);
+    try {
+      const nextMessage = await onVerifyTwoFactorCode(normalizedCode);
+      setSettingsMessage({
+        tone: "success",
+        text: nextMessage || "Two-factor authentication enabled.",
+      });
+      setTwoFactorCode("");
+    } catch (error) {
+      setSettingsMessage({
+        tone: "error",
+        text: isApiError(error)
+          ? error.message
+          : "Unable to verify the SMS code right now.",
+      });
+    } finally {
+      setIsVerifyingTwoFactor(false);
+    }
+  };
+
+  const handleStopTwoFactorCountdown = async () => {
+    if (!onStopTwoFactorCountdown) {
+      return;
+    }
+
+    setSettingsMessage(null);
+    try {
+      const nextMessage = await onStopTwoFactorCountdown();
+      setSettingsMessage({
+        tone: "success",
+        text: nextMessage || "Verification code sent.",
+      });
+    } catch (error) {
+      setSettingsMessage({
+        tone: "error",
+        text: isApiError(error)
+          ? error.message
+          : "Unable to send SMS verification code right now.",
+      });
     }
   };
 
@@ -303,7 +393,11 @@ export function ProfileSecuritySettingsForm({
           >
             {passwordMessage.text}
           </p>
-        ) : null}
+        ) : (
+          <p className="mt-5 text-[13px] text-[rgba(92,107,94,0.75)]">
+            {PASSWORD_REQUIREMENTS_MESSAGE}
+          </p>
+        )}
       </section>
 
       <div className="mt-16 border-t border-[rgba(92,107,94,0.12)]" />
@@ -339,8 +433,14 @@ export function ProfileSecuritySettingsForm({
               <button
                 type="button"
                 aria-pressed={option.enabled}
+                aria-disabled={option.disabled}
+                disabled={option.disabled}
                 onClick={() => handleToggle(option.id)}
-                className={`relative h-5 w-10 shrink-0 rounded-full transition-all duration-300 ease-in-out hover:opacity-90 active:scale-95 ${
+                className={`relative h-5 w-10 shrink-0 rounded-full transition-all duration-300 ease-in-out ${
+                  option.disabled
+                    ? "cursor-not-allowed opacity-50"
+                    : "hover:opacity-90 active:scale-95"
+                } ${
                   option.enabled ? "bg-[#d0bb95]" : "bg-[#e7e5e4]"
                 }`}
               >
@@ -352,6 +452,68 @@ export function ProfileSecuritySettingsForm({
               </button>
             </div>
           ))}
+
+          {twoFactorCountdownSeconds !== null && !twoFactorVerificationPending ? (
+            <div className="rounded-[12px] border border-[rgba(92,107,94,0.18)] bg-[rgba(255,255,255,0.5)] p-4">
+              <p className="text-[12px] font-semibold uppercase tracking-[0.6px] text-[rgba(92,107,94,0.75)]">
+                SMS Test Countdown
+              </p>
+              <p className="mt-1 text-[12px] font-light leading-4 text-[rgba(92,107,94,0.8)]">
+                {twoFactorCountdownSeconds > 0
+                  ? `Countdown: ${twoFactorCountdownSeconds}s. Click Stop when you are ready to send the SMS code.`
+                  : "Countdown ended. Click Stop to send the SMS code now."}
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    void handleStopTwoFactorCountdown();
+                  }}
+                  disabled={isStoppingTwoFactorCountdown}
+                  className="inline-flex min-h-[44px] min-w-[180px] items-center justify-center rounded-[10px] bg-[#d0bb95] px-6 text-[13px] font-medium text-white transition-colors hover:bg-[#c2a571] disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {isStoppingTwoFactorCountdown ? "Sending..." : "Stop & Send SMS Code"}
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {twoFactorVerificationPending ? (
+            <div className="rounded-[12px] border border-[rgba(92,107,94,0.18)] bg-[rgba(255,255,255,0.5)] p-4">
+              <p className="text-[12px] font-semibold uppercase tracking-[0.6px] text-[rgba(92,107,94,0.75)]">
+                Verify SMS Code
+              </p>
+              <p className="mt-1 text-[12px] font-light leading-4 text-[rgba(92,107,94,0.8)]">
+                {twoFactorVerificationHint ||
+                  "We sent a 6-digit code to your saved phone. Enter it to finish enabling 2FA."}
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={twoFactorCode}
+                  onChange={(event) =>
+                    setTwoFactorCode(
+                      event.target.value.replace(/\D/g, "").slice(0, 6)
+                    )
+                  }
+                  placeholder="Enter 6-digit code"
+                  className="h-[44px] w-[220px] rounded-[10px] border border-[rgba(92,107,94,0.2)] bg-white px-4 text-[14px] text-[#2d2a26] outline-none transition-colors focus:border-[rgba(92,107,94,0.45)]"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    void handleVerifyTwoFactorCode();
+                  }}
+                  disabled={isVerifyingTwoFactor}
+                  className="inline-flex min-h-[44px] min-w-[140px] items-center justify-center rounded-[10px] bg-[#d0bb95] px-6 text-[13px] font-medium text-white transition-colors hover:bg-[#c2a571] disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {isVerifyingTwoFactor ? "Verifying..." : "Verify Code"}
+                </button>
+              </div>
+            </div>
+          ) : null}
         </div>
       </section>
 

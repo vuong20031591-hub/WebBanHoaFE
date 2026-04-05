@@ -4,9 +4,11 @@ import {
   CreateAddressRequest,
   UpdateAddressRequest,
   NotificationPreferencesDTO,
+  TwoFactorSmsCodeResponse,
   UpdateNotificationPreferencesRequest,
   UserPreferencesDTO,
   UpdateUserPreferencesRequest,
+  VerifyTwoFactorSmsCodeRequest,
   UserRewardsDTO,
   RewardsHistoryResponse,
 } from "./types";
@@ -79,6 +81,23 @@ export async function updateUserPreferences(
 ): Promise<UserPreferencesDTO> {
   const response = await apiClient.put<UserPreferencesDTO>(
     "/api/user-preferences",
+    request
+  );
+  return response.data;
+}
+
+export async function requestSmsTwoFactorCode(): Promise<TwoFactorSmsCodeResponse> {
+  const response = await apiClient.post<TwoFactorSmsCodeResponse>(
+    "/api/user-preferences/two-factor/sms/request-code"
+  );
+  return response.data;
+}
+
+export async function verifySmsTwoFactorCode(
+  request: VerifyTwoFactorSmsCodeRequest
+): Promise<UserPreferencesDTO> {
+  const response = await apiClient.post<UserPreferencesDTO>(
+    "/api/user-preferences/two-factor/sms/verify-code",
     request
   );
   return response.data;

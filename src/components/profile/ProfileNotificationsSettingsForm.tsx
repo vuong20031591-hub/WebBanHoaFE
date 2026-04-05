@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import {
   ProfileNotificationsPreference,
   ProfileNotificationsSection,
@@ -10,6 +10,7 @@ import {
   updateNotificationPreferences,
   isApiError,
 } from "@/lib/api";
+import { useLocale } from "@/src/contexts";
 
 interface ProfileNotificationsSettingsFormProps {
   emailSection: ProfileNotificationsSection;
@@ -105,6 +106,7 @@ export function ProfileNotificationsSettingsForm({
   discardLabel,
   updateLabel,
 }: ProfileNotificationsSettingsFormProps) {
+  const { t } = useLocale();
   const [emailPreferences, setEmailPreferences] = useState(
     emailSection.preferences.map((preference) => ({ ...preference }))
   );
@@ -115,21 +117,18 @@ export function ProfileNotificationsSettingsForm({
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  useEffect(() => {
-    loadPreferences();
-  }, []);
-
-  const loadPreferences = async () => {
+  const loadPreferences = useCallback(async () => {
     try {
       setLoading(true);
       setMessage(null);
       const prefs = await getNotificationPreferences();
-      
+
       setEmailPreferences((current) =>
         current.map((pref) => {
           if (pref.id === "order_updates") return { ...pref, enabled: prefs.emailOrderUpdates };
           if (pref.id === "seasonal_curations") return { ...pref, enabled: prefs.emailPromotions };
           if (pref.id === "boutique_news") return { ...pref, enabled: prefs.emailNewsletter };
+          if (pref.id === "event_reminders_email") return { ...pref, enabled: prefs.emailEventReminders };
           return pref;
         })
       );
@@ -137,21 +136,48 @@ export function ProfileNotificationsSettingsForm({
       setSmsPreferences((current) =>
         current.map((pref) => {
           if (pref.id === "delivery_alerts") return { ...pref, enabled: prefs.smsOrderUpdates };
+          if (pref.id === "event_reminders_sms") return { ...pref, enabled: prefs.smsEventReminders };
           return pref;
         })
       );
     } catch (err) {
       setMessage({
         type: "error",
-        text: isApiError(err) ? err.message : "Failed to load notification preferences.",
+        text: isApiError(err) ? err.message : t("profile.notifications.loadError"),
       });
     } finally {
       setLoading(false);
     }
-  };
+  }, [t]);
+
+  useEffect(() => {
+    void loadPreferences();
+  }, [loadPreferences]);
+
+  useEffect(() => {
+    setEmailPreferences((current) =>
+      emailSection.preferences.map((preference) => ({
+        ...preference,
+        enabled:
+          current.find((item) => item.id === preference.id)?.enabled ??
+          preference.enabled,
+      }))
+    );
+  }, [emailSection.preferences]);
+
+  useEffect(() => {
+    setSmsPreferences((current) =>
+      smsSection.preferences.map((preference) => ({
+        ...preference,
+        enabled:
+          current.find((item) => item.id === preference.id)?.enabled ??
+          preference.enabled,
+      }))
+    );
+  }, [smsSection.preferences]);
 
   const handleDiscard = () => {
-    loadPreferences();
+    void loadPreferences();
     setMessage(null);
   };
 
@@ -183,20 +209,24 @@ export function ProfileNotificationsSettingsForm({
       const orderUpdates = emailPreferences.find((p) => p.id === "order_updates")?.enabled ?? true;
       const promotions = emailPreferences.find((p) => p.id === "seasonal_curations")?.enabled ?? true;
       const newsletter = emailPreferences.find((p) => p.id === "boutique_news")?.enabled ?? false;
+      const emailEventReminders = emailPreferences.find((p) => p.id === "event_reminders_email")?.enabled ?? false;
       const smsUpdates = smsPreferences.find((p) => p.id === "delivery_alerts")?.enabled ?? false;
+      const smsEventReminders = smsPreferences.find((p) => p.id === "event_reminders_sms")?.enabled ?? false;
 
       await updateNotificationPreferences({
         emailOrderUpdates: orderUpdates,
         emailPromotions: promotions,
         emailNewsletter: newsletter,
+        emailEventReminders,
         smsOrderUpdates: smsUpdates,
+        smsEventReminders,
       });
 
-      setMessage({ type: "success", text: "Notification preferences updated successfully." });
+      setMessage({ type: "success", text: t("profile.notifications.updated") });
     } catch (err) {
       setMessage({
         type: "error",
-        text: isApiError(err) ? err.message : "Failed to update preferences.",
+        text: isApiError(err) ? err.message : t("profile.notifications.updateError"),
       });
     } finally {
       setSaving(false);
@@ -230,7 +260,7 @@ export function ProfileNotificationsSettingsForm({
         />
 
         <div className="mt-8 rounded-2xl border border-dashed border-[rgba(92,107,94,0.2)] bg-white/40 px-5 py-4 text-[13px] leading-6 text-[#5c6b5e]">
-          Push notifications are not available yet. Toggle controls are hidden until the push delivery workflow is fully integrated.
+          {t("profile.notifications.centralHelp")}
         </div>
       </div>
 
@@ -258,7 +288,7 @@ export function ProfileNotificationsSettingsForm({
           disabled={saving}
           className="inline-flex min-h-[52px] min-w-[205px] items-center justify-center rounded-[12px] bg-[#d0bb95] px-10 text-[14px] font-medium text-white transition-colors hover:bg-[#c2a571] disabled:opacity-50"
         >
-          {saving ? "Saving..." : updateLabel}
+          {saving ? t("profile.common.saving") : updateLabel}
         </button>
       </div>
     </form>

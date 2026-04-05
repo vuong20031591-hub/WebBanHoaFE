@@ -11,6 +11,8 @@ import {
   updateUserPreferences,
   isApiError,
 } from "@/lib/api";
+import { normalizeLocale } from "@/lib/i18n/messages";
+import { useLocale } from "@/src/contexts";
 
 interface ProfilePreferencesSettingsFormProps {
   regionalSection: ProfilePreferencesRegionalSection;
@@ -28,6 +30,10 @@ const fieldLabelClassName =
   "text-[11px] font-normal uppercase tracking-[1.1px] text-[#a8a29e]";
 const fieldDescriptionClassName =
   "mt-[7.6px] text-[11px] font-light leading-[16.5px] text-[#a8a29e]";
+
+function currencyFromLanguage(language: string): "USD" | "VND" {
+  return language === "vi" ? "VND" : "USD";
+}
 
 function PreferenceSelectField({
   field,
@@ -61,6 +67,7 @@ export function ProfilePreferencesSettingsForm({
   saveLabel,
   resetLabel,
 }: ProfilePreferencesSettingsFormProps) {
+  const { setLocale, t } = useLocale();
   const [fieldValues, setFieldValues] = useState<Record<string, string>>(
     Object.fromEntries(
       regionalSection.fields.map((field) => [field.id, field.value])
@@ -75,23 +82,23 @@ export function ProfilePreferencesSettingsForm({
       setLoading(true);
       setMessage(null);
       const prefs = await getUserPreferences();
-
+      
       setFieldValues((current) => ({
         ...current,
         language: prefs.language,
-        currency: prefs.currency.toLowerCase(),
         theme: prefs.theme,
         timezone: prefs.timezone,
       }));
+      setLocale(normalizeLocale(prefs.language));
     } catch (err) {
       setMessage({
         type: "error",
-        text: isApiError(err) ? err.message : "Failed to load preferences.",
+        text: isApiError(err) ? err.message : t("profile.preferences.loadError"),
       });
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [setLocale, t]);
 
   useEffect(() => {
     loadPreferences();
@@ -115,18 +122,20 @@ export function ProfilePreferencesSettingsForm({
     setSaving(true);
 
     try {
+      const language = normalizeLocale(fieldValues.language);
       await updateUserPreferences({
-        language: fieldValues.language,
-        currency: fieldValues.currency.toUpperCase(),
+        language,
+        currency: currencyFromLanguage(language),
         theme: fieldValues.theme,
         timezone: fieldValues.timezone,
       });
 
-      setMessage({ type: "success", text: "Preferences saved successfully." });
+      setLocale(language);
+      setMessage({ type: "success", text: t("profile.preferences.saved") });
     } catch (err) {
       setMessage({
         type: "error",
-        text: isApiError(err) ? err.message : "Failed to save preferences.",
+        text: isApiError(err) ? err.message : t("profile.preferences.saveError"),
       });
     } finally {
       setSaving(false);
@@ -163,8 +172,9 @@ export function ProfilePreferencesSettingsForm({
 
       {message && (
         <p
-          className={`mt-6 text-[13px] ${message.type === "success" ? "text-[#166534]" : "text-[#b91c1c]"
-            }`}
+          className={`mt-6 text-[13px] ${
+            message.type === "success" ? "text-[#166534]" : "text-[#b91c1c]"
+          }`}
         >
           {message.text}
         </p>
@@ -176,7 +186,7 @@ export function ProfilePreferencesSettingsForm({
           disabled={saving}
           className="inline-flex min-h-[44px] min-w-[195px] items-center justify-center rounded-[8px] bg-[#2d2a26] px-8 text-[12px] font-medium uppercase tracking-[1.8px] text-white transition-colors hover:bg-[#3a342f] disabled:opacity-50"
         >
-          {saving ? "Saving..." : saveLabel}
+          {saving ? t("profile.common.saving") : saveLabel}
         </button>
         <button
           type="button"

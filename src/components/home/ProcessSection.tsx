@@ -1,34 +1,71 @@
+"use client";
+
 import Image from "next/image";
+import { useLocale } from "@/src/contexts";
 
 const IMG_BIRTHDAY = "/images/birthday.png";
 const IMG_PROCESS_2 = "/images/process-step-2.png";
 const IMG_PROCESS_3 = "/images/process-step-3.png";
 
-const steps = [
-  {
-    num: "01",
-    title: "The Selection",
-    desc: "Hand-picked from sustainable farms, each stem is selected for its peak freshness and unique character.",
-    img: IMG_BIRTHDAY,
-    reverse: false,
-  },
-  {
-    num: "02",
-    title: "The Personal Touch",
-    desc: "Our artisans compose your arrangement, adding handwritten notes and bespoke packaging for an intimate touch.",
-    img: IMG_PROCESS_2,
-    reverse: true,
-  },
-  {
-    num: "03",
-    title: "The Arrival",
-    desc: "Delivered by hand in our specialized climate-controlled boutique vans to ensure every petal arrives in perfect bloom.",
-    img: IMG_PROCESS_3,
-    reverse: false,
-  },
-];
-
 export function ProcessSection() {
+  const { locale } = useLocale();
+  const copy =
+    locale === "vi"
+      ? {
+          badge: "QUY TRÌNH CỦA CHÚNG TÔI",
+          title: "Nghệ thuật gửi trao",
+          steps: [
+            {
+              num: "01",
+              title: "Tuyển chọn",
+              desc: "Mỗi bông hoa được chọn thủ công từ nông trại bền vững để đảm bảo độ tươi và cá tính riêng.",
+              img: IMG_BIRTHDAY,
+              reverse: false,
+            },
+            {
+              num: "02",
+              title: "Chạm khắc cá nhân",
+              desc: "Nghệ nhân phối hoa theo cảm xúc, thêm thiệp tay và bao gói riêng để món quà trở nên gần gũi hơn.",
+              img: IMG_PROCESS_2,
+              reverse: true,
+            },
+            {
+              num: "03",
+              title: "Trao tận tay",
+              desc: "Đơn hoa được giao tay trong xe chuyên dụng kiểm soát nhiệt độ để từng cánh hoa luôn nở rạng rỡ.",
+              img: IMG_PROCESS_3,
+              reverse: false,
+            },
+          ],
+        }
+      : {
+          badge: "OUR PROCESS",
+          title: "The Art of Gifting",
+          steps: [
+            {
+              num: "01",
+              title: "The Selection",
+              desc: "Hand-picked from sustainable farms, each stem is selected for its peak freshness and unique character.",
+              img: IMG_BIRTHDAY,
+              reverse: false,
+            },
+            {
+              num: "02",
+              title: "The Personal Touch",
+              desc: "Our artisans compose your arrangement, adding handwritten notes and bespoke packaging for an intimate touch.",
+              img: IMG_PROCESS_2,
+              reverse: true,
+            },
+            {
+              num: "03",
+              title: "The Arrival",
+              desc: "Delivered by hand in our specialized climate-controlled boutique vans to ensure every petal arrives in perfect bloom.",
+              img: IMG_PROCESS_3,
+              reverse: false,
+            },
+          ],
+        };
+
   return (
     <section className="bg-[#fef5f6] py-24 overflow-hidden">
       <div className="max-w-[1280px] mx-auto px-[160px]">
@@ -37,18 +74,18 @@ export function ProcessSection() {
             className="text-[#d0bb95] text-[16px] font-bold tracking-[2px] uppercase mb-[10px]"
             style={{ fontFamily: "var(--font-inter)" }}
           >
-            OUR PROCESS
+            {copy.badge}
           </p>
           <h2
             className="text-[#2d2a26] text-[48px] font-light leading-[48px]"
             style={{ fontFamily: "var(--font-noto-serif)" }}
           >
-            The Art of Gifting
+            {copy.title}
           </h2>
         </div>
 
         <div className="flex flex-col gap-24">
-          {steps.map((s) => (
+          {copy.steps.map((s) => (
             <div
               key={s.num}
               className={`flex items-center gap-32 ${s.reverse ? "flex-row-reverse" : ""}`}

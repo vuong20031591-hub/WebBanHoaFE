@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState, useSyncExternalStore, useEffect, useRef } from "react";
 import { Flower2, Search, ShoppingCart, User } from "lucide-react";
 import { useCartStore } from "@/lib/cart";
-import { useAuth } from "@/src/contexts";
+import { useAuth, useLocale } from "@/src/contexts";
 
 interface ProductSuggestion {
   id: number;
@@ -28,6 +28,7 @@ function subscribeToCartHydration(onStoreChange: () => void) {
 export function Navbar() {
   const router = useRouter();
   const { user, signOut } = useAuth();
+  const { t } = useLocale();
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [suggestions, setSuggestions] = useState<ProductSuggestion[]>([]);
@@ -44,7 +45,7 @@ export function Navbar() {
   const itemCount = useCartStore((state) =>
     state.variants.reduce((sum, item) => sum + item.quantity, 0)
   );
-  const displayCount = hydrated ? itemCount : 0;
+  const displayCount = hydrated && user ? itemCount : 0;
   const countLabel = displayCount > 99 ? "99+" : String(displayCount);
 
   useEffect(() => {
@@ -134,13 +135,13 @@ export function Navbar() {
 
           <div className="hidden shrink-0 items-center gap-8 whitespace-nowrap lg:flex">
             {[
-              { label: "Shop All", href: "/products" },
-              { label: "Categories", href: "/#categories" },
-              { label: "Latest", href: "/#latest" },
-              { label: "Our Story", href: "/#our-story" },
+              { label: t("nav.shopAll"), href: "/products" },
+              { label: t("nav.categories"), href: "/products?view=categories" },
+              { label: t("nav.latest"), href: "/products?sort=latest" },
+              { label: t("nav.ourStory"), href: "/our-story" },
             ].map((item) => (
               <Link
-                key={item.label}
+                key={item.href}
                 href={item.href}
                 className="whitespace-nowrap text-[14px] font-medium tracking-[0.02em] text-[#2d2a26] transition-colors hover:text-[#c2a07f]"
                 style={{ fontFamily: "var(--font-inter)" }}
@@ -158,7 +159,7 @@ export function Navbar() {
               className="hidden h-11 items-center justify-center rounded-full border border-[#d8c8bb] bg-[#fff8f3] px-5 text-[12px] font-semibold uppercase tracking-[0.12em] text-[#8a6d5d] transition-colors hover:bg-[#f7ede5] sm:inline-flex"
               style={{ fontFamily: "var(--font-inter)" }}
             >
-              Admin Panel
+              {t("nav.adminPanel")}
             </Link>
           ) : null}
 
@@ -171,7 +172,7 @@ export function Navbar() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => searchQuery.length >= 2 && setShowSuggestions(true)}
-                  placeholder="Search arrangements..."
+                  placeholder={t("nav.searchPlaceholder")}
                   className="w-full bg-transparent text-[12px] font-light text-[#2d2a26] placeholder-[#baafa7] outline-none"
                   style={{ fontFamily: "var(--font-inter)" }}
                 />
@@ -221,14 +222,14 @@ export function Navbar() {
                   className="text-[12px] text-[#8a7968]"
                   style={{ fontFamily: "var(--font-inter)" }}
                 >
-                  No products found
+                  {t("nav.noProductsFound")}
                 </p>
               </div>
             )}
           </div>
 
           <Link
-            href="/cart"
+            href={user ? "/cart" : "/signin"}
             className="relative flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-[#f5f0eb]"
           >
             <ShoppingCart className="h-5 w-5 text-[#2d2a26]" />
@@ -236,7 +237,7 @@ export function Navbar() {
               <span
                 className="absolute -right-1 -top-1 min-w-[18px] rounded-full bg-[#d0bb95] px-1 text-center text-[10px] font-semibold leading-[18px] text-white"
                 style={{ fontFamily: "var(--font-inter)" }}
-                aria-label={`${displayCount} items in cart`}
+                aria-label={`${displayCount} ${t("nav.itemsInCart")}`}
               >
                 {countLabel}
               </span>
@@ -258,7 +259,7 @@ export function Navbar() {
               className="hidden h-11 items-center justify-center rounded-full border border-[#ddd1c8] px-5 text-[12px] font-medium text-[#2d2a26] transition-colors hover:bg-[#f5f0eb] disabled:cursor-not-allowed disabled:opacity-50 sm:inline-flex"
               style={{ fontFamily: "var(--font-inter)" }}
             >
-              {isSigningOut ? "Log out..." : "Log out"}
+              {isSigningOut ? t("nav.logOutLoading") : t("nav.logOut")}
             </button>
           ) : null}
         </div>

@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import { ProfileOrder } from "@/lib/profile/types";
+import { useLocale } from "@/src/contexts";
 import { ProfileOrderCard } from "./ProfileOrderCard";
 
 interface ProfileOrdersSectionProps {
@@ -9,6 +12,8 @@ interface ProfileOrdersSectionProps {
 export function ProfileOrdersSection({
   orders,
 }: ProfileOrdersSectionProps) {
+  const { t } = useLocale();
+
   return (
     <section className="px-0 pt-12 lg:px-[102px] lg:pt-16">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -17,11 +22,11 @@ export function ProfileOrdersSection({
             className="text-[28px] font-light leading-none text-[#2d2a26] lg:text-[24px]"
             style={{ fontFamily: "var(--font-noto-serif)" }}
           >
-            Recent Purchases
+            {t("profile.orders.recentPurchases")}
           </h2>
         </div>
         <p className="text-[12px] font-light leading-4 text-[#5c6b5e]">
-          Showing last {orders.length} orders
+          {t("profile.orders.showingLast").replace("{count}", String(orders.length))}
         </p>
       </div>
 
@@ -38,7 +43,7 @@ export function ProfileOrdersSection({
               href="/profile"
               className="inline-flex min-h-[52px] items-center justify-center rounded-[12px] bg-[#d0bb95] px-8 text-[14px] font-medium text-white transition-colors hover:bg-[#c2a571]"
             >
-              View All Orders
+              {t("profile.orders.viewAll")}
             </Link>
           </div>
         </>
@@ -48,10 +53,10 @@ export function ProfileOrdersSection({
             className="text-[26px] leading-8 text-[#2d2a26]"
             style={{ fontFamily: "var(--font-noto-serif)" }}
           >
-            No order history yet
+            {t("profile.orders.emptyTitle")}
           </p>
           <p className="mt-3 text-[14px] leading-6 text-[#5c6b5e]">
-            Real backend orders will appear here after checkout.
+            {t("profile.orders.emptySubtitle")}
           </p>
         </div>
       )}

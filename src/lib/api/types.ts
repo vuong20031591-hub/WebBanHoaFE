@@ -211,7 +211,9 @@ export interface NotificationPreferencesDTO {
   emailOrderUpdates: boolean;
   emailPromotions: boolean;
   emailNewsletter: boolean;
+  emailEventReminders: boolean;
   smsOrderUpdates: boolean;
+  smsEventReminders: boolean;
   pushArtistUpdates: boolean;
 }
 
@@ -219,7 +221,9 @@ export interface UpdateNotificationPreferencesRequest {
   emailOrderUpdates?: boolean;
   emailPromotions?: boolean;
   emailNewsletter?: boolean;
+  emailEventReminders?: boolean;
   smsOrderUpdates?: boolean;
+  smsEventReminders?: boolean;
   pushArtistUpdates?: boolean;
 }
 
@@ -230,6 +234,7 @@ export interface UserPreferencesDTO {
   timezone: string;
   signatureWrap: boolean;
   ecoDelivery: boolean;
+  smsTwoFactorEnabled: boolean;
 }
 
 export interface UpdateUserPreferencesRequest {
@@ -239,6 +244,17 @@ export interface UpdateUserPreferencesRequest {
   timezone?: string;
   signatureWrap?: boolean;
   ecoDelivery?: boolean;
+  smsTwoFactorEnabled?: boolean;
+}
+
+export interface TwoFactorSmsCodeResponse {
+  deliveryMethod: "sms";
+  message: string;
+  maskedPhone: string;
+}
+
+export interface VerifyTwoFactorSmsCodeRequest {
+  code: string;
 }
 
 export interface UserRewardsDTO {

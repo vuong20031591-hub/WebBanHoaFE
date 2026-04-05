@@ -134,16 +134,19 @@ export function AdminCustomersPageContent() {
 
     useEffect(() => {
         if (authLoading || !isAdmin) {
-            if (!authLoading) setContentLoading(false);
             return;
         }
 
         let active = true;
-        setContentLoading(true);
-        setError(null);
 
         fetchCustomers()
-            .then((data) => { if (active) setCustomers(data); })
+            .then((data) => {
+                if (!active) {
+                    return;
+                }
+                setCustomers(data);
+                setError(null);
+            })
             .catch((err) => {
                 if (!active) return;
                 setError(isApiError(err) ? err.message : "Failed to load customer data.");
@@ -152,9 +155,6 @@ export function AdminCustomersPageContent() {
 
         return () => { active = false; };
     }, [authLoading, isAdmin, reloadToken]);
-
-    // Reset page on filter change
-    useEffect(() => { setPage(0); }, [tierFilter, search, sortBy]);
 
     const filtered = useMemo(() => {
         let list = [...customers];
@@ -259,7 +259,7 @@ export function AdminCustomersPageContent() {
                         <div className="flex flex-wrap items-center gap-2">
                             {TIER_TABS.map((t) => (
                                 <button key={t} type="button"
-                                    onClick={() => setTierFilter(t)}
+                                    onClick={() => { setTierFilter(t); setPage(0); }}
                                     className={`rounded-full px-4 py-1.5 text-[12px] font-medium transition-colors ${tierFilter === t ? "border border-[#7d562d1a] bg-white font-semibold text-[#7d562d]" : "bg-[#f5f3ef] text-[#78716c] hover:bg-[#ede9e3]"}`}>
                                     {t === "All" ? "All Clients" : `${t} Tier`}
                                 </button>
@@ -275,7 +275,7 @@ export function AdminCustomersPageContent() {
                                 <div className="absolute right-0 top-7 z-10 w-44 rounded-[12px] border border-[#e5ddd4] bg-white py-1 shadow-md">
                                     {SORT_OPTIONS.map((opt) => (
                                         <button key={opt.value} type="button"
-                                            onClick={() => { setSortBy(opt.value); setSortOpen(false); }}
+                                            onClick={() => { setSortBy(opt.value); setPage(0); setSortOpen(false); }}
                                             className={`w-full px-4 py-2 text-left text-[13px] hover:bg-[#f5f3ef] ${sortBy === opt.value ? "font-semibold text-[#7d562d]" : "text-[#4f4444]"}`}>
                                             {opt.label}
                                         </button>
@@ -290,7 +290,7 @@ export function AdminCustomersPageContent() {
                         <Search className="h-4 w-4 shrink-0 text-[#a8a29e]" />
                         <input type="text" placeholder="Search by name or email..."
                             value={search}
-                            onChange={(e) => setSearch(e.target.value)}
+                            onChange={(e) => { setSearch(e.target.value); setPage(0); }}
                             className="flex-1 bg-transparent text-[13px] text-[#1b1c1a] outline-none placeholder:text-[#a8a29e]" />
                     </div>
 
@@ -316,7 +316,7 @@ export function AdminCustomersPageContent() {
                                             <td colSpan={4} className="px-6 py-14 text-center">
                                                 <p className="text-[15px] font-semibold text-[#8f3d35]">Could not load customer data</p>
                                                 <p className="mt-1 text-[13px] text-[#a8a29e]">{error}</p>
-                                                <button type="button" onClick={() => setReloadToken((t) => t + 1)}
+                                                <button type="button" onClick={() => { setContentLoading(true); setError(null); setReloadToken((t) => t + 1); }}
                                                     className="mt-4 inline-flex items-center gap-2 rounded-full bg-[#8d6030] px-5 py-2 text-[12px] font-medium text-white hover:bg-[#724c25]">
                                                     <RefreshCw className="h-3.5 w-3.5" /> Retry
                                                 </button>

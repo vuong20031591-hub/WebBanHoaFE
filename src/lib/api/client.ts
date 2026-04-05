@@ -8,6 +8,9 @@ const API_BASE_URL =
 interface ErrorResponse {
   message?: string;
   code?: string;
+  errors?: Array<{
+    defaultMessage?: string;
+  }>;
 }
 
 type RetriableRequestConfig = InternalAxiosRequestConfig & {
@@ -22,6 +25,21 @@ export const apiClient = axios.create({
   withCredentials: false,
   timeout: 12000,
 });
+
+export function extractApiErrorMessage(error: AxiosError<ErrorResponse>): string {
+  const isNetworkFailure = !error.response;
+
+  if (isNetworkFailure) {
+    return "Cannot connect to backend server. Please check BE is running on http://localhost:8080.";
+  }
+
+  return (
+    error.response?.data?.errors?.[0]?.defaultMessage ||
+    error.response?.data?.message ||
+    error.message ||
+    "An error occurred"
+  );
+}
 
 apiClient.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
@@ -65,12 +83,8 @@ apiClient.interceptors.response.use(
       }
     }
 
-    const isNetworkFailure = !error.response;
-
     const apiError: ApiError = {
-      message: isNetworkFailure
-        ? "Cannot connect to backend server. Please check BE is running on http://localhost:8080."
-        : error.response?.data?.message || error.message || "An error occurred",
+      message: extractApiErrorMessage(error),
       code: error.response?.data?.code,
       status: error.response?.status,
     };

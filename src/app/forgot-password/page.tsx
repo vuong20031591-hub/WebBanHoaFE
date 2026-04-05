@@ -6,39 +6,146 @@ import React, { Suspense, useState } from "react";
 import { ArrowLeft, Flower2, KeyRound, Lock, Mail } from "lucide-react";
 import { Footer, Navbar } from "@/components/layout";
 import { authApi } from "@/lib/auth/client";
+import {
+  getPasswordValidationMessage,
+  getPasswordRequirementsMessage,
+} from "@/lib/auth/validation";
+import { useLocale } from "@/src/contexts";
 
 function ForgotPasswordFormContent() {
   const router = useRouter();
+  const { locale } = useLocale();
   const [step, setStep] = useState<"request" | "verify" | "success">("request");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const copy =
+    locale === "vi"
+      ? {
+          emailRequired: "Vui lòng nhập địa chỉ email.",
+          emailNotFound: "Email này không tồn tại.",
+          debugNoticePrefix: "Đang chạy chế độ debug local. Dùng mã xác minh",
+          debugNoticeSuffix: "để tiếp tục.",
+          verificationSent: "Mã xác minh đã được gửi. Vui lòng kiểm tra hộp thư email.",
+          sendCodeFailed: "Hiện không thể gửi mã xác minh.",
+          codeRequired: "Vui lòng nhập mã 6 chữ số từ email.",
+          passwordMismatch: "Mật khẩu xác nhận không khớp.",
+          resetFailed: "Hiện không thể đặt lại mật khẩu.",
+          successTitle: "Cập nhật mật khẩu thành công",
+          successDescriptionPrefix: "Mật khẩu đã được đặt lại thành công cho",
+          successDescriptionSuffix: "Bạn có thể đăng nhập bằng mật khẩu mới.",
+          backToSignIn: "Quay lại đăng nhập",
+          signInSuccessMessage: "Đặt lại mật khẩu thành công",
+          requestTitle: "Quên mật khẩu",
+          verifyTitle: "Nhập mã từ Gmail",
+          requestDescription:
+            "Nhập email của bạn, chúng tôi sẽ gửi mã xác minh 6 chữ số đến Gmail.",
+          verifyDescription:
+            "Kiểm tra Gmail, nhập mã 6 chữ số rồi đặt mật khẩu mới.",
+          emailLabel: "Địa chỉ email",
+          sendButton: "Gửi mã xác minh",
+          sending: "Đang gửi...",
+          codeLabel: "Mã xác minh",
+          newPasswordLabel: "Mật khẩu mới",
+          newPasswordPlaceholder: "Nhập mật khẩu mới",
+          confirmPasswordLabel: "Xác nhận mật khẩu",
+          confirmPasswordPlaceholder: "Nhập lại mật khẩu mới",
+          resetButton: "Đặt lại mật khẩu",
+          updating: "Đang cập nhật...",
+          resend: "Gửi lại mã",
+          backToLogin: "Quay lại đăng nhập",
+          botanicalAtelier: "Xưởng hoa thực vật",
+          loading: "Đang tải...",
+          gmailNotice:
+            "Để gửi mã qua Gmail, backend SMTP cần cấu hình Gmail App Password hợp lệ.",
+        }
+      : {
+          emailRequired: "Please enter your email address.",
+          emailNotFound: "Email này không tồn tại.",
+          debugNoticePrefix: "Local debug mode is active. Use verification code",
+          debugNoticeSuffix: "to continue.",
+          verificationSent: "Verification code sent. Please check your email inbox.",
+          sendCodeFailed: "Unable to send verification code right now.",
+          codeRequired: "Please enter the 6-digit code from your email.",
+          passwordMismatch: "Passwords do not match.",
+          resetFailed: "Unable to reset password right now.",
+          successTitle: "Password updated",
+          successDescriptionPrefix: "Your password has been reset successfully for",
+          successDescriptionSuffix: "You can now sign in with your new password.",
+          backToSignIn: "Back to Sign In",
+          signInSuccessMessage: "Password reset successfully",
+          requestTitle: "Forgot Password",
+          verifyTitle: "Enter Gmail Code",
+          requestDescription:
+            "Enter your email address and we will send a 6-digit verification code to Gmail.",
+          verifyDescription:
+            "Check your Gmail inbox, enter the 6-digit code, then choose your new password.",
+          emailLabel: "Email Address",
+          sendButton: "Send Verification Code",
+          sending: "Sending...",
+          codeLabel: "Verification Code",
+          newPasswordLabel: "New Password",
+          newPasswordPlaceholder: "Enter new password",
+          confirmPasswordLabel: "Confirm Password",
+          confirmPasswordPlaceholder: "Confirm new password",
+          resetButton: "Reset Password",
+          updating: "Updating...",
+          resend: "Send code again",
+          backToLogin: "Back to Login",
+          botanicalAtelier: "The Botanical Atelier",
+          loading: "Loading...",
+          gmailNotice:
+            "Gmail delivery needs a valid Gmail App Password in backend SMTP configuration before codes can be sent.",
+        };
+
+  const newPasswordValidationMessage = newPassword
+    ? getPasswordValidationMessage(newPassword, locale)
+    : null;
 
   const handleRequestCode = async (event: React.FormEvent) => {
     event.preventDefault();
     setError("");
+    setNotice("");
+    const preferLocalizedNotice = locale === "vi";
 
     if (!email.trim()) {
-      setError("Please enter your email address.");
+      setError(copy.emailRequired);
       return;
     }
 
     setLoading(true);
     try {
-      await authApi.requestForgotPasswordCode({ email });
+      const response = await authApi.requestForgotPasswordCode({ email });
+
+      if (response.deliveryMethod === "none") {
+        setCode("");
+        setNotice(preferLocalizedNotice ? copy.emailNotFound : response.message || copy.emailNotFound);
+        setStep("request");
+        return;
+      }
+
+      if (response.debugCode) {
+        setCode(response.debugCode);
+        setNotice(`${copy.debugNoticePrefix} ${response.debugCode} ${copy.debugNoticeSuffix}`);
+      } else {
+        setNotice(preferLocalizedNotice ? copy.verificationSent : response.message || copy.verificationSent);
+      }
       setStep("verify");
     } catch (requestError) {
       const nextError = requestError as {
-        response?: { data?: { message?: string } };
+        response?: { data?: { message?: string; errors?: Array<{ defaultMessage?: string }> } };
         message?: string;
       };
       setError(
-        nextError.response?.data?.message ||
+        nextError.response?.data?.errors?.[0]?.defaultMessage ||
+          nextError.response?.data?.message ||
           nextError.message ||
-          "Unable to send verification code right now."
+          copy.sendCodeFailed
       );
     } finally {
       setLoading(false);
@@ -48,19 +155,21 @@ function ForgotPasswordFormContent() {
   const handleResetPassword = async (event: React.FormEvent) => {
     event.preventDefault();
     setError("");
+    setNotice("");
 
     if (!code.trim()) {
-      setError("Please enter the 6-digit code from your email.");
+      setError(copy.codeRequired);
       return;
     }
 
-    if (newPassword.length < 6) {
-      setError("New password must be at least 6 characters.");
+    const passwordError = getPasswordValidationMessage(newPassword, locale);
+    if (passwordError) {
+      setError(passwordError);
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setError("Passwords do not match.");
+      setError(copy.passwordMismatch);
       return;
     }
 
@@ -74,13 +183,14 @@ function ForgotPasswordFormContent() {
       setStep("success");
     } catch (requestError) {
       const nextError = requestError as {
-        response?: { data?: { message?: string } };
+        response?: { data?: { message?: string; errors?: Array<{ defaultMessage?: string }> } };
         message?: string;
       };
       setError(
-        nextError.response?.data?.message ||
+        nextError.response?.data?.errors?.[0]?.defaultMessage ||
+          nextError.response?.data?.message ||
           nextError.message ||
-          "Unable to reset password right now."
+          copy.resetFailed
       );
     } finally {
       setLoading(false);
@@ -99,21 +209,20 @@ function ForgotPasswordFormContent() {
             className="text-[24px] font-normal leading-[32px] text-[#1b1c1a]"
             style={{ fontFamily: "var(--font-noto-serif)" }}
           >
-            Password updated
+            {copy.successTitle}
           </h2>
           <p
             className="text-center text-[14px] leading-[22.75px] text-[#4f4444]"
             style={{ fontFamily: "var(--font-inter)" }}
           >
-            Your password has been reset successfully for <span className="font-semibold">{email}</span>.
-            You can now sign in with your new password.
+            {copy.successDescriptionPrefix} <span className="font-semibold">{email}</span>. {copy.successDescriptionSuffix}
           </p>
           <button
-            onClick={() => router.push("/signin?message=Password reset successfully")}
+            onClick={() => router.push(`/signin?message=${encodeURIComponent(copy.signInSuccessMessage)}`)}
             className="mt-4 w-full rounded-full bg-gradient-to-b from-[#7d562d] to-[#7e572d] py-4 text-[16px] font-semibold text-white shadow-[0px_10px_15px_-3px_rgba(125,86,45,0.1),0px_4px_6px_-4px_rgba(125,86,45,0.1)] transition-opacity hover:opacity-90"
             style={{ fontFamily: "var(--font-inter)" }}
           >
-            Back to Sign In
+            {copy.backToSignIn}
           </button>
         </div>
       </div>
@@ -130,15 +239,15 @@ function ForgotPasswordFormContent() {
             className="text-[24px] font-normal leading-[32px] text-[#1b1c1a]"
             style={{ fontFamily: "var(--font-noto-serif)" }}
           >
-            {step === "request" ? "Forgot Password" : "Enter Gmail Code"}
+            {step === "request" ? copy.requestTitle : copy.verifyTitle}
           </h2>
           <p
             className="text-[14px] leading-[22.75px] text-[#4f4444]"
             style={{ fontFamily: "var(--font-inter)" }}
           >
             {step === "request"
-              ? "Enter your email address and we will send a 6-digit verification code to Gmail."
-              : "Check your Gmail inbox, enter the 6-digit code, then choose your new password."}
+              ? copy.requestDescription
+              : copy.verifyDescription}
           </p>
         </div>
 
@@ -157,9 +266,15 @@ function ForgotPasswordFormContent() {
           </div>
         ) : null}
 
+        {notice ? (
+          <div className="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
+            {notice}
+          </div>
+        ) : null}
+
         {step === "request" ? (
           <form onSubmit={handleRequestCode} className="mt-8 flex flex-col gap-6">
-            <FieldLabel>Email Address</FieldLabel>
+            <FieldLabel>{copy.emailLabel}</FieldLabel>
             <IconInput
               icon={<Mail className="h-4 w-4 text-[#817474]" />}
               type="email"
@@ -174,13 +289,13 @@ function ForgotPasswordFormContent() {
               className="w-full rounded-full bg-gradient-to-b from-[#7d562d] to-[#7e572d] py-4 text-[16px] font-semibold text-white shadow-[0px_10px_15px_-3px_rgba(125,86,45,0.1),0px_4px_6px_-4px_rgba(125,86,45,0.1)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
               style={{ fontFamily: "var(--font-inter)" }}
             >
-              {loading ? "Sending..." : "Send Verification Code"}
+              {loading ? copy.sending : copy.sendButton}
             </button>
           </form>
         ) : (
           <form onSubmit={handleResetPassword} className="mt-8 flex flex-col gap-6">
             <div>
-              <FieldLabel>Verification Code</FieldLabel>
+              <FieldLabel>{copy.codeLabel}</FieldLabel>
               <IconInput
                 icon={<KeyRound className="h-4 w-4 text-[#817474]" />}
                 type="text"
@@ -191,22 +306,25 @@ function ForgotPasswordFormContent() {
             </div>
 
             <div>
-              <FieldLabel>New Password</FieldLabel>
+              <FieldLabel>{copy.newPasswordLabel}</FieldLabel>
               <IconInput
                 icon={<Lock className="h-4 w-4 text-[#817474]" />}
                 type="password"
-                placeholder="Enter new password"
+                placeholder={copy.newPasswordPlaceholder}
                 value={newPassword}
                 onChange={(nextValue) => setNewPassword(nextValue)}
               />
+              <p className={`mt-2 text-[12px] ${newPasswordValidationMessage ? "text-red-600" : "text-[#6a7282]"}`}>
+                {newPasswordValidationMessage || getPasswordRequirementsMessage(locale)}
+              </p>
             </div>
 
             <div>
-              <FieldLabel>Confirm Password</FieldLabel>
+              <FieldLabel>{copy.confirmPasswordLabel}</FieldLabel>
               <IconInput
                 icon={<Lock className="h-4 w-4 text-[#817474]" />}
                 type="password"
-                placeholder="Confirm new password"
+                placeholder={copy.confirmPasswordPlaceholder}
                 value={confirmPassword}
                 onChange={(nextValue) => setConfirmPassword(nextValue)}
               />
@@ -218,7 +336,7 @@ function ForgotPasswordFormContent() {
               className="w-full rounded-full bg-gradient-to-b from-[#7d562d] to-[#7e572d] py-4 text-[16px] font-semibold text-white shadow-[0px_10px_15px_-3px_rgba(125,86,45,0.1),0px_4px_6px_-4px_rgba(125,86,45,0.1)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
               style={{ fontFamily: "var(--font-inter)" }}
             >
-              {loading ? "Updating..." : "Reset Password"}
+              {loading ? copy.updating : copy.resetButton}
             </button>
 
             <button
@@ -228,12 +346,13 @@ function ForgotPasswordFormContent() {
                 setNewPassword("");
                 setConfirmPassword("");
                 setError("");
+                setNotice("");
                 setStep("request");
               }}
               className="text-[13px] font-medium text-[#52634c] transition-opacity hover:opacity-70"
               style={{ fontFamily: "var(--font-inter)" }}
             >
-              Send code again
+              {copy.resend}
             </button>
           </form>
         )}
@@ -246,7 +365,7 @@ function ForgotPasswordFormContent() {
           style={{ fontFamily: "var(--font-inter)" }}
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to Login
+          {copy.backToLogin}
         </Link>
       </div>
     </div>
@@ -293,6 +412,9 @@ function IconInput({
 }
 
 function BrandHeader() {
+  const { locale } = useLocale();
+  const botanicalAtelier = locale === "vi" ? "Xưởng hoa thực vật" : "The Botanical Atelier";
+
   return (
     <div className="mb-12 flex flex-col items-center">
       <div className="relative mb-0 h-[184px] w-16">
@@ -310,18 +432,21 @@ function BrandHeader() {
         className="mt-1 text-center text-[14px] text-[rgba(79,68,68,0.8)]"
         style={{ fontFamily: "var(--font-inter)" }}
       >
-        The Botanical Atelier
+        {botanicalAtelier}
       </p>
     </div>
   );
 }
 
 function ForgotPasswordForm() {
+  const { locale } = useLocale();
+  const loadingText = locale === "vi" ? "Đang tải..." : "Loading...";
+
   return (
     <Suspense
       fallback={
         <div className="flex w-full flex-col items-center">
-          <div className="text-[#4f4444] animate-pulse">Loading...</div>
+          <div className="text-[#4f4444] animate-pulse">{loadingText}</div>
         </div>
       }
     >
@@ -331,6 +456,12 @@ function ForgotPasswordForm() {
 }
 
 export default function ForgotPasswordPage() {
+  const { locale } = useLocale();
+  const gmailNotice =
+    locale === "vi"
+      ? "Để gửi mã qua Gmail, backend SMTP cần cấu hình Gmail App Password hợp lệ."
+      : "Gmail delivery needs a valid Gmail App Password in backend SMTP configuration before codes can be sent.";
+
   return (
     <div className="flex min-h-screen flex-col bg-[#fbf9f5]">
       <Navbar />
@@ -349,7 +480,7 @@ export default function ForgotPasswordPage() {
           className="mt-8 text-center text-[12px] tracking-[0.3px] text-[rgba(79,68,68,0.5)]"
           style={{ fontFamily: "var(--font-inter)" }}
         >
-          Gmail delivery needs SMTP configured in backend before codes can be sent.
+          {gmailNotice}
         </p>
       </main>
 

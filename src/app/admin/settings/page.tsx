@@ -1,4 +1,4 @@
-import { AdminSettingsPageContent } from "@/components/admin";
+"use client";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -236,6 +236,8 @@ function notificationStateToPayload(notifs: NotifPref[]): NotificationPreference
     emailPromotions: true,
     emailNewsletter: Boolean(map.emailNewsletter),
     smsOrderUpdates: false,
+    emailEventReminders: Boolean(map.emailEventReminders),
+    smsEventReminders: Boolean(map.smsEventReminders),
     pushArtistUpdates: Boolean(map.pushArtistUpdates),
   };
 }

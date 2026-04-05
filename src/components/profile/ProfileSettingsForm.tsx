@@ -5,14 +5,24 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { isApiError } from "@/lib/api";
 import {
+  ProfileCommunicationPreference,
   ProfileSettingsAccountInfo,
 } from "@/lib/profile/types";
+import {
+  getPhoneValidationMessage,
+  normalizePhoneInput,
+} from "@/lib/auth/validation";
+import { useLocale } from "@/src/contexts";
 
 interface ProfileSettingsFormProps {
   accountInfo: ProfileSettingsAccountInfo;
+  communicationTitle: string;
+  communicationSubtitle: string;
+  communicationPreferences: ProfileCommunicationPreference[];
   cancelLabel: string;
   saveLabel: string;
   manageAddressesHref?: string;
+  manageNotificationsHref?: string;
   onSave?: (payload: SaveProfileSettingsPayload) => Promise<void>;
 }
 
@@ -27,6 +37,7 @@ export interface SaveProfileSettingsPayload {
   fullName: string;
   phone: string;
   address?: string;
+  communicationPreferences: ProfileCommunicationPreference[];
 }
 
 type SubmitMessage = {
@@ -102,19 +113,30 @@ function ProfileTextareaField({
 
 export function ProfileSettingsForm({
   accountInfo,
+  communicationTitle,
+  communicationSubtitle,
+  communicationPreferences,
   cancelLabel,
   saveLabel,
   manageAddressesHref,
+  manageNotificationsHref,
   onSave,
 }: ProfileSettingsFormProps) {
+  const { t } = useLocale();
   const [formState, setFormState] = useState<AccountInfoFormState>({
     fullName: accountInfo.fullName,
     email: accountInfo.email,
     phone: accountInfo.phone,
     address: accountInfo.address,
   });
+  const [preferences, setPreferences] = useState(
+    communicationPreferences.map((item) => ({ ...item }))
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState<SubmitMessage>(null);
+  const phoneValidationMessage = formState.phone
+    ? getPhoneValidationMessage(formState.phone)
+    : null;
 
   // Sync form state when accountInfo changes (after save or reload)
   useEffect(() => {
@@ -133,7 +155,16 @@ export function ProfileSettingsForm({
       phone: accountInfo.phone,
       address: accountInfo.address,
     });
+    setPreferences(communicationPreferences.map((item) => ({ ...item })));
     setSubmitMessage(null);
+  };
+
+  const handlePreferenceToggle = (id: string) => {
+    setPreferences((current) =>
+      current.map((item) =>
+        item.id === id ? { ...item, enabled: !item.enabled } : item
+      )
+    );
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -146,7 +177,7 @@ export function ProfileSettingsForm({
     if (!fullName) {
       setSubmitMessage({
         tone: "error",
-        text: "Full name is required.",
+        text: t("profile.account.fullNameRequired"),
       });
       return;
     }
@@ -154,7 +185,17 @@ export function ProfileSettingsForm({
     if (!phone) {
       setSubmitMessage({
         tone: "error",
-        text: "Phone number is required.",
+        text: t("profile.account.phoneRequired"),
+      });
+      return;
+    }
+
+    const normalizedPhone = normalizePhoneInput(phone);
+    const phoneError = getPhoneValidationMessage(normalizedPhone);
+    if (phoneError) {
+      setSubmitMessage({
+        tone: "error",
+        text: phoneError,
       });
       return;
     }
@@ -162,7 +203,7 @@ export function ProfileSettingsForm({
     if (!onSave) {
       setSubmitMessage({
         tone: "success",
-        text: "Settings saved.",
+        text: t("profile.account.settingsSaved"),
       });
       return;
     }
@@ -171,21 +212,22 @@ export function ProfileSettingsForm({
     try {
       await onSave({
         fullName,
-        phone,
+        phone: normalizedPhone,
         address: formState.address.trim(),
+        communicationPreferences: preferences,
       });
-
+      
       // Don't reset form state here - let useEffect handle it when accountInfo updates
       setSubmitMessage({
         tone: "success",
-        text: "Account settings updated successfully.",
+        text: t("profile.account.settingsUpdated"),
       });
     } catch (error) {
       setSubmitMessage({
         tone: "error",
         text: isApiError(error)
           ? error.message
-          : "Unable to save settings right now.",
+          : t("profile.account.saveError"),
       });
     } finally {
       setIsSubmitting(false);
@@ -219,7 +261,7 @@ export function ProfileSettingsForm({
 
         <div className="mt-8 grid gap-x-8 gap-y-8 lg:grid-cols-[minmax(0,371.5px)_minmax(0,371.5px)] lg:justify-between">
           <ProfileField
-            label="Full Name"
+            label={t("profile.account.field.fullName")}
             type="text"
             value={formState.fullName}
             onChange={(fullName) =>
@@ -231,7 +273,7 @@ export function ProfileSettingsForm({
           />
           <div>
             <ProfileField
-              label="Email Address"
+              label={t("profile.account.field.email")}
               type="email"
               value={formState.email}
               onChange={(email) =>
@@ -243,22 +285,27 @@ export function ProfileSettingsForm({
               readOnly
             />
             <p className="mt-2 px-1 text-[11px] text-[rgba(92,107,94,0.7)]">
-              Email cannot be changed from this screen.
+              {t("profile.account.field.emailNote")}
             </p>
           </div>
-          <ProfileField
-            label="Phone Number"
-            type="tel"
-            value={formState.phone}
-            onChange={(phone) =>
-              setFormState((current) => ({
-                ...current,
-                phone,
-              }))
-            }
-          />
+          <div>
+            <ProfileField
+              label={t("profile.account.field.phone")}
+              type="tel"
+              value={formState.phone}
+              onChange={(phone) =>
+                setFormState((current) => ({
+                  ...current,
+                  phone: normalizePhoneInput(phone),
+                }))
+              }
+            />
+            <p className={`mt-2 px-1 text-[11px] ${phoneValidationMessage ? "text-[#b91c1c]" : "text-[rgba(92,107,94,0.8)]"}`}>
+              {phoneValidationMessage || t("profile.account.field.phoneHint")}
+            </p>
+          </div>
           <ProfileTextareaField
-            label="Primary Address"
+            label={t("profile.account.field.primaryAddress")}
             value={formState.address}
             onChange={(address) =>
               setFormState((current) => ({
@@ -269,22 +316,86 @@ export function ProfileSettingsForm({
           />
           {manageAddressesHref ? (
             <div className="lg:col-start-2 -mt-4 px-1 text-[11px] text-[rgba(92,107,94,0.8)]">
-              Need full address management?
+              {t("profile.account.addressManagementPrompt")}
               <Link
                 href={manageAddressesHref}
                 className="ml-1 font-medium text-[#5c6b5e] underline underline-offset-2 hover:text-[#2d2a26]"
               >
-                Open Address Book
+                {t("profile.account.openAddressBook")}
               </Link>
             </div>
           ) : null}
         </div>
       </section>
 
+      <div className="mt-10 border-t border-[rgba(92,107,94,0.12)]" />
+
+      <section id="communication-preferences" className="mt-10">
+        <h2
+          className="text-[24px] font-normal leading-8 text-[#2d2a26]"
+          style={{ fontFamily: "var(--font-noto-serif)" }}
+        >
+          {communicationTitle}
+        </h2>
+        <p className="mt-2 text-[14px] font-light leading-5 text-[#5c6b5e]">
+          {communicationSubtitle}
+        </p>
+
+        {preferences.length > 0 ? (
+          <div className="mt-8 space-y-6">
+            {preferences.map((item) => (
+              <div
+                key={item.id}
+                className="flex items-center justify-between gap-6"
+              >
+                <div className="max-w-[540px]">
+                  <p className="text-[14px] font-medium leading-5 text-[#2d2a26]">
+                    {item.label}
+                  </p>
+                  <p className="mt-1 text-[12px] font-light leading-4 text-[rgba(92,107,94,0.7)]">
+                    {item.description}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  aria-pressed={item.enabled}
+                  onClick={() => handlePreferenceToggle(item.id)}
+                  className={`relative h-5 w-10 shrink-0 rounded-full transition-all duration-300 ease-in-out hover:opacity-90 active:scale-95 ${
+                    item.enabled ? "bg-[#d0bb95]" : "bg-[#e7e5e4]"
+                  }`}
+                >
+                  <span
+                    className={`absolute left-1 top-1/2 h-3 w-3 -translate-y-1/2 rounded-full bg-white transition-transform duration-300 ease-in-out ${
+                      item.enabled ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-8 rounded-[24px] border border-[rgba(92,107,94,0.12)] bg-white/45 px-5 py-5 text-[#5c6b5e]">
+            <p className="text-[13px] leading-6">
+              {t("profile.account.notificationsInfo")}
+            </p>
+            {manageNotificationsHref ? (
+              <Link
+                href={manageNotificationsHref}
+                className="mt-4 inline-flex min-h-[44px] items-center justify-center rounded-[12px] border border-[rgba(208,187,149,0.45)] px-5 text-[12px] font-semibold uppercase tracking-[1px] text-[#c7ab78] transition-colors hover:bg-white/50"
+              >
+                {t("profile.account.manageNotifications")}
+              </Link>
+            ) : null}
+          </div>
+        )}
+      </section>
+
       {submitMessage ? (
         <p
-          className={`mt-8 text-[13px] ${submitMessage.tone === "success" ? "text-[#166534]" : "text-[#b91c1c]"
-            }`}
+          className={`mt-8 text-[13px] ${
+            submitMessage.tone === "success" ? "text-[#166534]" : "text-[#b91c1c]"
+          }`}
         >
           {submitMessage.text}
         </p>
@@ -303,7 +414,7 @@ export function ProfileSettingsForm({
           disabled={isSubmitting}
           className="inline-flex min-h-[53px] items-center justify-center rounded-xl bg-[#d0bb96] px-10 text-[14px] font-medium text-white transition-colors hover:bg-[#c2a571] disabled:cursor-not-allowed disabled:opacity-70"
         >
-          {isSubmitting ? "Saving..." : saveLabel}
+          {isSubmitting ? t("profile.common.saving") : saveLabel}
         </button>
       </div>
     </form>
