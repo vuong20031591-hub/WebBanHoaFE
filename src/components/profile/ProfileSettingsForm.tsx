@@ -5,15 +5,11 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { isApiError } from "@/lib/api";
 import {
-  ProfileCommunicationPreference,
   ProfileSettingsAccountInfo,
 } from "@/lib/profile/types";
 
 interface ProfileSettingsFormProps {
   accountInfo: ProfileSettingsAccountInfo;
-  communicationTitle: string;
-  communicationSubtitle: string;
-  communicationPreferences: ProfileCommunicationPreference[];
   cancelLabel: string;
   saveLabel: string;
   manageAddressesHref?: string;
@@ -31,7 +27,6 @@ export interface SaveProfileSettingsPayload {
   fullName: string;
   phone: string;
   address?: string;
-  communicationPreferences: ProfileCommunicationPreference[];
 }
 
 type SubmitMessage = {
@@ -107,9 +102,6 @@ function ProfileTextareaField({
 
 export function ProfileSettingsForm({
   accountInfo,
-  communicationTitle,
-  communicationSubtitle,
-  communicationPreferences,
   cancelLabel,
   saveLabel,
   manageAddressesHref,
@@ -121,9 +113,6 @@ export function ProfileSettingsForm({
     phone: accountInfo.phone,
     address: accountInfo.address,
   });
-  const [preferences, setPreferences] = useState(
-    communicationPreferences.map((item) => ({ ...item }))
-  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState<SubmitMessage>(null);
 
@@ -144,16 +133,7 @@ export function ProfileSettingsForm({
       phone: accountInfo.phone,
       address: accountInfo.address,
     });
-    setPreferences(communicationPreferences.map((item) => ({ ...item })));
     setSubmitMessage(null);
-  };
-
-  const handlePreferenceToggle = (id: string) => {
-    setPreferences((current) =>
-      current.map((item) =>
-        item.id === id ? { ...item, enabled: !item.enabled } : item
-      )
-    );
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -193,9 +173,8 @@ export function ProfileSettingsForm({
         fullName,
         phone,
         address: formState.address.trim(),
-        communicationPreferences: preferences,
       });
-      
+
       // Don't reset form state here - let useEffect handle it when accountInfo updates
       setSubmitMessage({
         tone: "success",
@@ -302,58 +281,10 @@ export function ProfileSettingsForm({
         </div>
       </section>
 
-      <div className="mt-10 border-t border-[rgba(92,107,94,0.12)]" />
-
-      <section id="communication-preferences" className="mt-10">
-        <h2
-          className="text-[24px] font-normal leading-8 text-[#2d2a26]"
-          style={{ fontFamily: "var(--font-noto-serif)" }}
-        >
-          {communicationTitle}
-        </h2>
-        <p className="mt-2 text-[14px] font-light leading-5 text-[#5c6b5e]">
-          {communicationSubtitle}
-        </p>
-
-        <div className="mt-8 space-y-6">
-          {preferences.map((item) => (
-            <div
-              key={item.id}
-              className="flex items-center justify-between gap-6"
-            >
-              <div className="max-w-[540px]">
-                <p className="text-[14px] font-medium leading-5 text-[#2d2a26]">
-                  {item.label}
-                </p>
-                <p className="mt-1 text-[12px] font-light leading-4 text-[rgba(92,107,94,0.7)]">
-                  {item.description}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                aria-pressed={item.enabled}
-                onClick={() => handlePreferenceToggle(item.id)}
-                className={`relative h-5 w-10 shrink-0 rounded-full transition-all duration-300 ease-in-out hover:opacity-90 active:scale-95 ${
-                  item.enabled ? "bg-[#d0bb95]" : "bg-[#e7e5e4]"
-                }`}
-              >
-                <span
-                  className={`absolute left-1 top-1/2 h-3 w-3 -translate-y-1/2 rounded-full bg-white transition-transform duration-300 ease-in-out ${
-                    item.enabled ? "translate-x-5" : "translate-x-0"
-                  }`}
-                />
-              </button>
-            </div>
-          ))}
-        </div>
-      </section>
-
       {submitMessage ? (
         <p
-          className={`mt-8 text-[13px] ${
-            submitMessage.tone === "success" ? "text-[#166534]" : "text-[#b91c1c]"
-          }`}
+          className={`mt-8 text-[13px] ${submitMessage.tone === "success" ? "text-[#166534]" : "text-[#b91c1c]"
+            }`}
         >
           {submitMessage.text}
         </p>

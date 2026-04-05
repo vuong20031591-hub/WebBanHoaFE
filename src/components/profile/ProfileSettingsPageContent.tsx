@@ -4,9 +4,8 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { ChatLive, Footer, Navbar } from "@/components/layout";
 import { authApi } from "@/lib/auth/client";
-import { getUserAddresses, getNotificationPreferences, updateNotificationPreferences } from "@/lib/api";
+import { getUserAddresses } from "@/lib/api";
 import {
-  ProfileCommunicationPreference,
   ProfileSettingsNavItem,
   ProfileRewardsCard,
 } from "@/lib/profile/types";
@@ -54,80 +53,23 @@ const REWARDS_CARD: ProfileRewardsCard = {
   ctaLabel: "View Details",
 };
 
-const COMMUNICATION_PREFERENCES: ProfileCommunicationPreference[] = [
-  {
-    id: "order_updates",
-    label: "Order updates",
-    description: "Receive order confirmation and delivery updates by email.",
-    enabled: true,
-  },
-  {
-    id: "special_offers",
-    label: "Special offers",
-    description: "Get seasonal promotions and exclusive bouquet launches.",
-    enabled: true,
-  },
-  {
-    id: "reminders",
-    label: "Event reminders",
-    description: "Get reminder emails for saved dates and occasions.",
-    enabled: false,
-  },
-];
-
 export function ProfileSettingsPageContent() {
   const { user, loading, refreshUser } = useAuth();
   const [primaryAddress, setPrimaryAddress] = useState<string>("");
   const [loadingAddress, setLoadingAddress] = useState(true);
-  const [communicationPreferences, setCommunicationPreferences] = useState(COMMUNICATION_PREFERENCES);
-  const [loadingPreferences, setLoadingPreferences] = useState(true);
 
   useEffect(() => {
     if (user) {
       loadPrimaryAddress();
-      loadNotificationPreferences();
     }
   }, [user]);
-
-  const loadNotificationPreferences = async () => {
-    try {
-      setLoadingPreferences(true);
-      const prefs = await getNotificationPreferences();
-      console.log("Loaded notification preferences from backend:", prefs);
-      setCommunicationPreferences([
-        {
-          id: "order_updates",
-          label: "Order updates",
-          description: "Receive order confirmation and delivery updates by email.",
-          enabled: prefs.emailOrderUpdates,
-        },
-        {
-          id: "special_offers",
-          label: "Special offers",
-          description: "Get seasonal promotions and exclusive bouquet launches.",
-          enabled: prefs.emailPromotions,
-        },
-        {
-          id: "reminders",
-          label: "Event reminders",
-          description: "Get reminder emails for saved dates and occasions.",
-          enabled: prefs.emailNewsletter,
-        },
-      ]);
-      console.log("Communication preferences set:", [prefs.emailOrderUpdates, prefs.emailPromotions, prefs.emailNewsletter]);
-    } catch (err) {
-      console.error("Failed to load notification preferences:", err);
-    } finally {
-      setLoadingPreferences(false);
-    }
-  };
 
   const loadPrimaryAddress = async () => {
     try {
       setLoadingAddress(true);
       const addresses = await getUserAddresses();
       const primary = addresses.find((addr) => addr.isDefault);
-      
+
       if (primary) {
         const parts = [
           primary.address,
@@ -167,27 +109,10 @@ export function ProfileSettingsPageContent() {
 
   const handleSaveSettings = async (payload: SaveProfileSettingsPayload) => {
     try {
-      // Update user profile (fullName, phone)
       await authApi.updateProfile({
         fullName: payload.fullName,
         phone: payload.phone,
       });
-      console.log("Profile updated:", payload.fullName, payload.phone);
-
-      // Update notification preferences
-      const orderUpdates = payload.communicationPreferences.find(p => p.id === "order_updates");
-      const specialOffers = payload.communicationPreferences.find(p => p.id === "special_offers");
-      const reminders = payload.communicationPreferences.find(p => p.id === "reminders");
-
-      const prefsPayload = {
-        emailOrderUpdates: orderUpdates?.enabled ?? true,
-        emailPromotions: specialOffers?.enabled ?? true,
-        emailNewsletter: reminders?.enabled ?? false,
-      };
-      console.log("Saving notification preferences:", prefsPayload);
-
-      await updateNotificationPreferences(prefsPayload);
-      console.log("Notification preferences updated");
 
       // Update or create address
       if (payload.address && payload.address.trim()) {
@@ -197,7 +122,7 @@ export function ProfileSettingsPageContent() {
 
           // Parse address: "street, ward, district, city" or just "full address"
           const addressParts = payload.address.split(",").map((s) => s.trim()).filter(Boolean);
-          
+
           let addressData;
           if (addressParts.length >= 4) {
             // Full format: street, ward, district, city
@@ -260,14 +185,9 @@ export function ProfileSettingsPageContent() {
         }
       }
 
-      // Refresh user data from backend
       await refreshUser();
-      console.log("User refreshed");
 
-      // Reload address and preferences from backend
       await loadPrimaryAddress();
-      await loadNotificationPreferences();
-      console.log("Data reloaded");
     } catch (err) {
       console.error("Save failed:", err);
       throw err;
@@ -295,7 +215,7 @@ export function ProfileSettingsPageContent() {
               </p>
             </header>
 
-            {loading || loadingAddress || loadingPreferences ? (
+            {loading || loadingAddress ? (
               <div className="h-[560px] rounded-[40px] bg-white/60 animate-pulse" />
             ) : !user ? (
               <div className="rounded-[32px] bg-white/70 px-8 py-10 text-center">
@@ -326,9 +246,6 @@ export function ProfileSettingsPageContent() {
                 <ProfileSettingsForm
                   key={`${user.id}-${user.phone}-${primaryAddress}`}
                   accountInfo={accountInfo}
-                  communicationTitle="Communication Preferences"
-                  communicationSubtitle="Choose the updates you want to receive."
-                  communicationPreferences={communicationPreferences}
                   cancelLabel="Cancel"
                   saveLabel="Save Changes"
                   manageAddressesHref="/profile/addresses"

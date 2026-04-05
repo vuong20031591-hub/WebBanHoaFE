@@ -11,7 +11,6 @@ import {
   PackageSearch,
   ShieldCheck,
   Truck,
-  X,
 } from "lucide-react";
 import { createCartItem, useCartStore } from "@/lib/cart";
 import { formatCurrency } from "@/lib/currency";
@@ -71,7 +70,6 @@ function ProductDetailContent() {
   const [selectedSize, setSelectedSize] = useState<"classic" | "deluxe" | "grand">("deluxe");
   const [selectedRibbon, setSelectedRibbon] = useState(0);
   const [deliveryDate, setDeliveryDate] = useState("");
-  const [giftNote, setGiftNote] = useState("");
 
   useEffect(() => {
     if (!Number.isFinite(id)) {
@@ -186,7 +184,6 @@ function ProductDetailContent() {
     addItem(
       createCartItem(product, {
         deliveryDate: deliveryDate || undefined,
-        giftNote: giftNote.trim() || undefined,
         ribbon: RIBBONS[selectedRibbon]?.label,
         size: selectedSize,
         availableStock: product.stockQuantity ?? null,
@@ -244,11 +241,10 @@ function ProductDetailContent() {
                     key={src}
                     type="button"
                     onClick={() => setActiveImg(index)}
-                    className={`relative rounded-tl-[1000px] rounded-tr-[1000px] overflow-hidden border-2 transition-all ${
-                      activeImg === index
-                        ? "border-[#2d2a26]"
-                        : "border-[rgba(255,255,255,0.4)] hover:border-[rgba(45,42,38,0.3)]"
-                    }`}
+                    className={`relative rounded-tl-[1000px] rounded-tr-[1000px] overflow-hidden border-2 transition-all ${activeImg === index
+                      ? "border-[#2d2a26]"
+                      : "border-[rgba(255,255,255,0.4)] hover:border-[rgba(45,42,38,0.3)]"
+                      }`}
                     style={{ paddingBottom: "36%" }}
                   >
                     <Image
@@ -311,11 +307,10 @@ function ProductDetailContent() {
                         key={size}
                         type="button"
                         onClick={() => setSelectedSize(size)}
-                        className={`px-8 py-3 rounded-full text-[11px] tracking-[1.1px] uppercase border transition-colors ${
-                          selectedSize === size
-                            ? "bg-[#2d2a26] border-[#2d2a26] text-white"
-                            : "border-[rgba(45,42,38,0.1)] text-[#2d2a26] hover:border-[rgba(45,42,38,0.4)]"
-                        }`}
+                        className={`px-8 py-3 rounded-full text-[11px] tracking-[1.1px] uppercase border transition-colors ${selectedSize === size
+                          ? "bg-[#2d2a26] border-[#2d2a26] text-white"
+                          : "border-[rgba(45,42,38,0.1)] text-[#2d2a26] hover:border-[rgba(45,42,38,0.4)]"
+                          }`}
                         style={{ fontFamily: "var(--font-inter)" }}
                       >
                         {size.charAt(0).toUpperCase() + size.slice(1)}
@@ -366,54 +361,6 @@ function ProductDetailContent() {
                     />
                     <CalendarDays className="absolute right-0 top-0 w-4.5 h-4.5 text-[#9a8c81] pointer-events-none" />
                   </label>
-                </div>
-
-                <div className="flex flex-col gap-4">
-                  <div className="flex items-end justify-between">
-                    <p
-                      className="text-[rgba(45,42,38,0.4)] text-[10px] font-semibold tracking-[2px] uppercase"
-                      style={{ fontFamily: "var(--font-inter)" }}
-                    >
-                      Gift Note
-                    </p>
-                    <p
-                      className="text-[#9a8c81] text-[9px] tracking-[0.9px] uppercase"
-                      style={{ fontFamily: "var(--font-inter)" }}
-                    >
-                      Personalization
-                    </p>
-                  </div>
-                  <div className="relative">
-                    <div className="relative -rotate-1 bg-[rgba(252,250,247,0.8)] border border-[rgba(45,42,38,0.07)] rounded-sm shadow-sm overflow-hidden">
-                      <div className="rotate-1">
-                        <textarea
-                          value={giftNote}
-                          onChange={(event) =>
-                            setGiftNote(event.target.value.slice(0, 250))
-                          }
-                          placeholder="Type your heartfelt message here..."
-                          rows={5}
-                          className="w-full bg-transparent px-8 py-8 text-[20px] text-[#2d2a26] outline-none resize-none placeholder-[rgba(0,0,0,0.3)]"
-                          style={{ fontFamily: "cursive, var(--font-noto-serif)" }}
-                        />
-                        {giftNote ? (
-                          <button
-                            type="button"
-                            onClick={() => setGiftNote("")}
-                            className="absolute top-2 right-2 w-9 h-9 flex items-center justify-center opacity-40 hover:opacity-70 transition-opacity"
-                          >
-                            <X className="w-5 h-5" />
-                          </button>
-                        ) : null}
-                      </div>
-                    </div>
-                    <p
-                      className="text-[#9a8c81] text-[9px] tracking-[0.9px] uppercase text-right mt-2"
-                      style={{ fontFamily: "var(--font-inter)" }}
-                    >
-                      {giftNote.length} / Max 250 characters
-                    </p>
-                  </div>
                 </div>
 
                 <div className="flex flex-col gap-4 pt-8">

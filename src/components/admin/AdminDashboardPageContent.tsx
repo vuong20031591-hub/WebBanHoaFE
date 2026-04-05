@@ -342,350 +342,349 @@ export function AdminDashboardPageContent() {
       <Navbar />
       <div className="grid overflow-hidden border-t border-[#e9e3dc] bg-[#fbfaf8] md:grid-cols-[218px_minmax(0,1fr)]">
         <aside className="border-b border-[#eee8e1] px-4 py-6 md:min-h-[720px] md:border-b-0 md:border-r md:border-[#eee8e1] md:px-5">
-            <nav className="space-y-2">
-              {[
-                { icon: LayoutDashboard, label: "Dashboard", href: "/admin", active: true },
-                { icon: ClipboardList, label: "Orders", href: "/admin/orders", active: false },
-                { icon: Package2, label: "Products", href: "/admin/products", active: false },
-                { icon: Users, label: "Customers", active: false },
-                { icon: Settings, label: "Settings", active: false },
-              ].map((item) => {
-                const className = `flex w-full items-center gap-3 rounded-full px-4 py-3 text-left text-[13px] transition-colors ${
-                  item.active
-                    ? "bg-[#8d6030] text-white"
-                    : "text-[#4a433c] hover:bg-[#f1ede7]"
+          <nav className="space-y-2">
+            {[
+              { icon: LayoutDashboard, label: "Dashboard", href: "/admin", active: true },
+              { icon: ClipboardList, label: "Orders", href: "/admin/orders", active: false },
+              { icon: Package2, label: "Products", href: "/admin/products", active: false },
+              { icon: Users, label: "Customers", href: "/admin/customers", active: false },
+              { icon: Settings, label: "Settings", href: "/admin/settings", active: false },
+            ].map((item) => {
+              const className = `flex w-full items-center gap-3 rounded-full px-4 py-3 text-left text-[13px] transition-colors ${item.active
+                  ? "bg-[#8d6030] text-white"
+                  : "text-[#4a433c] hover:bg-[#f1ede7]"
                 }`;
 
-                if (item.href) {
-                  return (
-                    <Link key={item.label} href={item.href} className={className}>
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.label}</span>
-                    </Link>
-                  );
-                }
-
+              if (item.href) {
                 return (
-                  <button key={item.label} type="button" className={className}>
+                  <Link key={item.label} href={item.href} className={className}>
                     <item.icon className="h-4 w-4" />
                     <span>{item.label}</span>
-                  </button>
+                  </Link>
                 );
-              })}
-            </nav>
-            <div className="mt-14 hidden items-center gap-3 md:flex">
-              <div className="h-10 w-10 rounded-full bg-[#ece8e3]" />
-              <div>
-                <p className="text-[12px] font-medium text-[#3f3934]">{user.fullName}</p>
-                <p className="text-[10px] uppercase tracking-[1.2px] text-[#b2aaa2]">Head Florist</p>
-              </div>
-            </div>
-          </aside>
+              }
 
-          <main className="px-4 py-7 md:px-7">
-            {loading ? (
-              <div className="grid gap-4">
-                <div className="h-32 animate-pulse rounded-[18px] bg-[#f0ece7]" />
-                <div className="h-64 animate-pulse rounded-[18px] bg-[#f0ece7]" />
-              </div>
-            ) : error ? (
-              <div className="rounded-[18px] border border-[#efd0cc] bg-[#fbefec] px-5 py-4 text-[14px] text-[#8f3d35]">
-                {error}
-              </div>
-            ) : (
-              <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
-                <section className="space-y-5">
-                  <header>
-                    <h1
-                      className="text-[46px] leading-[1.04] text-[#2d2a26]"
+              return (
+                <button key={item.label} type="button" className={className}>
+                  <item.icon className="h-4 w-4" />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+          <div className="mt-14 hidden items-center gap-3 md:flex">
+            <div className="h-10 w-10 rounded-full bg-[#ece8e3]" />
+            <div>
+              <p className="text-[12px] font-medium text-[#3f3934]">{user.fullName}</p>
+              <p className="text-[10px] uppercase tracking-[1.2px] text-[#b2aaa2]">Head Florist</p>
+            </div>
+          </div>
+        </aside>
+
+        <main className="px-4 py-7 md:px-7">
+          {loading ? (
+            <div className="grid gap-4">
+              <div className="h-32 animate-pulse rounded-[18px] bg-[#f0ece7]" />
+              <div className="h-64 animate-pulse rounded-[18px] bg-[#f0ece7]" />
+            </div>
+          ) : error ? (
+            <div className="rounded-[18px] border border-[#efd0cc] bg-[#fbefec] px-5 py-4 text-[14px] text-[#8f3d35]">
+              {error}
+            </div>
+          ) : (
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
+              <section className="space-y-5">
+                <header>
+                  <h1
+                    className="text-[46px] leading-[1.04] text-[#2d2a26]"
+                    style={{ fontFamily: "var(--font-noto-serif)" }}
+                  >
+                    Bonjour, {user.fullName}
+                  </h1>
+                  <p className="mt-2 text-[13px] text-[#857d76]">
+                    The Atelier is buzzing today with{" "}
+                    <span className="font-medium text-[#5e564f]">{stats?.pendingOrders ?? 0}</span>{" "}
+                    new deliveries scheduled.
+                  </p>
+                </header>
+
+                <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
+                  <article className="rounded-[14px] border border-[#efe9e2] bg-[#fdfcfa] px-4 py-4">
+                    <div className="flex items-center justify-between">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-[#f1dcc7] text-[#94663a]">
+                        <DollarSign className="h-4 w-4" />
+                      </span>
+                      <span className="text-[10px] text-[#a99786]">+12.5% vs LW</span>
+                    </div>
+                    <p className="mt-3 text-[10px] uppercase tracking-[1.3px] text-[#beb2a6]">
+                      Total Revenue
+                    </p>
+                    <p className="mt-1 max-w-[145px] whitespace-normal break-all text-[26px] leading-[1.05] text-[#312c27] md:text-[28px] 2xl:max-w-[170px] 2xl:text-[32px]">
+                      {formatDashboardCurrency(totalRevenue)}
+                    </p>
+                  </article>
+
+                  <article className="rounded-[14px] border border-[#efe9e2] bg-[#fdfcfa] px-4 py-4">
+                    <div className="flex items-center justify-between">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-[#dce9d2] text-[#5b7848]">
+                        <ShoppingBag className="h-4 w-4" />
+                      </span>
+                      <span className="text-[10px] text-[#a99786]">{stats?.totalOrders ?? 0} total</span>
+                    </div>
+                    <p className="mt-3 text-[10px] uppercase tracking-[1.3px] text-[#beb2a6]">
+                      New Orders
+                    </p>
+                    <p className="mt-1 text-[32px] leading-[1] text-[#312c27]">
+                      {stats?.pendingOrders ?? 0}
+                    </p>
+                  </article>
+
+                  <article className="rounded-[14px] border border-[#efe9e2] bg-[#fdfcfa] px-4 py-4">
+                    <div className="flex items-center justify-between">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-[#ebddd0] text-[#9f7552]">
+                        <Package2 className="h-4 w-4" />
+                      </span>
+                      <span className="text-[10px] text-[#a99786]">Current snapshot</span>
+                    </div>
+                    <p className="mt-3 text-[10px] uppercase tracking-[1.3px] text-[#beb2a6]">
+                      Avg. Order Value
+                    </p>
+                    <p className="mt-1 max-w-[145px] whitespace-normal break-all text-[26px] leading-[1.05] text-[#312c27] md:text-[28px] 2xl:max-w-[170px] 2xl:text-[32px]">
+                      {formatDashboardCurrency(averageOrderValue)}
+                    </p>
+                  </article>
+
+                  <article className="rounded-[14px] border border-[#efe9e2] bg-[#fdfcfa] px-4 py-4">
+                    <div className="flex items-center justify-between">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-[#f1d7af] text-[#8f612e]">
+                        <Star className="h-4 w-4 fill-current" />
+                      </span>
+                      <span className="text-[10px] text-[#a99786]">Delivered success</span>
+                    </div>
+                    <p className="mt-3 text-[10px] uppercase tracking-[1.3px] text-[#beb2a6]">
+                      Satisfaction
+                    </p>
+                    <p className="mt-1 text-[32px] leading-[1] text-[#312c27]">
+                      {satisfactionRate.toFixed(1)}%
+                    </p>
+                  </article>
+                </div>
+
+                <section className="rounded-[16px] border border-[#eee8e1] bg-[#fcfbf9]">
+                  <div className="flex items-center justify-between border-b border-[#efebe5] px-5 py-4">
+                    <h2
+                      className="text-[34px] leading-none text-[#2d2a26]"
                       style={{ fontFamily: "var(--font-noto-serif)" }}
                     >
-                      Bonjour, {user.fullName}
-                    </h1>
-                    <p className="mt-2 text-[13px] text-[#857d76]">
-                      The Atelier is buzzing today with{" "}
-                      <span className="font-medium text-[#5e564f]">{stats?.pendingOrders ?? 0}</span>{" "}
-                      new deliveries scheduled.
-                    </p>
-                  </header>
-
-                  <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
-                    <article className="rounded-[14px] border border-[#efe9e2] bg-[#fdfcfa] px-4 py-4">
-                      <div className="flex items-center justify-between">
-                        <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-[#f1dcc7] text-[#94663a]">
-                          <DollarSign className="h-4 w-4" />
-                        </span>
-                        <span className="text-[10px] text-[#a99786]">+12.5% vs LW</span>
-                      </div>
-                      <p className="mt-3 text-[10px] uppercase tracking-[1.3px] text-[#beb2a6]">
-                        Total Revenue
-                      </p>
-                      <p className="mt-1 max-w-[145px] whitespace-normal break-all text-[26px] leading-[1.05] text-[#312c27] md:text-[28px] 2xl:max-w-[170px] 2xl:text-[32px]">
-                        {formatDashboardCurrency(totalRevenue)}
-                      </p>
-                    </article>
-
-                    <article className="rounded-[14px] border border-[#efe9e2] bg-[#fdfcfa] px-4 py-4">
-                      <div className="flex items-center justify-between">
-                        <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-[#dce9d2] text-[#5b7848]">
-                          <ShoppingBag className="h-4 w-4" />
-                        </span>
-                        <span className="text-[10px] text-[#a99786]">{stats?.totalOrders ?? 0} total</span>
-                      </div>
-                      <p className="mt-3 text-[10px] uppercase tracking-[1.3px] text-[#beb2a6]">
-                        New Orders
-                      </p>
-                      <p className="mt-1 text-[32px] leading-[1] text-[#312c27]">
-                        {stats?.pendingOrders ?? 0}
-                      </p>
-                    </article>
-
-                    <article className="rounded-[14px] border border-[#efe9e2] bg-[#fdfcfa] px-4 py-4">
-                      <div className="flex items-center justify-between">
-                        <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-[#ebddd0] text-[#9f7552]">
-                          <Package2 className="h-4 w-4" />
-                        </span>
-                        <span className="text-[10px] text-[#a99786]">Current snapshot</span>
-                      </div>
-                      <p className="mt-3 text-[10px] uppercase tracking-[1.3px] text-[#beb2a6]">
-                        Avg. Order Value
-                      </p>
-                      <p className="mt-1 max-w-[145px] whitespace-normal break-all text-[26px] leading-[1.05] text-[#312c27] md:text-[28px] 2xl:max-w-[170px] 2xl:text-[32px]">
-                        {formatDashboardCurrency(averageOrderValue)}
-                      </p>
-                    </article>
-
-                    <article className="rounded-[14px] border border-[#efe9e2] bg-[#fdfcfa] px-4 py-4">
-                      <div className="flex items-center justify-between">
-                        <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-[#f1d7af] text-[#8f612e]">
-                          <Star className="h-4 w-4 fill-current" />
-                        </span>
-                        <span className="text-[10px] text-[#a99786]">Delivered success</span>
-                      </div>
-                      <p className="mt-3 text-[10px] uppercase tracking-[1.3px] text-[#beb2a6]">
-                        Satisfaction
-                      </p>
-                      <p className="mt-1 text-[32px] leading-[1] text-[#312c27]">
-                        {satisfactionRate.toFixed(1)}%
-                      </p>
-                    </article>
+                      Recent Orders
+                    </h2>
+                    <Link
+                      href="/admin/orders"
+                      className="text-[13px] text-[#8d6030] transition-colors hover:text-[#714b24]"
+                    >
+                      View all history
+                    </Link>
                   </div>
-
-                  <section className="rounded-[16px] border border-[#eee8e1] bg-[#fcfbf9]">
-                    <div className="flex items-center justify-between border-b border-[#efebe5] px-5 py-4">
-                      <h2
-                        className="text-[34px] leading-none text-[#2d2a26]"
-                        style={{ fontFamily: "var(--font-noto-serif)" }}
-                      >
-                        Recent Orders
-                      </h2>
-                      <Link
-                        href="/admin/orders"
-                        className="text-[13px] text-[#8d6030] transition-colors hover:text-[#714b24]"
-                      >
-                        View all history
-                      </Link>
-                    </div>
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full">
-                        <thead>
-                          <tr className="border-b border-[#f1ede8] text-left text-[10px] uppercase tracking-[1.2px] text-[#b6aea7]">
-                            <th className="px-5 py-3 font-medium">Product</th>
-                            <th className="px-2 py-3 font-medium">Date</th>
-                            <th className="px-2 py-3 font-medium">Customer</th>
-                            <th className="px-2 py-3 font-medium">Amount</th>
-                            <th className="px-2 py-3 font-medium">Status</th>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full">
+                      <thead>
+                        <tr className="border-b border-[#f1ede8] text-left text-[10px] uppercase tracking-[1.2px] text-[#b6aea7]">
+                          <th className="px-5 py-3 font-medium">Product</th>
+                          <th className="px-2 py-3 font-medium">Date</th>
+                          <th className="px-2 py-3 font-medium">Customer</th>
+                          <th className="px-2 py-3 font-medium">Amount</th>
+                          <th className="px-2 py-3 font-medium">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {recentOrders.length === 0 ? (
+                          <tr>
+                            <td
+                              colSpan={5}
+                              className="px-5 py-8 text-center text-[13px] text-[#8f877f]"
+                            >
+                              No recent orders yet.
+                            </td>
                           </tr>
-                        </thead>
-                        <tbody>
-                          {recentOrders.length === 0 ? (
-                            <tr>
-                              <td
-                                colSpan={5}
-                                className="px-5 py-8 text-center text-[13px] text-[#8f877f]"
+                        ) : (
+                          recentOrders.map((order) => {
+                            const firstItem = order.items[0];
+                            const orderDate = new Intl.DateTimeFormat("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            }).format(new Date(order.createdAt));
+
+                            return (
+                              <tr
+                                key={order.id}
+                                className="border-b border-[#f4f0eb] text-[13px] text-[#3d3731] last:border-none"
                               >
-                                No recent orders yet.
-                              </td>
-                            </tr>
-                          ) : (
-                            recentOrders.map((order) => {
-                              const firstItem = order.items[0];
-                              const orderDate = new Intl.DateTimeFormat("en-US", {
-                                month: "short",
-                                day: "numeric",
-                                year: "numeric",
-                              }).format(new Date(order.createdAt));
-
-                              return (
-                                <tr
-                                  key={order.id}
-                                  className="border-b border-[#f4f0eb] text-[13px] text-[#3d3731] last:border-none"
-                                >
-                                  <td className="px-5 py-3">
-                                    <div className="flex items-center gap-3">
-                                      <div className="relative h-11 w-11 overflow-hidden rounded-full bg-[#f3efe9]">
-                                        <Image
-                                          src={coverByOrderId[order.id] ?? FALLBACK_IMAGE}
-                                          alt={firstItem?.productName ?? `Order ${order.id}`}
-                                          fill
-                                          sizes="44px"
-                                          className="object-cover"
-                                        />
-                                      </div>
-                                      <div className="max-w-[170px]">
-                                        <p className="line-clamp-2 leading-5">
-                                          {firstItem?.productName ?? `Order #${order.id}`}
-                                        </p>
-                                      </div>
+                                <td className="px-5 py-3">
+                                  <div className="flex items-center gap-3">
+                                    <div className="relative h-11 w-11 overflow-hidden rounded-full bg-[#f3efe9]">
+                                      <Image
+                                        src={coverByOrderId[order.id] ?? FALLBACK_IMAGE}
+                                        alt={firstItem?.productName ?? `Order ${order.id}`}
+                                        fill
+                                        sizes="44px"
+                                        className="object-cover"
+                                      />
                                     </div>
-                                  </td>
-                                  <td className="px-2 py-3 text-[#6f6861]">{orderDate}</td>
-                                  <td className="px-2 py-3">{formatCustomerLabel(order.userId)}</td>
-                                  <td className="px-2 py-3 font-medium">{formatCurrency(order.totalAmount)}</td>
-                                  <td className="px-2 py-3">
-                                    <span
-                                      className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-[0.8px] ${getOrderStatusClassName(order.status)}`}
-                                    >
-                                      {formatOrderStatus(order.status)}
-                                    </span>
-                                  </td>
-                                </tr>
-                              );
-                            })
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </section>
+                                    <div className="max-w-[170px]">
+                                      <p className="line-clamp-2 leading-5">
+                                        {firstItem?.productName ?? `Order #${order.id}`}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-2 py-3 text-[#6f6861]">{orderDate}</td>
+                                <td className="px-2 py-3">{formatCustomerLabel(order.userId)}</td>
+                                <td className="px-2 py-3 font-medium">{formatCurrency(order.totalAmount)}</td>
+                                <td className="px-2 py-3">
+                                  <span
+                                    className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-[0.8px] ${getOrderStatusClassName(order.status)}`}
+                                  >
+                                    {formatOrderStatus(order.status)}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </section>
+              </section>
 
-                <aside className="space-y-4">
-                  <section className="rounded-[16px] border border-[#eee8e1] bg-[#fcfbf9] px-4 py-4">
-                    <div className="flex items-center justify-between">
-                      <h3
-                        className="text-[25px] text-[#2d2a26]"
-                        style={{ fontFamily: "var(--font-noto-serif)" }}
-                      >
-                        Weekly Revenue
-                      </h3>
-                      <button
-                        type="button"
-                        className="flex h-8 w-8 items-center justify-center rounded-full text-[#9d948b] transition-colors hover:bg-[#f2eeea]"
-                        aria-label="More"
-                      >
-                        <MoreHorizontal className="h-4 w-4" />
-                      </button>
-                    </div>
-                    <div className="mt-5 flex h-[178px] items-end justify-between gap-2">
-                      {WEEKDAY_LABELS.map((label, index) => {
-                        const value = weeklyRevenue[index];
-                        const ratio = value / weekPeakRevenue;
-                        const heightPercent = Math.max(12, Math.round(ratio * 100));
-                        const barColor =
-                          index === 1
-                            ? "bg-[#8d6030]"
-                            : index === 4
-                              ? "bg-[#9ab48f]"
-                              : "bg-[#e4dfd8]";
-
-                        return (
-                          <div key={label} className="flex flex-1 flex-col items-center">
-                            <div className="flex h-[136px] w-full items-end justify-center">
-                              <div
-                                className={`w-[16px] rounded-full ${barColor}`}
-                                style={{ height: `${heightPercent}%` }}
-                                title={formatCurrency(value)}
-                              />
-                            </div>
-                            <span className="mt-2 text-[9px] tracking-[0.8px] text-[#b3aba4]">
-                              {label}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </section>
-
-                  <section className="rounded-[16px] border border-[#eee8e1] bg-[#fcfbf9] px-4 py-4">
-                    <div className="flex items-center gap-2">
-                      <AlertTriangle className="h-4 w-4 text-[#bf4343]" />
-                      <h3
-                        className="text-[23px] text-[#2d2a26]"
-                        style={{ fontFamily: "var(--font-noto-serif)" }}
-                      >
-                        Low Stock Alerts
-                      </h3>
-                    </div>
-                    <div className="mt-3 space-y-3">
-                      {lowStockProducts.length === 0 ? (
-                        <p className="rounded-[10px] bg-[#f7f4ef] px-3 py-3 text-[12px] text-[#756f68]">
-                          Inventory looks healthy. No low stock products right now.
-                        </p>
-                      ) : (
-                        lowStockProducts.map((product) => {
-                          const stockLeft = product.stockQuantity ?? 0;
-                          const progress = Math.max(
-                            4,
-                            Math.round((stockLeft / LOW_STOCK_THRESHOLD) * 100)
-                          );
-                          return (
-                            <article key={product.id} className="space-y-1.5">
-                              <div className="flex items-start justify-between gap-3">
-                                <p className="text-[12px] text-[#3f3934]">{product.name}</p>
-                                <p className="shrink-0 text-[11px] font-semibold text-[#bf4343]">
-                                  {stockLeft} units left
-                                </p>
-                              </div>
-                              <div className="h-[4px] rounded-full bg-[#efe9e2]">
-                                <div
-                                  className="h-full rounded-full bg-[#cf3b35]"
-                                  style={{ width: `${progress}%` }}
-                                />
-                              </div>
-                            </article>
-                          );
-                        })
-                      )}
-                    </div>
+              <aside className="space-y-4">
+                <section className="rounded-[16px] border border-[#eee8e1] bg-[#fcfbf9] px-4 py-4">
+                  <div className="flex items-center justify-between">
+                    <h3
+                      className="text-[25px] text-[#2d2a26]"
+                      style={{ fontFamily: "var(--font-noto-serif)" }}
+                    >
+                      Weekly Revenue
+                    </h3>
                     <button
                       type="button"
-                      className="mt-5 w-full rounded-full bg-[#8d6030] px-4 py-3 text-[13px] font-medium text-white transition-colors hover:bg-[#724e26]"
+                      className="flex h-8 w-8 items-center justify-center rounded-full text-[#9d948b] transition-colors hover:bg-[#f2eeea]"
+                      aria-label="More"
                     >
-                      Reorder Inventory
+                      <MoreHorizontal className="h-4 w-4" />
                     </button>
-                  </section>
+                  </div>
+                  <div className="mt-5 flex h-[178px] items-end justify-between gap-2">
+                    {WEEKDAY_LABELS.map((label, index) => {
+                      const value = weeklyRevenue[index];
+                      const ratio = value / weekPeakRevenue;
+                      const heightPercent = Math.max(12, Math.round(ratio * 100));
+                      const barColor =
+                        index === 1
+                          ? "bg-[#8d6030]"
+                          : index === 4
+                            ? "bg-[#9ab48f]"
+                            : "bg-[#e4dfd8]";
 
-                  <section className="relative overflow-hidden rounded-[16px] bg-[#4c413d] px-5 py-5 text-white">
-                    <Image
-                      src="/images/heritage-main.png"
-                      alt="Seasonal collection"
-                      fill
-                      sizes="280px"
-                      className="object-cover opacity-20"
-                    />
-                    <div className="relative">
-                      <p
-                        className="text-[30px] leading-none"
-                        style={{ fontFamily: "var(--font-noto-serif)" }}
-                      >
-                        Seasonal Trends
+                      return (
+                        <div key={label} className="flex flex-1 flex-col items-center">
+                          <div className="flex h-[136px] w-full items-end justify-center">
+                            <div
+                              className={`w-[16px] rounded-full ${barColor}`}
+                              style={{ height: `${heightPercent}%` }}
+                              title={formatCurrency(value)}
+                            />
+                          </div>
+                          <span className="mt-2 text-[9px] tracking-[0.8px] text-[#b3aba4]">
+                            {label}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+
+                <section className="rounded-[16px] border border-[#eee8e1] bg-[#fcfbf9] px-4 py-4">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-[#bf4343]" />
+                    <h3
+                      className="text-[23px] text-[#2d2a26]"
+                      style={{ fontFamily: "var(--font-noto-serif)" }}
+                    >
+                      Low Stock Alerts
+                    </h3>
+                  </div>
+                  <div className="mt-3 space-y-3">
+                    {lowStockProducts.length === 0 ? (
+                      <p className="rounded-[10px] bg-[#f7f4ef] px-3 py-3 text-[12px] text-[#756f68]">
+                        Inventory looks healthy. No low stock products right now.
                       </p>
-                      <p className="mt-2 max-w-[220px] text-[12px] leading-5 text-white/80">
-                        Early Winter collection is trending. Review catalog updates and campaign
-                        placements.
-                      </p>
-                      <button
-                        type="button"
-                        className="mt-4 text-[12px] font-medium text-[#f0dcbf] transition-colors hover:text-[#ffe8c5]"
-                      >
-                        Learn More
-                      </button>
-                    </div>
-                  </section>
-                </aside>
-              </div>
-            )}
-          </main>
+                    ) : (
+                      lowStockProducts.map((product) => {
+                        const stockLeft = product.stockQuantity ?? 0;
+                        const progress = Math.max(
+                          4,
+                          Math.round((stockLeft / LOW_STOCK_THRESHOLD) * 100)
+                        );
+                        return (
+                          <article key={product.id} className="space-y-1.5">
+                            <div className="flex items-start justify-between gap-3">
+                              <p className="text-[12px] text-[#3f3934]">{product.name}</p>
+                              <p className="shrink-0 text-[11px] font-semibold text-[#bf4343]">
+                                {stockLeft} units left
+                              </p>
+                            </div>
+                            <div className="h-[4px] rounded-full bg-[#efe9e2]">
+                              <div
+                                className="h-full rounded-full bg-[#cf3b35]"
+                                style={{ width: `${progress}%` }}
+                              />
+                            </div>
+                          </article>
+                        );
+                      })
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    className="mt-5 w-full rounded-full bg-[#8d6030] px-4 py-3 text-[13px] font-medium text-white transition-colors hover:bg-[#724e26]"
+                  >
+                    Reorder Inventory
+                  </button>
+                </section>
+
+                <section className="relative overflow-hidden rounded-[16px] bg-[#4c413d] px-5 py-5 text-white">
+                  <Image
+                    src="/images/heritage-main.png"
+                    alt="Seasonal collection"
+                    fill
+                    sizes="280px"
+                    className="object-cover opacity-20"
+                  />
+                  <div className="relative">
+                    <p
+                      className="text-[30px] leading-none"
+                      style={{ fontFamily: "var(--font-noto-serif)" }}
+                    >
+                      Seasonal Trends
+                    </p>
+                    <p className="mt-2 max-w-[220px] text-[12px] leading-5 text-white/80">
+                      Early Winter collection is trending. Review catalog updates and campaign
+                      placements.
+                    </p>
+                    <button
+                      type="button"
+                      className="mt-4 text-[12px] font-medium text-[#f0dcbf] transition-colors hover:text-[#ffe8c5]"
+                    >
+                      Learn More
+                    </button>
+                  </div>
+                </section>
+              </aside>
+            </div>
+          )}
+        </main>
       </div>
     </div>
   );
