@@ -29,6 +29,15 @@ const RIBBONS = [
   { label: "Gold", bg: "#d4af37" },
 ] as const;
 
+function getTodayDateString() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function RelatedProductCard({ product, locale }: { product: Product; locale: "en" | "vi" }) {
   const safeImage = product.image || DEFAULT_PRODUCT_IMAGE;
   return (
@@ -75,7 +84,9 @@ function ProductDetailContent() {
   const [selectedSize, setSelectedSize] = useState<"classic" | "deluxe" | "grand">("deluxe");
   const [selectedRibbon, setSelectedRibbon] = useState(0);
   const [deliveryDate, setDeliveryDate] = useState("");
+  const [deliveryDateError, setDeliveryDateError] = useState<string | null>(null);
   const [giftNote, setGiftNote] = useState("");
+  const todayDate = getTodayDateString();
 
   const copy =
     locale === "vi"
@@ -88,10 +99,12 @@ function ProductDetailContent() {
           selectSize: "Chon kich thuoc bo hoa",
           ribbon: "Chon mau no",
           deliveryDate: "Ngay giao",
+          deliveryDatePast: "Ngay giao khong duoc nho hon ngay hom nay.",
           giftNote: "Loi nhan tang kem",
           personalization: "Ca nhan hoa",
           notePlaceholder: "Viet loi nhan chan thanh cua ban tai day...",
           maxChars: "{count} / Toi da 250 ky tu",
+          clearNote: "Xoa ghi chu",
           signInOrder: "Dang nhap de dat hang",
           addToCart: "Them vao gio",
           storeDelivery: "Giao tu cua hang",
@@ -109,10 +122,12 @@ function ProductDetailContent() {
           selectSize: "Select Arrangement Size",
           ribbon: "Ribbon Selection",
           deliveryDate: "Delivery Date",
+          deliveryDatePast: "Delivery date cannot be earlier than today.",
           giftNote: "Gift Note",
           personalization: "Personalization",
           notePlaceholder: "Type your heartfelt message here...",
           maxChars: "{count} / Max 250 characters",
+          clearNote: "Clear note",
           signInOrder: "Sign In To Order",
           addToCart: "Add to Cart",
           storeDelivery: "Store Delivery",
@@ -236,6 +251,13 @@ function ProductDetailContent() {
       router.push("/signin");
       return;
     }
+
+    if (deliveryDate && deliveryDate < todayDate) {
+      setDeliveryDateError(copy.deliveryDatePast);
+      return;
+    }
+
+    setDeliveryDateError(null);
 
     addItem(
       createCartItem(product, {
@@ -413,13 +435,33 @@ function ProductDetailContent() {
                   <label className="relative w-[256px] border-b border-[rgba(45,42,38,0.2)] pb-2 cursor-pointer">
                     <input
                       type="date"
+                      min={todayDate}
                       value={deliveryDate}
-                      onChange={(event) => setDeliveryDate(event.target.value)}
+                      onChange={(event) => {
+                        const nextDeliveryDate = event.target.value;
+
+                        if (nextDeliveryDate && nextDeliveryDate < todayDate) {
+                          setDeliveryDate(todayDate);
+                          setDeliveryDateError(copy.deliveryDatePast);
+                          return;
+                        }
+
+                        setDeliveryDate(nextDeliveryDate);
+                        setDeliveryDateError(null);
+                      }}
                       className="w-full bg-transparent text-[#2d2a26] text-[14px] outline-none cursor-pointer appearance-none pr-6 [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
                       style={{ fontFamily: "var(--font-inter)" }}
                     />
                     <CalendarDays className="absolute right-0 top-0 w-4.5 h-4.5 text-[#9a8c81] pointer-events-none" />
                   </label>
+                  {deliveryDateError ? (
+                    <p
+                      className="text-[#a43737] text-[10px] tracking-[0.4px]"
+                      style={{ fontFamily: "var(--font-inter)" }}
+                    >
+                      {deliveryDateError}
+                    </p>
+                  ) : null}
                 </div>
 
                 <div className="flex flex-col gap-4">
@@ -455,6 +497,8 @@ function ProductDetailContent() {
                             type="button"
                             onClick={() => setGiftNote("")}
                             className="absolute top-2 right-2 w-9 h-9 flex items-center justify-center opacity-40 hover:opacity-70 transition-opacity"
+                            aria-label={copy.clearNote}
+                            title={copy.clearNote}
                           >
                             <X className="w-5 h-5" />
                           </button>
@@ -467,6 +511,16 @@ function ProductDetailContent() {
                     >
                       {copy.maxChars.replace("{count}", String(giftNote.length))}
                     </p>
+                    {giftNote ? (
+                      <button
+                        type="button"
+                        onClick={() => setGiftNote("")}
+                        className="mt-2 ml-auto block text-[10px] uppercase tracking-[1px] text-[#8b5f4f] hover:text-[#6e4a3c]"
+                        style={{ fontFamily: "var(--font-inter)" }}
+                      >
+                        {copy.clearNote}
+                      </button>
+                    ) : null}
                   </div>
                 </div>
 
