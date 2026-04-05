@@ -342,17 +342,18 @@ export function AdminDashboardPageContent() {
       <Navbar />
       <div className="grid overflow-hidden border-t border-[#e9e3dc] bg-[#fbfaf8] md:grid-cols-[218px_minmax(0,1fr)]">
         <aside className="border-b border-[#eee8e1] px-4 py-6 md:min-h-[720px] md:border-b-0 md:border-r md:border-[#eee8e1] md:px-5">
-          <nav className="space-y-2">
-            {[
-              { icon: LayoutDashboard, label: "Dashboard", href: "/admin", active: true },
-              { icon: ClipboardList, label: "Orders", href: "/admin/orders", active: false },
-              { icon: Package2, label: "Products", href: "/admin/products", active: false },
-              { icon: Users, label: "Customers", href: "/admin/customers", active: false },
-              { icon: Settings, label: "Settings", href: "/admin/settings", active: false },
-            ].map((item) => {
-              const className = `flex w-full items-center gap-3 rounded-full px-4 py-3 text-left text-[13px] transition-colors ${item.active
-                  ? "bg-[#8d6030] text-white"
-                  : "text-[#4a433c] hover:bg-[#f1ede7]"
+            <nav className="space-y-2">
+              {[
+                { icon: LayoutDashboard, label: "Dashboard", href: "/admin", active: true },
+                { icon: ClipboardList, label: "Orders", href: "/admin/orders", active: false },
+                { icon: Package2, label: "Products", href: "/admin/products", active: false },
+                { icon: Users, label: "Customers", href: "/admin/customers", active: false },
+                { icon: Settings, label: "Settings", href: "/admin/settings", active: false },
+              ].map((item) => {
+                const className = `flex w-full items-center gap-3 rounded-full px-4 py-3 text-left text-[13px] transition-colors ${
+                  item.active
+                    ? "bg-[#8d6030] text-white"
+                    : "text-[#4a433c] hover:bg-[#f1ede7]"
                 }`;
 
               if (item.href) {
