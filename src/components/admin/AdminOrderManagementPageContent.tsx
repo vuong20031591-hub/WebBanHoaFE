@@ -26,10 +26,10 @@ const ADMIN_ORDERS_CACHE_TTL_MS = 60_000;
 
 let adminOrdersCache:
   | {
-      expiresAt: number;
-      orders: OrderDTO[];
-      coverByOrderId: Record<number, string>;
-    }
+    expiresAt: number;
+    orders: OrderDTO[];
+    coverByOrderId: Record<number, string>;
+  }
   | null = null;
 
 type StatusFilter = "ALL" | "PENDING" | "CONFIRMED" | "CANCELLED";
@@ -744,9 +744,9 @@ export function AdminOrderManagementPageContent() {
       current.map((item, itemIndex) =>
         itemIndex === index
           ? {
-              ...item,
-              [field]: value,
-            }
+            ...item,
+            [field]: value,
+          }
           : item
       )
     );
@@ -938,14 +938,13 @@ export function AdminOrderManagementPageContent() {
                 { icon: LayoutDashboard, label: "Dashboard", href: "/admin", active: false },
                 { icon: ClipboardList, label: "Orders", href: "/admin/orders", active: true },
                 { icon: Package2, label: "Products", href: "/admin/products", active: false },
-                { icon: Users, label: "Customers", active: false },
-                { icon: Settings, label: "Settings", active: false },
+                { icon: Users, label: "Customers", href: "/admin/customers", active: false },
+                { icon: Settings, label: "Settings", href: "/admin/settings", active: false },
               ].map((item) => {
-                const className = `flex w-full items-center gap-3 rounded-full px-4 py-3 text-left text-[13px] transition-colors ${
-                  item.active
+                const className = `flex w-full items-center gap-3 rounded-full px-4 py-3 text-left text-[13px] transition-colors ${item.active
                     ? "bg-[#8d6030] text-white"
                     : "text-[#4a433c] hover:bg-[#f1ede7]"
-                }`;
+                  }`;
 
                 if (item.href) {
                   return (
@@ -1159,9 +1158,8 @@ export function AdminOrderManagementPageContent() {
                         ) : (
                           visibleOrders.map((order) => {
                             const firstItem = order.items[0];
-                            const itemSummary = `${order.items.length} arrangement${
-                              order.items.length > 1 ? "s" : ""
-                            }`;
+                            const itemSummary = `${order.items.length} arrangement${order.items.length > 1 ? "s" : ""
+                              }`;
                             const orderStatus = isOrderStatusValue(order.status)
                               ? order.status
                               : "PENDING";
@@ -1206,11 +1204,10 @@ export function AdminOrderManagementPageContent() {
                                         event.target.value as OrderStatusValue
                                       );
                                     }}
-                                    className={`h-8 rounded-full border px-3 text-[10px] font-semibold tracking-[0.8px] outline-none ${getOrderStatusClassName(order.status)} ${
-                                      updatingOrderId === order.id
+                                    className={`h-8 rounded-full border px-3 text-[10px] font-semibold tracking-[0.8px] outline-none ${getOrderStatusClassName(order.status)} ${updatingOrderId === order.id
                                         ? "cursor-not-allowed opacity-70"
                                         : ""
-                                    }`}
+                                      }`}
                                   >
                                     {ORDER_STATUS_VALUES.map((statusValue) => (
                                       <option

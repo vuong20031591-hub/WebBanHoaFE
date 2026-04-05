@@ -4,6 +4,27 @@ export interface ApiError {
   status?: number;
 }
 
+export interface AdminUserDTO {
+  id: number;
+  email: string;
+  fullName: string;
+  phone: string;
+  role: string;
+}
+
+export type CollaboratorBadge = "STAFF" | "ADMIN";
+
+export interface AdminCollaboratorDTO {
+  id: number;
+  email: string;
+  fullName: string;
+  phone: string;
+  role: string;
+  badge: CollaboratorBadge;
+  positionTitle: string;
+  positionDescription: string | null;
+}
+
 export interface PagedResponse<T> {
   content: T[];
   totalElements: number;
@@ -103,6 +124,8 @@ export interface OrderItemDTO {
 export interface OrderDTO {
   id: number;
   userId: string;
+  userFullName?: string | null;
+  userEmail?: string | null;
   totalAmount: number;
   redeemedPoints: number;
   rewardsDiscountAmount: number;
