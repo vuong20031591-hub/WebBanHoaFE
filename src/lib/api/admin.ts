@@ -25,6 +25,8 @@ export interface AdminOrderQueryParams {
 
 export interface AdminUserQueryParams {
   role?: "USER" | "ADMIN";
+  page?: number;
+  size?: number;
 }
 
 export interface InviteCollaboratorPayload {
@@ -136,8 +138,8 @@ export const adminProductsApi = {
 };
 
 export const adminUsersApi = {
-  async getUsers(params: AdminUserQueryParams = {}): Promise<AdminUserDTO[]> {
-    const { data } = await apiClient.get<AdminUserDTO[]>("/api/admin/users", {
+  async getUsers(params: AdminUserQueryParams = {}): Promise<PagedResponse<AdminUserDTO>> {
+    const { data } = await apiClient.get<PagedResponse<AdminUserDTO>>("/api/admin/users", {
       params,
       headers: ADMIN_HEADERS,
     });
