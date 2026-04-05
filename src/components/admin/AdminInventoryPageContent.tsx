@@ -1063,14 +1063,13 @@ export function AdminInventoryPageContent() {
                 { icon: LayoutDashboard, label: "Dashboard", href: "/admin", active: false },
                 { icon: ClipboardList, label: "Orders", href: "/admin/orders", active: false },
                 { icon: Package2, label: "Products", href: "/admin/products", active: true },
-                { icon: Users, label: "Customers", active: false },
-                { icon: Settings, label: "Settings", active: false },
+                { icon: Users, label: "Customers", href: "/admin/customers", active: false },
+                { icon: Settings, label: "Settings", href: "/admin/settings", active: false },
               ].map((item) => {
-                const className = `flex w-full items-center gap-3 rounded-full px-4 py-3 text-left text-[13px] transition-colors ${
-                  item.active
+                const className = `flex w-full items-center gap-3 rounded-full px-4 py-3 text-left text-[13px] transition-colors ${item.active
                     ? "bg-[#8d6030] text-white"
                     : "text-[#4a433c] hover:bg-[#f1ede7]"
-                }`;
+                  }`;
 
                 if (item.href) {
                   return (
@@ -1165,11 +1164,10 @@ export function AdminInventoryPageContent() {
                       key={label}
                       type="button"
                       onClick={() => setActiveCategory(label)}
-                      className={`rounded-full px-4 py-2 text-[11px] transition-colors ${
-                        activeCategory === label
+                      className={`rounded-full px-4 py-2 text-[11px] transition-colors ${activeCategory === label
                           ? "bg-[#ece8e3] text-[#4f4841]"
                           : "text-[#6a625b] hover:bg-[#f2ede8]"
-                      }`}
+                        }`}
                     >
                       {label === "ALL" ? "All Elements" : label}
                     </button>
@@ -1397,9 +1395,8 @@ export function AdminInventoryPageContent() {
                               <td className="px-5 py-3 font-medium">{log.item}</td>
                               <td className="px-2 py-3 text-[#6f6861]">{log.reference}</td>
                               <td
-                                className={`px-2 py-3 font-medium ${
-                                  log.isNegative ? "text-[#b63f3f]" : "text-[#4f6951]"
-                                }`}
+                                className={`px-2 py-3 font-medium ${log.isNegative ? "text-[#b63f3f]" : "text-[#4f6951]"
+                                  }`}
                               >
                                 {log.adjustment}
                               </td>

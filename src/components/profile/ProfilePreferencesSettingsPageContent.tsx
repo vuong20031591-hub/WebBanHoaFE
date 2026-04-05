@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { ChatLive, Footer, Navbar } from "@/components/layout";
 import {
-  ProfilePreferencesGiftingSection,
   ProfilePreferencesRegionalSection,
   ProfileRewardsCard,
   ProfileSettingsNavItem,
@@ -75,29 +74,6 @@ const REGIONAL_SECTION: ProfilePreferencesRegionalSection = {
   ],
 };
 
-const GIFTING_SECTION: ProfilePreferencesGiftingSection = {
-  title: "Gifting Preferences",
-  toggles: [
-    {
-      id: "signature_wrap",
-      label: "Signature Gift Wrap",
-      description: "Always include our premium boutique wrapping.",
-      enabled: true,
-    },
-    {
-      id: "eco_delivery",
-      label: "Eco-Friendly Delivery",
-      description: "Minimize packaging where possible.",
-      enabled: false,
-    },
-  ],
-  preview: {
-    image: "/images/gallery-photo.png",
-    alt: "Curated floral gift presentation preview",
-    label: "CURATED GIFT PRESENTATION",
-  },
-};
-
 export function ProfilePreferencesSettingsPageContent() {
   const { user, loading } = useAuth();
 
@@ -150,7 +126,6 @@ export function ProfilePreferencesSettingsPageContent() {
                 />
                 <ProfilePreferencesSettingsForm
                   regionalSection={REGIONAL_SECTION}
-                  giftingSection={GIFTING_SECTION}
                   saveLabel="Save Changes"
                   resetLabel="Reset to Default"
                 />

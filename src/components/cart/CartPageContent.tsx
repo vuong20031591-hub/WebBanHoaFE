@@ -2,11 +2,10 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { ChatLive, Footer, Navbar } from "@/components/layout";
-import { CartItem, CartNote, useCartStore, cartSyncEngine } from "@/lib/cart";
+import { CartItem, useCartStore, cartSyncEngine } from "@/lib/cart";
 import { productsApi } from "@/lib/api";
 import { mapProductDTOsToProducts } from "@/lib/mappers";
 import { CartItemsTable } from "./CartItemsTable";
-import { CartNoteCard } from "./CartNoteCard";
 import { CartRecommendations } from "./CartRecommendations";
 import { CartSummary } from "./CartSummary";
 import { CartRecommendation } from "./constants";
@@ -32,11 +31,8 @@ export function CartPageContent() {
     () => false
   );
   const variants = useCartStore((state) => state.variants);
-  const note = useCartStore((state) => state.note);
   const updateQuantity = useCartStore((state) => state.updateQuantity);
   const removeItem = useCartStore((state) => state.removeItem);
-  const setNote = useCartStore((state) => state.setNote);
-  const clearNote = useCartStore((state) => state.clearNote);
 
   const displayItems = hydrated ? variants : EMPTY_ITEMS;
   const hasItems = displayItems.length > 0;
@@ -98,10 +94,6 @@ export function CartPageContent() {
     removeItem(item.localId);
   };
 
-  const handleSaveNote = (nextNote: CartNote) => {
-    setNote(nextNote);
-  };
-
   const handleRetry = (productId: number) => {
     cartSyncEngine.retryProduct(productId);
   };
@@ -131,13 +123,6 @@ export function CartPageContent() {
                   onRemove={handleRemove}
                   onRetry={handleRetry}
                 />
-                {hasItems ? (
-                  <CartNoteCard
-                    note={note}
-                    onClear={clearNote}
-                    onSave={handleSaveNote}
-                  />
-                ) : null}
               </div>
               <CartSummary
                 hasItems={hasItems}
