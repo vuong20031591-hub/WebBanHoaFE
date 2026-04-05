@@ -1,1 +1,1 @@
-export type PaymentMethod = "vietqr" | "sepay" | "cod";
+export type PaymentMethod = "vietqr" | "cod";

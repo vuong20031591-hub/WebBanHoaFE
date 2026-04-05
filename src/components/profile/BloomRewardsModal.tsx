@@ -76,6 +76,11 @@ export function BloomRewardsModal({ isOpen, onClose }: BloomRewardsModalProps) {
         >
           Bloom Rewards
         </h2>
+        <p className="mt-3 max-w-[560px] text-[14px] leading-6 text-[#78716c]">
+          Your Bloom Rewards balance is made up of loyalty points from your account.
+          You can review the balance here and apply points directly at checkout. This
+          is not a separate promo code system.
+        </p>
 
         {loading ? (
           <div className="mt-8 h-[400px] animate-pulse rounded-[16px] bg-[#f5f5f4]" />
@@ -85,7 +90,7 @@ export function BloomRewardsModal({ isOpen, onClose }: BloomRewardsModalProps) {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[12px] font-medium uppercase tracking-[1.2px] text-[#a8a29e]">
-                    Available Points
+                    Available Reward Points
                   </p>
                   <p className="mt-1 text-[36px] font-light leading-none text-[#2d2a26]">
                     {rewards.points}
@@ -123,31 +128,32 @@ export function BloomRewardsModal({ isOpen, onClose }: BloomRewardsModalProps) {
 
             <div className="mt-8">
               <h3 className="text-[18px] font-medium text-[#2d2a26]">
-                Tier Benefits
+                How Points Work
               </h3>
               <div className="mt-4 space-y-3">
                 <div className="rounded-[12px] bg-[#f5f5f4] p-4">
                   <p className="text-[14px] font-medium text-[#cd7f32]">
-                    Bronze
+                    Point value
                   </p>
                   <p className="mt-1 text-[12px] text-[#5c6b5e]">
-                    Earn 1 point per $1 spent
+                    1 Bloom Rewards point = 1,000 VND applied at checkout.
                   </p>
                 </div>
                 <div className="rounded-[12px] bg-[#f5f5f4] p-4">
                   <p className="text-[14px] font-medium text-[#c0c0c0]">
-                    Silver (500+ points)
+                    When points are earned
                   </p>
                   <p className="mt-1 text-[12px] text-[#5c6b5e]">
-                    Earn 1.5 points per $1 + Free delivery
+                    Points are added after an order is confirmed by the system.
                   </p>
                 </div>
                 <div className="rounded-[12px] bg-[#f5f5f4] p-4">
                   <p className="text-[14px] font-medium text-[#d4af37]">
-                    Gold (1500+ points)
+                    Tier milestones
                   </p>
                   <p className="mt-1 text-[12px] text-[#5c6b5e]">
-                    Earn 2 points per $1 + Free delivery + Exclusive access
+                    Bronze starts below 500 lifetime points, Silver starts at 500,
+                    and Gold starts at 1,500.
                   </p>
                 </div>
               </div>

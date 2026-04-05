@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Minus, Plus, ShoppingBag, AlertCircle, RefreshCw } from "lucide-react";
 import { CartItem, useCartStore } from "@/lib/cart";
 import { formatCurrency } from "@/lib/currency";
+import { useLocale } from "@/src/contexts";
 import { getCartItemVariant } from "./constants";
 import { DEFAULT_PRODUCT_IMAGE } from "@/lib/mappers/product";
 
@@ -51,7 +52,37 @@ export function CartItemsTable({
   onRemove,
   onRetry,
 }: CartItemsTableProps) {
+  const { locale } = useLocale();
   const getSyncEntry = useCartStore((state) => state.getSyncEntry);
+
+  const copy =
+    locale === "vi"
+      ? {
+          selectedBlooms: "Hoa da chon",
+          quantity: "So luong",
+          total: "Tong",
+          emptyTitle: "Gio hang dang trong",
+          emptySubtitle: "Them vai mau hoa de bat dau don hang cua ban.",
+          explore: "Kham pha hoa",
+          syncFailed: "Dong bo that bai",
+          retry: "Thu lai",
+          decrease: "Giam so luong cho",
+          increase: "Tang so luong cho",
+          remove: "Xoa",
+        }
+      : {
+          selectedBlooms: "Selected Blooms",
+          quantity: "Quantity",
+          total: "Total",
+          emptyTitle: "Your cart is resting",
+          emptySubtitle: "Add a few arrangements to bring this editorial cart layout to life.",
+          explore: "Explore Blooms",
+          syncFailed: "Sync failed",
+          retry: "Retry",
+          decrease: "Decrease quantity for",
+          increase: "Increase quantity for",
+          remove: "Remove",
+        };
 
   return (
     <section className="overflow-hidden bg-transparent">
@@ -60,19 +91,19 @@ export function CartItemsTable({
           className="pl-1 text-[18px] leading-[28px] text-[var(--color-cart-ink)]"
           style={{ fontFamily: "var(--font-cormorant)" }}
         >
-          Selected Blooms
+          {copy.selectedBlooms}
         </p>
         <p
           className="text-center text-[18px] leading-[28px] text-[var(--color-cart-ink)]"
           style={{ fontFamily: "var(--font-cormorant)" }}
         >
-          Quantity
+          {copy.quantity}
         </p>
         <p
           className="text-right text-[18px] leading-[28px] text-[var(--color-cart-ink)]"
           style={{ fontFamily: "var(--font-cormorant)" }}
         >
-          Total
+          {copy.total}
         </p>
       </div>
       <div className="pt-0 md:pt-0">
@@ -88,14 +119,13 @@ export function CartItemsTable({
                 className="text-[32px] leading-none text-[var(--color-cart-ink)]"
                 style={{ fontFamily: "var(--font-cormorant)" }}
               >
-                Your cart is resting
+                {copy.emptyTitle}
               </h2>
               <p
                 className="mx-auto max-w-md text-[14px] leading-7 text-[rgba(58,53,50,0.65)]"
                 style={{ fontFamily: "var(--font-inter)" }}
               >
-                Add a few arrangements to bring this editorial cart layout to
-                life.
+                {copy.emptySubtitle}
               </p>
             </div>
             <Link
@@ -103,7 +133,7 @@ export function CartItemsTable({
               className="rounded-full border border-[rgba(201,166,148,0.45)] px-6 py-3 text-[11px] uppercase tracking-[1.8px] text-[var(--color-cart-ink)] transition hover:bg-[rgba(201,166,148,0.08)]"
               style={{ fontFamily: "var(--font-inter)" }}
             >
-              Explore Blooms
+              {copy.explore}
             </Link>
           </div>
         ) : (
@@ -141,13 +171,13 @@ export function CartItemsTable({
                       className="text-[10px] uppercase tracking-[1.5px] text-[rgba(138,109,93,0.7)]"
                       style={{ fontFamily: "var(--font-inter)" }}
                     >
-                      {getCartItemVariant(item)}
+                      {getCartItemVariant(item, locale)}
                     </p>
                     {hasError && (
                       <div className="flex items-center gap-2 mt-1">
                         <AlertCircle className="h-3 w-3 text-red-500" />
                         <span className="text-[10px] text-red-500" style={{ fontFamily: "var(--font-inter)" }}>
-                          Sync failed
+                          {copy.syncFailed}
                         </span>
                         {onRetry && (
                           <button
@@ -157,7 +187,7 @@ export function CartItemsTable({
                             style={{ fontFamily: "var(--font-inter)" }}
                           >
                             <RefreshCw className="h-3 w-3" />
-                            Retry
+                            {copy.retry}
                           </button>
                         )}
                       </div>
@@ -169,14 +199,14 @@ export function CartItemsTable({
                     className="text-[10px] uppercase tracking-[1.5px] text-[rgba(138,109,93,0.6)] md:hidden"
                     style={{ fontFamily: "var(--font-inter)" }}
                   >
-                    Quantity
+                    {copy.quantity}
                   </span>
                   <div className="inline-flex items-center gap-4">
                     <button
                       type="button"
                       onClick={() => onDecrease(item)}
                       className="text-[var(--color-cart-ink)] transition hover:text-[var(--color-cart-gold)]"
-                      aria-label={`Decrease quantity for ${item.productName}`}
+                      aria-label={`${copy.decrease} ${item.productName}`}
                     >
                       <Minus className="h-[9px] w-[9px]" strokeWidth={0.75} />
                     </button>
@@ -190,7 +220,7 @@ export function CartItemsTable({
                       type="button"
                       onClick={() => onIncrease(item)}
                       className="text-[var(--color-cart-ink)] transition hover:text-[var(--color-cart-gold)]"
-                      aria-label={`Increase quantity for ${item.productName}`}
+                      aria-label={`${copy.increase} ${item.productName}`}
                     >
                       <Plus className="h-[9px] w-[9px]" strokeWidth={1} />
                     </button>
@@ -201,13 +231,13 @@ export function CartItemsTable({
                     className="text-[10px] uppercase tracking-[1.5px] text-[rgba(138,109,93,0.6)] md:hidden"
                     style={{ fontFamily: "var(--font-inter)" }}
                   >
-                    Total
+                    {copy.total}
                   </span>
                   <p
                     className="text-[14px] font-medium leading-[20px] tracking-[0.35px] text-[var(--color-cart-ink)]"
                     style={{ fontFamily: "var(--font-inter)" }}
                   >
-                    {formatCurrency(item.price * item.quantity)}
+                    {formatCurrency(item.price * item.quantity, locale)}
                   </p>
                   <button
                     type="button"
@@ -215,7 +245,7 @@ export function CartItemsTable({
                     className="text-[9px] uppercase tracking-[0.9px] text-[var(--color-cart-gold)] transition hover:text-[var(--color-cart-warm)]"
                     style={{ fontFamily: "var(--font-inter)" }}
                   >
-                    Remove
+                    {copy.remove}
                   </button>
                 </div>
               </article>

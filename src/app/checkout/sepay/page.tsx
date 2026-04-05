@@ -1,10 +1,5 @@
-import { Suspense } from "react";
-import { QrPaymentPageContent } from "@/components/checkout";
+import { redirect } from "next/navigation";
 
 export default function CheckoutSePayPage() {
-  return (
-    <Suspense fallback={null}>
-      <QrPaymentPageContent provider="SEPAY" />
-    </Suspense>
-  );
+  redirect("/checkout");
 }

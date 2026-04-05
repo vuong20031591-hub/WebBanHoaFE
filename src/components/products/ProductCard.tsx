@@ -1,17 +1,24 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Heart, Plus } from "lucide-react";
 import { Product } from "@/lib/products";
 import { createCartItem, useCartStore } from "@/lib/cart";
 import { formatCurrency } from "@/lib/currency";
 import { DEFAULT_PRODUCT_IMAGE } from "@/lib/mappers/product";
 import { useFavoritesStore } from "@/lib/favorites";
+import { useAuth, useLocale } from "@/src/contexts";
 
 interface ProductCardProps {
   product: Product;
 }
 
 export function ProductCard({ product }: ProductCardProps) {
+  const router = useRouter();
+  const { locale, t } = useLocale();
+  const { user } = useAuth();
   const safeImage = product.image || DEFAULT_PRODUCT_IMAGE;
   const addItem = useCartStore((state) => state.addItem);
   const liked = useFavoritesStore((state) =>
@@ -25,6 +32,11 @@ export function ProductCard({ product }: ProductCardProps) {
   );
 
   const handleAddToCart = () => {
+    if (!user) {
+      router.push("/signin");
+      return;
+    }
+
     addItem(createCartItem(product, { 
       availableStock: product.stockQuantity ?? null 
     }));
@@ -75,7 +87,7 @@ export function ProductCard({ product }: ProductCardProps) {
           className="text-[#5c6b5e] text-[18px] font-light leading-[28px] text-center mt-1"
           style={{ fontFamily: "var(--font-noto-serif)" }}
         >
-          {formatCurrency(product.price)}
+          {formatCurrency(product.price, locale)}
         </p>
         <button
           type="button"
@@ -85,7 +97,11 @@ export function ProductCard({ product }: ProductCardProps) {
         >
           <Plus className="w-5 h-5 text-[#d0bb95]" />
           <span className="text-[#d0bb95] text-[12px] font-bold tracking-[1.2px] uppercase">
-            {cartQuantity > 0 ? `In Cart (${cartQuantity})` : "Move to Cart"}
+            {!user
+              ? t("products.card.signInToAdd")
+              : cartQuantity > 0
+                ? `${t("products.card.inCart")} (${cartQuantity})`
+                : t("products.card.moveToCart")}
           </span>
         </button>
       </div>

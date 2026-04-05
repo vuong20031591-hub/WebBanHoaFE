@@ -13,16 +13,7 @@ import {
   setPrimaryAddress,
   updateAddress,
 } from "@/lib/api";
-import { ProfileTab } from "@/lib/profile/types";
 import { useAuth } from "@/src/contexts";
-import { ProfileTabs } from "./ProfileTabs";
-
-const PROFILE_TABS: ProfileTab[] = [
-  { id: "orders", label: "My Orders", href: "/profile", active: false },
-  { id: "favorites", label: "Favorites", href: "/profile/favorites", active: false },
-  { id: "settings", label: "Settings", href: "/profile/settings", active: false },
-  { id: "addresses", label: "Addresses", href: "/profile/addresses", active: true },
-];
 
 type AddressFormState = {
   fullName: string;
@@ -272,9 +263,6 @@ export function ProfileAddressesPageContent() {
                 Manage shipping addresses for faster checkout.
               </p>
             </header>
-
-            <ProfileTabs tabs={PROFILE_TABS} />
-
             {authLoading || loadingAddresses ? (
               <div className="mt-12 h-[320px] rounded-[32px] bg-white/60 animate-pulse" />
             ) : !user ? (

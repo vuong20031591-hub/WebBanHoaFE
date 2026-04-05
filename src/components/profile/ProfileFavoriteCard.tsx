@@ -3,9 +3,11 @@
 import Image from "next/image";
 import { Heart, Plus } from "lucide-react";
 import { CartItem, useCartStore } from "@/lib/cart";
+import { formatCurrency } from "@/lib/currency";
 import { DEFAULT_PRODUCT_IMAGE } from "@/lib/mappers/product";
 import { useFavoritesStore } from "@/lib/favorites";
 import { ProfileFavorite } from "@/lib/profile/types";
+import { useLocale } from "@/src/contexts";
 
 const DEFAULT_CART_QUANTITY = 1;
 const DEFAULT_CART_SIZE: CartItem["size"] = "deluxe";
@@ -15,6 +17,7 @@ interface ProfileFavoriteCardProps {
 }
 
 export function ProfileFavoriteCard({ item }: ProfileFavoriteCardProps) {
+  const { locale, t } = useLocale();
   const addItem = useCartStore((state) => state.addItem);
   const removeFavorite = useFavoritesStore((state) => state.removeFavorite);
   const safeImage = item.image || DEFAULT_PRODUCT_IMAGE;
@@ -48,7 +51,7 @@ export function ProfileFavoriteCard({ item }: ProfileFavoriteCardProps) {
           type="button"
           onClick={() => removeFavorite(item.productId)}
           className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-[rgba(255,255,255,0.9)] shadow-sm backdrop-blur-sm hover:scale-110 transition-transform"
-          aria-label={`Remove ${item.name} from favorites`}
+          aria-label={t("profile.favorites.removeAria").replace("{name}", item.name)}
         >
           <Heart className="h-5 w-5 fill-[#f5d5d9] text-[#f5d5d9]" />
         </button>
@@ -66,10 +69,7 @@ export function ProfileFavoriteCard({ item }: ProfileFavoriteCardProps) {
           className="mt-1 text-center text-[18px] font-light leading-7 text-[#5c6b5e]"
           style={{ fontFamily: "var(--font-noto-serif)" }}
         >
-          {new Intl.NumberFormat("en-US", {
-            style: "currency",
-            currency: "USD",
-          }).format(item.price)}
+          {formatCurrency(item.price, locale)}
         </p>
 
         <button
@@ -79,7 +79,7 @@ export function ProfileFavoriteCard({ item }: ProfileFavoriteCardProps) {
         >
           <Plus className="h-5 w-5" />
           <span className="text-[12px] font-bold uppercase tracking-[1.2px]">
-            Move to Cart
+            {t("profile.favorites.moveToCart")}
           </span>
         </button>
       </div>

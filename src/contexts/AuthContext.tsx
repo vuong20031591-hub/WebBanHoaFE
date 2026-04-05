@@ -28,6 +28,34 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function describeAuthError(error: unknown): string {
+  if (typeof error === "string" && error.trim()) {
+    return error;
+  }
+
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+
+  if (error && typeof error === "object") {
+    const maybeMessage = "message" in error ? error.message : undefined;
+    if (typeof maybeMessage === "string" && maybeMessage.trim()) {
+      return maybeMessage;
+    }
+
+    try {
+      const serialized = JSON.stringify(error);
+      if (serialized && serialized !== "{}") {
+        return serialized;
+      }
+    } catch {
+      return "Unknown authentication error";
+    }
+  }
+
+  return "Unknown authentication error";
+}
+
 async function triggerCartMerge(userId: string) {
   try {
     cartSyncEngine.setMerging(true);
@@ -66,12 +94,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const prevUserIdRef = useRef<string | null>(null);
+  const lastExchangedSupabaseTokenRef = useRef<string | null>(null);
+  const pendingSupabaseTokenRef = useRef<string | null>(null);
+  const oauthExchangeInFlightRef = useRef<Promise<void> | null>(null);
 
   const exchangeSupabaseTokenForBackendToken = async (supabaseAccessToken: string) => {
-    const response = await authApi.loginWithGoogleToken(supabaseAccessToken);
-    setToken(response.accessToken, true);
-    setUser(response.user);
-    prevUserIdRef.current = String(response.user.id);
+    if (
+      lastExchangedSupabaseTokenRef.current === supabaseAccessToken &&
+      getToken()
+    ) {
+      return;
+    }
+
+    if (
+      oauthExchangeInFlightRef.current &&
+      pendingSupabaseTokenRef.current === supabaseAccessToken
+    ) {
+      await oauthExchangeInFlightRef.current;
+      return;
+    }
+
+    pendingSupabaseTokenRef.current = supabaseAccessToken;
+
+    const exchangePromise = (async () => {
+      const response = await authApi.loginWithGoogleToken(supabaseAccessToken);
+      setToken(response.accessToken, true);
+      setUser(response.user);
+      prevUserIdRef.current = String(response.user.id);
+      lastExchangedSupabaseTokenRef.current = supabaseAccessToken;
+    })();
+
+    oauthExchangeInFlightRef.current = exchangePromise;
+
+    try {
+      await exchangePromise;
+    } finally {
+      if (pendingSupabaseTokenRef.current === supabaseAccessToken) {
+        pendingSupabaseTokenRef.current = null;
+      }
+
+      if (oauthExchangeInFlightRef.current === exchangePromise) {
+        oauthExchangeInFlightRef.current = null;
+      }
+    }
   };
 
   useEffect(() => {
@@ -87,6 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           } catch (error) {
             console.warn("Stored backend token is invalid, falling back to Supabase session:", error);
             clearToken();
+            lastExchangedSupabaseTokenRef.current = null;
           }
         }
 
@@ -96,8 +162,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
       } catch (error) {
-        console.error("Failed to initialize auth:", error);
+        console.warn("Failed to initialize auth:", describeAuthError(error));
         clearToken();
+        lastExchangedSupabaseTokenRef.current = null;
       } finally {
         setLoading(false);
       }
@@ -112,17 +179,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } = authService.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT") {
         clearToken();
+        useCartStore.getState().clearCart();
+        lastExchangedSupabaseTokenRef.current = null;
+        pendingSupabaseTokenRef.current = null;
         setUser(null);
         return;
       }
 
-      if (session?.access_token) {
+      if (
+        session?.access_token &&
+        (event === "SIGNED_IN" || event === "TOKEN_REFRESHED")
+      ) {
         void (async () => {
           try {
             await exchangeSupabaseTokenForBackendToken(session.access_token);
           } catch (error) {
-            console.error("Google OAuth exchange failed:", error);
+            console.warn("Google OAuth exchange failed:", describeAuthError(error));
             clearToken();
+            lastExchangedSupabaseTokenRef.current = null;
             setUser(null);
           }
         })();
@@ -154,7 +228,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (!nextUserId && prevUserId) {
       console.log(`Logout: clearing sync state`);
-      useCartStore.getState().clearSyncState();
+      useCartStore.getState().clearCart();
     }
 
     prevUserIdRef.current = nextUserId;
@@ -204,6 +278,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.warn("Supabase sign out failed:", error);
     } finally {
       clearToken();
+      useCartStore.getState().clearCart();
       setUser(null);
       setLoading(false);
     }

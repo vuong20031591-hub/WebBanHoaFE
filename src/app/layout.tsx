@@ -8,7 +8,7 @@ import {
   Pinyon_Script,
 } from "next/font/google";
 import "./globals.css";
-import { AuthProvider } from "@/src/contexts";
+import { AuthProvider, LocaleProvider } from "@/src/contexts";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -56,7 +56,9 @@ export default function RootLayout({
         suppressHydrationWarning
         className={`${inter.variable} ${notoSerif.variable} ${cormorantGaramond.variable} ${pinyonScript.variable} ${montserrat.variable} antialiased`}
       >
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <LocaleProvider>{children}</LocaleProvider>
+        </AuthProvider>
       </body>
     </html>
   );

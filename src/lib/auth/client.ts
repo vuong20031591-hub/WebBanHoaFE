@@ -1,9 +1,11 @@
 import axios from "axios";
-import { apiClient } from "@/lib/api/client";
+import { apiClient, extractApiErrorMessage } from "@/lib/api/client";
+import type { ApiError } from "@/lib/api/types";
 import type {
   AuthUser,
   ChangePasswordRequest,
   ForgotPasswordRequest,
+  ForgotPasswordResponse,
   LoginRequest,
   LoginResponse,
   RegisterRequest,
@@ -21,6 +23,23 @@ const authClient = axios.create({
   },
   timeout: 5000,
 });
+
+authClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (!axios.isAxiosError(error)) {
+      return Promise.reject(error);
+    }
+
+    const apiError: ApiError = {
+      message: extractApiErrorMessage(error),
+      code: error.response?.data?.code,
+      status: error.response?.status,
+    };
+
+    return Promise.reject(apiError);
+  }
+);
 
 async function retryWithBackoff<T>(
   fn: () => Promise<T>,
@@ -96,8 +115,9 @@ export const authApi = {
     await apiClient.post("/api/auth/change-password", data);
   },
 
-  async requestForgotPasswordCode(data: ForgotPasswordRequest): Promise<void> {
-    await authClient.post("/api/auth/forgot-password/request", data);
+  async requestForgotPasswordCode(data: ForgotPasswordRequest): Promise<ForgotPasswordResponse> {
+    const response = await authClient.post<ForgotPasswordResponse>("/api/auth/forgot-password/request", data);
+    return response.data;
   },
 
   async resetPasswordWithCode(data: ResetPasswordWithCodeRequest): Promise<void> {

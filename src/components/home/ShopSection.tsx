@@ -6,6 +6,7 @@ import Link from "next/link";
 import { categoriesApi, isApiError } from "@/lib/api";
 import { Category } from "@/lib/categories";
 import { mapCategoryDTOsToCategories } from "@/lib/mappers";
+import { useLocale } from "@/src/contexts";
 
 const CATEGORY_IMAGES = [
   "/images/birthday.png",
@@ -14,9 +15,25 @@ const CATEGORY_IMAGES = [
 ] as const;
 
 export function ShopSection() {
+  const { locale } = useLocale();
   const [categories, setCategories] = useState<Category[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const copy =
+    locale === "vi"
+      ? {
+          badge: "CHỌN KHOẢNH KHẮC CỦA BẠN",
+          title: "Mua theo danh mục",
+          fallbackError: "Hiện không thể tải danh mục.",
+          unavailableTitle: "Danh mục tạm thời chưa khả dụng",
+        }
+      : {
+          badge: "CHOOSE YOUR MOMENT",
+          title: "Shop by Category",
+          fallbackError: "Unable to load categories right now.",
+          unavailableTitle: "Categories unavailable",
+        };
 
   useEffect(() => {
     let active = true;
@@ -39,7 +56,7 @@ export function ShopSection() {
         setError(
           isApiError(fetchError)
             ? fetchError.message
-            : "Unable to load categories right now."
+            : copy.fallbackError
         );
       } finally {
         if (active) {
@@ -53,7 +70,7 @@ export function ShopSection() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [copy.fallbackError]);
 
   return (
     <section className="bg-[#f7f3ed] py-24">
@@ -63,13 +80,13 @@ export function ShopSection() {
             className="text-[#d0bb95] text-[16px] font-bold tracking-[2px] uppercase mb-[10px]"
             style={{ fontFamily: "var(--font-inter)" }}
           >
-            CHOOSE YOUR MOMENT
+            {copy.badge}
           </p>
           <h2
             className="text-[#2d2a26] text-[48px] font-light leading-[48px]"
             style={{ fontFamily: "var(--font-noto-serif)" }}
           >
-            Shop by Category
+            {copy.title}
           </h2>
         </div>
         {loading ? (
@@ -87,7 +104,7 @@ export function ShopSection() {
               className="text-[#2d2a26] text-[24px] font-light leading-8"
               style={{ fontFamily: "var(--font-noto-serif)" }}
             >
-              Categories unavailable
+              {copy.unavailableTitle}
             </p>
             <p className="mt-3 text-[14px] leading-6 text-[#5c6b5e]">
               {error}

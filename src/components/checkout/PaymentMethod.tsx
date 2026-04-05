@@ -1,7 +1,8 @@
 "use client";
 
-import { Banknote, QrCode, WalletCards } from "lucide-react";
+import { Banknote, QrCode } from "lucide-react";
 import type { PaymentMethod as PaymentMethodType } from "@/lib/checkout/types";
+import { useLocale } from "@/src/contexts";
 
 interface PaymentMethodProps {
   onSelect: (method: PaymentMethodType) => void;
@@ -21,12 +22,6 @@ const PAYMENT_OPTIONS: Array<{
     Icon: QrCode,
   },
   {
-    id: "sepay",
-    label: "SePay",
-    caption: "Hosted transfer checkout",
-    Icon: WalletCards,
-  },
-  {
     id: "cod",
     label: "COD",
     caption: "Pay when receiving flowers",
@@ -35,9 +30,29 @@ const PAYMENT_OPTIONS: Array<{
 ];
 
 export function PaymentMethod({ onSelect, value }: PaymentMethodProps) {
+  const { locale } = useLocale();
   const handleSelect = (method: PaymentMethodType) => {
     onSelect(method);
   };
+
+  const copy =
+    locale === "vi"
+      ? {
+          title: "Phuong thuc thanh toan",
+          secure: "BAO MAT",
+          options: {
+            vietqr: "Quet bang ung dung ngan hang",
+            cod: "Thanh toan khi nhan hoa",
+          },
+        }
+      : {
+          title: "Payment Method",
+          secure: "SECURE",
+          options: {
+            vietqr: "Scan with any banking app",
+            cod: "Pay when receiving flowers",
+          },
+        };
 
   return (
     <div className="space-y-16">
@@ -46,7 +61,7 @@ export function PaymentMethod({ onSelect, value }: PaymentMethodProps) {
           className="text-[24px] font-medium leading-[32px] text-[#2c2825]"
           style={{ fontFamily: "var(--font-cormorant)" }}
         >
-          Payment Method
+          {copy.title}
         </h2>
 
         <div className="flex items-center gap-2">
@@ -66,13 +81,13 @@ export function PaymentMethod({ onSelect, value }: PaymentMethodProps) {
             className="text-[10px] font-bold leading-[15px] tracking-[1px] text-[#3a3532]"
             style={{ fontFamily: "var(--font-inter)" }}
           >
-            SECURE
+            {copy.secure}
           </span>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        {PAYMENT_OPTIONS.map(({ id, label, caption, Icon }) => {
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {PAYMENT_OPTIONS.map(({ id, label, Icon }) => {
           const isActive = value === id;
 
           return (
@@ -104,7 +119,7 @@ export function PaymentMethod({ onSelect, value }: PaymentMethodProps) {
                   className="mt-1 text-[11px] leading-5 text-[#8b7c72]"
                   style={{ fontFamily: "var(--font-inter)" }}
                 >
-                  {caption}
+                  {id === "vietqr" ? copy.options.vietqr : copy.options.cod}
                 </p>
               </div>
             </button>

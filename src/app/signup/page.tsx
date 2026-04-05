@@ -14,6 +14,13 @@ import {
 } from "lucide-react";
 import { Navbar, Footer } from "@/components/layout";
 import { useAuth } from "@/src/contexts/AuthContext";
+import { useLocale } from "@/src/contexts";
+import {
+  getPasswordValidationMessage,
+  getPasswordRequirementsMessage,
+  getPhoneValidationMessage,
+  normalizePhoneInput,
+} from "@/lib/auth/validation";
 
 /* ─────────────────────────────────────────────
    Google Icon SVG
@@ -46,6 +53,7 @@ function GoogleIcon() {
 ───────────────────────────────────────────── */
 function SignUpForm() {
   const router = useRouter();
+  const { locale } = useLocale();
   const { user, loading: authLoading, signUp, signInWithGoogle } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -57,6 +65,65 @@ function SignUpForm() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const normalizedError = error.toLowerCase();
+  const emailConflictMessage = normalizedError.includes("email")
+    ? error
+    : "";
+  const phoneConflictMessage =
+    normalizedError.includes("phone") || normalizedError.includes("số điện thoại")
+      ? error
+      : "";
+  const phoneValidationMessage = phone ? getPhoneValidationMessage(phone, locale) : null;
+  const passwordValidationMessage = password
+    ? getPasswordValidationMessage(password, locale)
+    : null;
+
+  const copy =
+    locale === "vi"
+      ? {
+          title: "Tạo tài khoản",
+          fullNameLabel: "Họ và tên",
+          emailLabel: "Địa chỉ email",
+          phoneLabel: "Số điện thoại",
+          passwordLabel: "Mật khẩu",
+          confirmPasswordLabel: "Xác nhận mật khẩu",
+          fullNamePlaceholder: "Diamond",
+          emailPlaceholder: "hotmail@gmail.com",
+          phonePlaceholder: "0355999999",
+          passwordMismatch: "Mật khẩu xác nhận không khớp",
+          accountCreated: "Tạo tài khoản thành công",
+          registrationFailed: "Đăng ký thất bại",
+          googleSignUpFailed: "Đăng ký bằng Google thất bại",
+          submit: "Tạo tài khoản",
+          submitting: "Đang tạo tài khoản...",
+          divider: "Hoặc đăng ký với",
+          redirecting: "Đang chuyển hướng...",
+          alreadyHaveAccount: "Bạn đã có tài khoản?",
+          signIn: "Đăng nhập",
+          phoneHint: "Sử dụng số điện thoại Việt Nam hợp lệ gồm 10 chữ số.",
+        }
+      : {
+          title: "Create Account",
+          fullNameLabel: "Full Name",
+          emailLabel: "Email Address",
+          phoneLabel: "Phone Number",
+          passwordLabel: "Password",
+          confirmPasswordLabel: "Confirm Password",
+          fullNamePlaceholder: "Diamond",
+          emailPlaceholder: "hotmail@gmail.com",
+          phonePlaceholder: "0355999999",
+          passwordMismatch: "Passwords do not match",
+          accountCreated: "Account created successfully",
+          registrationFailed: "Registration failed",
+          googleSignUpFailed: "Google sign up failed",
+          submit: "Create Account",
+          submitting: "Creating Account...",
+          divider: "Or sign up with",
+          redirecting: "Redirecting...",
+          alreadyHaveAccount: "Already have an account?",
+          signIn: "Sign in",
+          phoneHint: "Use a valid 10-digit Vietnamese phone number.",
+        };
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -69,22 +136,43 @@ function SignUpForm() {
     setError("");
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
+      setError(copy.passwordMismatch);
       return;
     }
 
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters");
+    const normalizedPhone = normalizePhoneInput(phone);
+    const phoneError = getPhoneValidationMessage(normalizedPhone, locale);
+    if (phoneError) {
+      setError(phoneError);
+      return;
+    }
+
+    const passwordError = getPasswordValidationMessage(password, locale);
+    if (passwordError) {
+      setError(passwordError);
       return;
     }
 
     setLoading(true);
     try {
-      await signUp({ email, password, fullName, phone });
-      router.push("/signin?message=Account created successfully");
+      await signUp({
+        email: email.trim(),
+        password,
+        fullName: fullName.trim(),
+        phone: normalizedPhone,
+      });
+      router.push(`/signin?message=${encodeURIComponent(copy.accountCreated)}`);
     } catch (err) {
-      const error = err as { response?: { data?: { message?: string } }; message?: string };
-      setError(error.response?.data?.message || error.message || "Registration failed");
+      const nextError = err as {
+        response?: { data?: { message?: string; errors?: Array<{ defaultMessage?: string }> } };
+        message?: string;
+      };
+      setError(
+        nextError.response?.data?.errors?.[0]?.defaultMessage ||
+          nextError.response?.data?.message ||
+          nextError.message ||
+          copy.registrationFailed
+      );
     } finally {
       setLoading(false);
     }
@@ -98,7 +186,7 @@ function SignUpForm() {
       await signInWithGoogle();
     } catch (err) {
       const error = err as { message?: string };
-      setError(error.message || "Google sign up failed");
+      setError(error.message || copy.googleSignUpFailed);
     } finally {
       setGoogleLoading(false);
     }
@@ -122,7 +210,7 @@ function SignUpForm() {
         className="text-[#0a0a0a] text-[28px] font-medium leading-[36px] mb-8"
         style={{ fontFamily: "var(--font-inter)" }}
       >
-        Create Account
+        {copy.title}
       </h1>
 
       <form onSubmit={handleSubmit} className="w-full flex flex-col gap-5">
@@ -138,7 +226,7 @@ function SignUpForm() {
             className="text-[#364153] text-[13px] font-normal"
             style={{ fontFamily: "var(--font-inter)" }}
           >
-            Full Name
+            {copy.fullNameLabel}
           </label>
           <div className="relative">
             <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
@@ -146,7 +234,7 @@ function SignUpForm() {
             </div>
             <input
               type="text"
-              placeholder="Diamond"
+              placeholder={copy.fullNamePlaceholder}
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               className="w-full h-[50px] pl-[48px] pr-4 border border-[#d1d5dc] rounded-[14px] text-[15px] text-[#0a0a0a] placeholder-[rgba(10,10,10,0.4)] outline-none focus:border-[#d0bb95] focus:ring-1 focus:ring-[rgba(208,187,149,0.3)] transition-colors"
@@ -161,7 +249,7 @@ function SignUpForm() {
             className="text-[#364153] text-[13px] font-normal"
             style={{ fontFamily: "var(--font-inter)" }}
           >
-            Email Address
+            {copy.emailLabel}
           </label>
           <div className="relative">
             <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
@@ -169,13 +257,25 @@ function SignUpForm() {
             </div>
             <input
               type="email"
-              placeholder="hotmail@gmail.com"
+              placeholder={copy.emailPlaceholder}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full h-[50px] pl-[48px] pr-4 border border-[#d1d5dc] rounded-[14px] text-[15px] text-[#0a0a0a] placeholder-[rgba(10,10,10,0.4)] outline-none focus:border-[#d0bb95] focus:ring-1 focus:ring-[rgba(208,187,149,0.3)] transition-colors"
+              className={`w-full h-[50px] pl-[48px] pr-4 border rounded-[14px] text-[15px] text-[#0a0a0a] placeholder-[rgba(10,10,10,0.4)] outline-none focus:ring-1 transition-colors ${
+                emailConflictMessage
+                  ? "border-red-300 focus:border-red-400 focus:ring-red-100"
+                  : "border-[#d1d5dc] focus:border-[#d0bb95] focus:ring-[rgba(208,187,149,0.3)]"
+              }`}
               style={{ fontFamily: "var(--font-inter)" }}
             />
           </div>
+          {emailConflictMessage ? (
+            <p
+              className="text-[12px] text-red-600"
+              style={{ fontFamily: "var(--font-inter)" }}
+            >
+              {emailConflictMessage}
+            </p>
+          ) : null}
         </div>
 
         {/* Phone Number */}
@@ -184,21 +284,38 @@ function SignUpForm() {
             className="text-[#364153] text-[13px] font-normal"
             style={{ fontFamily: "var(--font-inter)" }}
           >
-            Phone Number
+            {copy.phoneLabel}
           </label>
           <div className="relative">
             <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
               <Phone className="w-5 h-5 text-[#9ca3af]" />
             </div>
+            <div
+              className="absolute left-[48px] top-1/2 -translate-y-1/2 pointer-events-none text-[15px] text-[#6a7282]"
+              style={{ fontFamily: "var(--font-inter)" }}
+            >
+              +84
+            </div>
             <input
               type="tel"
-              placeholder="+84 0355999999"
+              placeholder={copy.phonePlaceholder}
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="w-full h-[50px] pl-[48px] pr-4 border border-[#d1d5dc] rounded-[14px] text-[15px] text-[#0a0a0a] placeholder-[rgba(10,10,10,0.4)] outline-none focus:border-[#d0bb95] focus:ring-1 focus:ring-[rgba(208,187,149,0.3)] transition-colors"
+              onChange={(e) => setPhone(normalizePhoneInput(e.target.value))}
+              inputMode="numeric"
+              className={`w-full h-[50px] pl-[88px] pr-4 border rounded-[14px] text-[15px] text-[#0a0a0a] placeholder-[rgba(10,10,10,0.4)] outline-none focus:ring-1 transition-colors ${
+                phoneValidationMessage
+                  ? "border-red-300 focus:border-red-400 focus:ring-red-100"
+                  : "border-[#d1d5dc] focus:border-[#d0bb95] focus:ring-[rgba(208,187,149,0.3)]"
+              }`}
               style={{ fontFamily: "var(--font-inter)" }}
             />
           </div>
+          <p
+            className={`text-[12px] ${(phoneConflictMessage || phoneValidationMessage) ? "text-red-600" : "text-[#6a7282]"}`}
+            style={{ fontFamily: "var(--font-inter)" }}
+          >
+            {phoneConflictMessage || phoneValidationMessage || copy.phoneHint}
+          </p>
         </div>
 
         {/* Password */}
@@ -207,7 +324,7 @@ function SignUpForm() {
             className="text-[#364153] text-[13px] font-normal"
             style={{ fontFamily: "var(--font-inter)" }}
           >
-            Password
+            {copy.passwordLabel}
           </label>
           <div className="relative">
             <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
@@ -218,7 +335,11 @@ function SignUpForm() {
               placeholder="••••••••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full h-[50px] pl-[48px] pr-[48px] border border-[#d1d5dc] rounded-[14px] text-[15px] text-[#0a0a0a] placeholder-[rgba(10,10,10,0.4)] outline-none focus:border-[#d0bb95] focus:ring-1 focus:ring-[rgba(208,187,149,0.3)] transition-colors"
+              className={`w-full h-[50px] pl-[48px] pr-[48px] border rounded-[14px] text-[15px] text-[#0a0a0a] placeholder-[rgba(10,10,10,0.4)] outline-none focus:ring-1 transition-colors ${
+                passwordValidationMessage
+                  ? "border-red-300 focus:border-red-400 focus:ring-red-100"
+                  : "border-[#d1d5dc] focus:border-[#d0bb95] focus:ring-[rgba(208,187,149,0.3)]"
+              }`}
               style={{ fontFamily: "var(--font-inter)" }}
             />
             <button
@@ -233,6 +354,12 @@ function SignUpForm() {
               )}
             </button>
           </div>
+          <p
+            className={`text-[12px] ${passwordValidationMessage ? "text-red-600" : "text-[#6a7282]"}`}
+            style={{ fontFamily: "var(--font-inter)" }}
+          >
+            {passwordValidationMessage || getPasswordRequirementsMessage(locale)}
+          </p>
         </div>
 
         {/* Confirm Password */}
@@ -241,7 +368,7 @@ function SignUpForm() {
             className="text-[#364153] text-[13px] font-normal"
             style={{ fontFamily: "var(--font-inter)" }}
           >
-            Confirm Password
+            {copy.confirmPasswordLabel}
           </label>
           <div className="relative">
             <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
@@ -276,7 +403,7 @@ function SignUpForm() {
           className="w-full h-12 bg-[#d0bb95] text-white text-[15px] font-normal rounded-[14px] shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)] hover:bg-[#c2a571] transition-colors mt-3 disabled:opacity-50 disabled:cursor-not-allowed"
           style={{ fontFamily: "var(--font-inter)" }}
         >
-          {loading ? "Creating Account..." : "Create Account"}
+          {loading ? copy.submitting : copy.submit}
         </button>
       </form>
 
@@ -287,7 +414,7 @@ function SignUpForm() {
           className="text-[#6a7282] text-[13px]"
           style={{ fontFamily: "var(--font-inter)" }}
         >
-          Or sign up with
+          {copy.divider}
         </span>
         <div className="flex-1 h-px bg-[#d1d5dc]" />
       </div>
@@ -303,7 +430,7 @@ function SignUpForm() {
         >
           <GoogleIcon />
           <span className="text-[#0a0a0a] text-[15px]">
-            {googleLoading ? "Redirecting..." : "Google"}
+            {googleLoading ? copy.redirecting : "Google"}
           </span>
         </button>
       </div>
@@ -313,12 +440,12 @@ function SignUpForm() {
         className="mt-6 text-[#4a5565] text-[15px]"
         style={{ fontFamily: "var(--font-inter)" }}
       >
-        Already have an account?{" "}
+        {copy.alreadyHaveAccount}{" "}
         <Link
           href="/signin"
           className="text-[#364153] text-[20px] font-medium hover:text-[#d0bb95] transition-colors"
         >
-          Sign in
+          {copy.signIn}
         </Link>
       </p>
     </div>

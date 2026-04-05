@@ -1,7 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import { Facebook, Flower2, Mail, MapPin, Phone } from "lucide-react";
+import { useLocale } from "@/src/contexts";
 
 export function Footer() {
+  const { t } = useLocale();
+
   return (
     <footer className="border-t border-[#f0e5de] bg-white">
       <div className="mx-auto max-w-[1280px] px-6 pb-8 pt-20 sm:px-8 lg:px-10">
@@ -21,8 +26,7 @@ export function Footer() {
               className="mt-8 text-[14px] font-light leading-7 text-[#7b6d64]"
               style={{ fontFamily: "var(--font-inter)" }}
             >
-              Redefining the floral experience with curated aesthetics and sustainable
-              practices. Hand-crafted in our local studio.
+              {t("footer.tagline")}
             </p>
 
             <div className="mt-8 flex gap-4">
@@ -42,17 +46,17 @@ export function Footer() {
               className="text-[10px] font-semibold uppercase tracking-[0.32em] text-[#d0bb95]"
               style={{ fontFamily: "var(--font-inter)" }}
             >
-              Shop
+              {t("footer.shop")}
             </p>
             <div className="mt-6 flex flex-col gap-4">
               {[
-                { label: "All Flowers", href: "/products" },
-                { label: "Categories", href: "/#categories" },
-                { label: "Latest", href: "/#latest" },
-                { label: "Gifts", href: "/products" },
+                { label: t("footer.allFlowers"), href: "/products" },
+                { label: t("nav.categories"), href: "/products?view=categories" },
+                { label: t("nav.latest"), href: "/products?sort=latest" },
+                { label: t("footer.gifts"), href: "/products" },
               ].map((item) => (
                 <Link
-                  key={item.label}
+                  key={`${item.href}-${item.label}`}
                   href={item.href}
                   className="text-[14px] font-light text-[#7b6d64] transition-colors hover:text-[#2d2a26]"
                   style={{ fontFamily: "var(--font-inter)" }}
@@ -68,17 +72,17 @@ export function Footer() {
               className="text-[10px] font-semibold uppercase tracking-[0.32em] text-[#d0bb95]"
               style={{ fontFamily: "var(--font-inter)" }}
             >
-              Services
+              {t("footer.services")}
             </p>
             <div className="mt-6 flex flex-col gap-4">
               {[
-                { label: "Weddings", href: "/events#weddings" },
-                { label: "Occasions", href: "/events#occasions" },
-                { label: "Corporate", href: "/events#corporate" },
-                { label: "Our Story", href: "/our-story" },
+                { label: t("footer.weddings"), href: "/events#weddings" },
+                { label: t("footer.occasions"), href: "/events#occasions" },
+                { label: t("footer.corporate"), href: "/events#corporate" },
+                { label: t("nav.ourStory"), href: "/our-story" },
               ].map((item) => (
                 <Link
-                  key={item.label}
+                  key={`${item.href}-${item.label}`}
                   href={item.href}
                   className="text-[14px] font-light text-[#7b6d64] transition-colors hover:text-[#2d2a26]"
                   style={{ fontFamily: "var(--font-inter)" }}
@@ -94,7 +98,7 @@ export function Footer() {
               className="text-[10px] font-semibold uppercase tracking-[0.32em] text-[#d0bb95]"
               style={{ fontFamily: "var(--font-inter)" }}
             >
-              Contact
+              {t("footer.contact")}
             </p>
             <div className="mt-6 flex flex-col gap-5">
               <div className="flex items-center gap-3 text-[#7b6d64]">
@@ -106,7 +110,7 @@ export function Footer() {
               <div className="flex items-center gap-3 text-[#7b6d64]">
                 <MapPin className="h-5 w-5 shrink-0" />
                 <span className="text-[14px] font-light" style={{ fontFamily: "var(--font-inter)" }}>
-                  123 Bloom Street, NY
+                  {t("footer.address")}
                 </span>
               </div>
               <div className="flex items-center gap-3 text-[#7b6d64]">
@@ -121,16 +125,16 @@ export function Footer() {
 
         <div className="mt-16 flex flex-col gap-5 border-t border-[#f0e5de] pt-6 text-[11px] text-[#a3948a] sm:flex-row sm:items-center sm:justify-between">
           <p style={{ fontFamily: "var(--font-inter)" }}>
-            © 2026 Floral Boutique. All rights reserved.
+            {t("footer.rights")}
           </p>
           <div className="flex flex-wrap gap-6">
             {[
-              { label: "Privacy Policy", href: "/privacy-policy" },
-              { label: "Terms of Service", href: "/terms-of-service" },
-              { label: "Shipping Info", href: "/shipping-info" },
+              { label: t("footer.privacy"), href: "/privacy-policy" },
+              { label: t("footer.terms"), href: "/terms-of-service" },
+              { label: t("footer.shipping"), href: "/shipping-info" },
             ].map((item) => (
               <Link
-                key={item.label}
+                key={`${item.href}-${item.label}`}
                 href={item.href}
                 className="transition-colors hover:text-[#7b6d64]"
                 style={{ fontFamily: "var(--font-inter)" }}
