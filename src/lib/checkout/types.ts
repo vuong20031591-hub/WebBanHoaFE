@@ -1,1 +1,1 @@
-export type PaymentMethod = "qr" | "cash";
+export type PaymentMethod = "vietqr" | "cod";

@@ -4,6 +4,27 @@ export interface ApiError {
   status?: number;
 }
 
+export interface AdminUserDTO {
+  id: number;
+  email: string;
+  fullName: string;
+  phone: string;
+  role: string;
+}
+
+export type CollaboratorBadge = "STAFF" | "ADMIN";
+
+export interface AdminCollaboratorDTO {
+  id: number;
+  email: string;
+  fullName: string;
+  phone: string;
+  role: string;
+  badge: CollaboratorBadge;
+  positionTitle: string;
+  positionDescription: string | null;
+}
+
 export interface PagedResponse<T> {
   content: T[];
   totalElements: number;
@@ -36,6 +57,23 @@ export interface ProductDetailDTO {
   stockQuantity: number | null;
   createdAt: string;
   updatedAt: string;
+  deletedAt: string | null;
+}
+
+export interface AdminProductUpsertRequest {
+  name: string;
+  price: number;
+  description?: string;
+  image?: string;
+  stockQuantity: number;
+  categoryId: number;
+}
+
+export interface UploadMediaResponse {
+  key: string;
+  publicUrl: string;
+  size: number;
+  contentType: string;
 }
 
 export interface CategoryDTO {
@@ -78,6 +116,7 @@ export type OrderPaymentMethod = "COD" | "VIETQR" | "SEPAY";
 export interface CreateOrderFromCartRequest {
   paymentMethod: OrderPaymentMethod;
   addressId?: number;
+  redeemPoints?: number;
 }
 
 export interface OrderItemDTO {
@@ -92,13 +131,35 @@ export interface OrderItemDTO {
 export interface OrderDTO {
   id: number;
   userId: string;
+  userFullName?: string | null;
+  userEmail?: string | null;
   totalAmount: number;
+  redeemedPoints: number;
+  rewardsDiscountAmount: number;
   paymentMethod: OrderPaymentMethod;
   status: string;
   items: OrderItemDTO[];
   createdAt: string;
   updatedAt: string;
   confirmedAt: string | null;
+}
+
+export interface AdminOrderStatsDTO {
+  totalOrders: number;
+  pendingOrders: number;
+  confirmedOrders: number;
+  cancelledOrders: number;
+}
+
+export interface AdminCreateOrderItemRequest {
+  productId: number;
+  quantity: number;
+}
+
+export interface AdminCreateOrderRequest {
+  customerEmail: string;
+  paymentMethod: OrderPaymentMethod;
+  items: AdminCreateOrderItemRequest[];
 }
 
 export interface PaymentCheckoutDTO {
@@ -118,4 +179,111 @@ export interface PaymentReconciliationDTO {
   transactionCount: number;
   paid: boolean;
   transactions: string[];
+}
+
+export interface AddressDTO {
+  id: number;
+  fullName: string;
+  phone: string;
+  address: string;
+  city: string;
+  district: string;
+  ward: string | null;
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateAddressRequest {
+  fullName: string;
+  phone: string;
+  address: string;
+  city: string;
+  district: string;
+  ward?: string;
+  isDefault?: boolean;
+}
+
+export interface UpdateAddressRequest {
+  fullName?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  district?: string;
+  ward?: string;
+  isDefault?: boolean;
+}
+
+export interface NotificationPreferencesDTO {
+  emailOrderUpdates: boolean;
+  emailPromotions: boolean;
+  emailNewsletter: boolean;
+  emailEventReminders: boolean;
+  smsOrderUpdates: boolean;
+  smsEventReminders: boolean;
+  pushArtistUpdates: boolean;
+}
+
+export interface UpdateNotificationPreferencesRequest {
+  emailOrderUpdates?: boolean;
+  emailPromotions?: boolean;
+  emailNewsletter?: boolean;
+  emailEventReminders?: boolean;
+  smsOrderUpdates?: boolean;
+  smsEventReminders?: boolean;
+  pushArtistUpdates?: boolean;
+}
+
+export interface UserPreferencesDTO {
+  language: string;
+  currency: string;
+  theme: string;
+  timezone: string;
+  signatureWrap: boolean;
+  ecoDelivery: boolean;
+  smsTwoFactorEnabled: boolean;
+}
+
+export interface UpdateUserPreferencesRequest {
+  language?: string;
+  currency?: string;
+  theme?: string;
+  timezone?: string;
+  signatureWrap?: boolean;
+  ecoDelivery?: boolean;
+  smsTwoFactorEnabled?: boolean;
+}
+
+export interface TwoFactorSmsCodeResponse {
+  deliveryMethod: "sms";
+  message: string;
+  maskedPhone: string;
+}
+
+export interface VerifyTwoFactorSmsCodeRequest {
+  code: string;
+}
+
+export interface UserRewardsDTO {
+  points: number;
+  lifetimePoints: number;
+  tier: string;
+  pointsToNextTier: number;
+}
+
+export interface RewardsTransactionDTO {
+  id: number;
+  points: number;
+  type: string;
+  description: string;
+  orderId: number | null;
+  createdAt: string;
+}
+
+export interface RewardsHistoryResponse {
+  content: RewardsTransactionDTO[];
+  totalElements: number;
+  totalPages: number;
+  currentPage: number;
+  size: number;
 }

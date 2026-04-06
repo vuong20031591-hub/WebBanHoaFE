@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Mail, Phone, MapPin, ArrowUpRight, Instagram, Facebook, Twitter } from "lucide-react";
+import { Mail, Phone, ArrowUpRight, Instagram, Facebook, Twitter } from "lucide-react";
 import { Navbar, Footer } from "@/components/layout";
 
 /* ─────────────────────────────────────────────

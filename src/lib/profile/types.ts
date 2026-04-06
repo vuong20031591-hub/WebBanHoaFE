@@ -8,7 +8,7 @@ export interface ProfileMember {
   editHref: string;
 }
 
-export type ProfileTabId = "orders" | "favorites" | "settings";
+export type ProfileTabId = "orders" | "favorites" | "settings" | "addresses";
 
 export interface ProfileTab {
   id: ProfileTabId;
@@ -35,6 +35,7 @@ export interface ProfileFavorite {
   price: number;
   image: string;
   href: string;
+  stockQuantity?: number | null;
 }
 
 export interface ProfileFavoritesCollection {
@@ -105,6 +106,7 @@ export interface ProfileSecurityToggleOption {
   label: string;
   description: string;
   enabled: boolean;
+  disabled?: boolean;
 }
 
 export interface ProfileSecuritySettingsPageData {
@@ -168,31 +170,9 @@ export interface ProfilePreferencesToggleOption {
   enabled: boolean;
 }
 
-export interface ProfilePreferencesRibbonColor {
-  id: string;
-  label: string;
-  color: string;
-  borderColor?: string;
-  selected: boolean;
-}
-
-export interface ProfilePreferencesPreview {
-  image: string;
-  alt: string;
-  label: string;
-}
-
 export interface ProfilePreferencesRegionalSection {
   title: string;
   fields: ProfilePreferencesSelectField[];
-}
-
-export interface ProfilePreferencesGiftingSection {
-  title: string;
-  toggles: ProfilePreferencesToggleOption[];
-  ribbonLabel: string;
-  ribbonColors: ProfilePreferencesRibbonColor[];
-  preview: ProfilePreferencesPreview;
 }
 
 export interface ProfilePreferencesSettingsPageData {
@@ -201,7 +181,6 @@ export interface ProfilePreferencesSettingsPageData {
   navigation: ProfileSettingsNavItem[];
   rewards: ProfileRewardsCard;
   regionalSection: ProfilePreferencesRegionalSection;
-  giftingSection: ProfilePreferencesGiftingSection;
   saveLabel: string;
   resetLabel: string;
 }

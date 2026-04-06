@@ -1,50 +1,32 @@
-import { Navbar, Footer, ChatLive } from "@/src/components/layout";
+import { Footer, Navbar } from "@/src/components/layout";
 import {
-  HeroSection,
-  ShopSection,
-  ProcessSection,
-  HeritageSection,
-  GallerySection,
   ContactSection,
+  GallerySection,
+  HeritageSection,
+  HeroSection,
+  ProcessSection,
+  ShopSection,
 } from "@/src/components/home";
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/* ─────────────────────────────────────────────
-   Page
-───────────────────────────────────────────── */
 export default function HomePage() {
   return (
-    <div className="bg-white min-h-screen">
+    <div className="min-h-screen bg-white">
       <Navbar />
       <main>
         <HeroSection />
-        <ShopSection />
+        <section id="categories" className="scroll-mt-28">
+          <ShopSection />
+        </section>
         <ProcessSection />
-        <HeritageSection />
-        <GallerySection />
+        <section id="our-story" className="scroll-mt-28">
+          <HeritageSection />
+        </section>
+        <section id="latest" className="scroll-mt-28">
+          <GallerySection />
+        </section>
         <ContactSection />
       </main>
       <Footer />
-      <ChatLive />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 export interface AuthUser {
-  id: number;
+  id: number | string;
   email: string;
   fullName: string;
   phone: string;
@@ -23,4 +23,30 @@ export interface RegisterRequest {
 export interface LoginRequest {
   email: string;
   password: string;
+}
+
+export interface UpdateProfileRequest {
+  fullName: string;
+  phone: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ForgotPasswordResponse {
+  deliveryMethod: "email" | "none";
+  message: string;
+  debugCode: string | null;
+}
+
+export interface ResetPasswordWithCodeRequest {
+  email: string;
+  code: string;
+  newPassword: string;
 }

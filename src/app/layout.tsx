@@ -7,9 +7,8 @@ import {
   Noto_Serif,
   Pinyon_Script,
 } from "next/font/google";
-import Script from "next/script";
 import "./globals.css";
-import { AuthProvider } from "@/src/contexts";
+import { AuthProvider, LocaleProvider } from "@/src/contexts";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -52,18 +51,14 @@ export default function RootLayout({
   children: ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
+        suppressHydrationWarning
         className={`${inter.variable} ${notoSerif.variable} ${cormorantGaramond.variable} ${pinyonScript.variable} ${montserrat.variable} antialiased`}
       >
-        {process.env.NODE_ENV === "development" && (
-          <Script
-            src="//unpkg.com/react-grab/dist/index.global.js"
-            crossOrigin="anonymous"
-            strategy="beforeInteractive"
-          />
-        )}
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <LocaleProvider>{children}</LocaleProvider>
+        </AuthProvider>
       </body>
     </html>
   );

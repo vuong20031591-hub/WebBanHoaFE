@@ -1,6 +1,10 @@
-import Image from "next/image";
+"use client";
+
 import Link from "next/link";
 import { formatCurrency } from "@/lib/currency";
+import { DEFAULT_PRODUCT_IMAGE } from "@/lib/mappers/product";
+import { SafeImage } from "@/components/common/SafeImage";
+import { useLocale } from "@/src/contexts";
 import { CartRecommendation } from "./constants";
 
 interface CartRecommendationsProps {
@@ -10,6 +14,8 @@ interface CartRecommendationsProps {
 export function CartRecommendations({
   recommendations,
 }: CartRecommendationsProps) {
+  const { locale } = useLocale();
+
   if (recommendations.length === 0) {
     return null;
   }
@@ -21,7 +27,7 @@ export function CartRecommendations({
           className="text-center text-[36px] leading-none text-[var(--color-cart-ink)] sm:text-[44px]"
           style={{ fontFamily: "var(--font-cormorant)" }}
         >
-          You might also like
+          {locale === "vi" ? "Co the ban cung thich" : "You might also like"}
         </h2>
       </div>
       <div className="mt-16 grid gap-10 md:grid-cols-2 xl:grid-cols-3">
@@ -32,8 +38,8 @@ export function CartRecommendations({
             className="group flex flex-col"
           >
             <div className="relative aspect-[0.75] overflow-hidden rounded-b-[28px] rounded-t-[180px] bg-white/35">
-              <Image
-                src={recommendation.image}
+              <SafeImage
+                src={recommendation.image || DEFAULT_PRODUCT_IMAGE}
                 alt={recommendation.name}
                 fill
                 sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 352px"
@@ -51,7 +57,7 @@ export function CartRecommendations({
                 className="mt-2 text-[12px] uppercase tracking-[1.2px] text-[var(--color-cart-warm)]"
                 style={{ fontFamily: "var(--font-inter)" }}
               >
-                {formatCurrency(recommendation.price)}
+                {formatCurrency(recommendation.price, locale)}
               </p>
             </div>
           </Link>

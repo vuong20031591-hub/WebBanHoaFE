@@ -1,8 +1,13 @@
 import { productsApi } from "../api/products";
 import { OrderDTO, OrderItemDTO, OrderPaymentMethod } from "../api/types";
+import { AppLocale } from "../i18n/messages";
 import { ProfileOrder } from "../profile/types";
 import { Product } from "../products/types";
-import { mapProductDetailDTOToProduct } from "./product";
+import {
+  DEFAULT_PRODUCT_IMAGE,
+  mapProductDetailDTOToProduct,
+  resolveProductImage,
+} from "./product";
 
 export interface OrderDisplayItem {
   id: number;
@@ -14,8 +19,8 @@ export interface OrderDisplayItem {
   image: string;
 }
 
-export function formatOrderDate(value: string): string {
-  return new Intl.DateTimeFormat("en-GB", {
+export function formatOrderDate(value: string, locale: AppLocale = "en"): string {
+  return new Intl.DateTimeFormat(locale === "vi" ? "vi-VN" : "en-GB", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -24,7 +29,19 @@ export function formatOrderDate(value: string): string {
   }).format(new Date(value));
 }
 
-export function formatOrderStatus(status: string): string {
+export function formatOrderStatus(status: string, locale: AppLocale = "en"): string {
+  const viStatus: Record<string, string> = {
+    CONFIRMED: "Da xac nhan",
+    CANCELLED: "Da huy",
+    PENDING: "Cho xu ly",
+    SHIPPING: "Dang giao",
+    DELIVERED: "Da giao",
+  };
+
+  if (locale === "vi" && viStatus[status]) {
+    return viStatus[status];
+  }
+
   switch (status) {
     case "CONFIRMED":
       return "Confirmed";
@@ -37,7 +54,23 @@ export function formatOrderStatus(status: string): string {
   }
 }
 
-export function formatPaymentMethod(method: OrderPaymentMethod): string {
+export function formatPaymentMethod(
+  method: OrderPaymentMethod,
+  locale: AppLocale = "en"
+): string {
+  if (locale === "vi") {
+    switch (method) {
+      case "COD":
+        return "Thanh toan khi nhan hang";
+      case "SEPAY":
+        return "SePay";
+      case "VIETQR":
+        return "VietQR";
+      default:
+        return method;
+    }
+  }
+
   switch (method) {
     case "COD":
       return "Cash on delivery";
@@ -81,18 +114,19 @@ export function mapOrderItemToDisplay(
     quantity: item.quantity,
     price: item.price,
     subtotal: item.subtotal,
-    image: product?.image ?? "/images/hero-main.png",
+    image: resolveProductImage(product?.image ?? DEFAULT_PRODUCT_IMAGE),
   };
 }
 
 export function mapOrderToProfileOrder(
   order: OrderDTO,
-  productsById: Record<number, Product>
+  productsById: Record<number, Product>,
+  locale: AppLocale = "en"
 ): ProfileOrder {
   const firstItem = order.items[0];
   const image = firstItem
-    ? productsById[firstItem.productId]?.image ?? "/images/hero-main.png"
-    : "/images/hero-main.png";
+    ? resolveProductImage(productsById[firstItem.productId]?.image ?? DEFAULT_PRODUCT_IMAGE)
+    : DEFAULT_PRODUCT_IMAGE;
   const extraItemsCount = Math.max(0, order.items.length - 1);
   const title = firstItem
     ? extraItemsCount > 0
@@ -103,10 +137,10 @@ export function mapOrderToProfileOrder(
 
   return {
     id: String(order.id),
-    status: formatOrderStatus(order.status),
-    date: formatOrderDate(order.createdAt),
+    status: formatOrderStatus(order.status, locale),
+    date: formatOrderDate(order.createdAt, locale),
     title,
-    description: `${quantity} items - ${formatPaymentMethod(order.paymentMethod)}`,
+    description: `${quantity} ${locale === "vi" ? "san pham" : "items"} - ${formatPaymentMethod(order.paymentMethod, locale)}`,
     price: order.totalAmount,
     image,
     href: `/checkout/tracking?orderId=${order.id}`,

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import { CartNote } from "@/lib/cart";
+import { useLocale } from "@/src/contexts";
 import { createEmptyNote } from "./constants";
 
 interface CartNoteCardProps {
@@ -16,8 +17,38 @@ export function CartNoteCard({
   onClear,
   onSave,
 }: CartNoteCardProps) {
+  const { locale } = useLocale();
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState<CartNote>(createEmptyNote());
+
+  const copy =
+    locale === "vi"
+      ? {
+          title: "Loi nhan ca nhan",
+          noteLabel: "Thiep viet tay",
+          delete: "Xoa loi nhan",
+          writePlaceholder: "Viet loi nhan cua ban tai day",
+          signature: "Chu ky",
+          save: "Luu loi nhan",
+          cancel: "Huy",
+          emptyTitle: "Chua co loi nhan",
+          emptyDesc:
+            "Ban co the them loi nhan o day de gui kem trong gio hang truoc khi thanh toan.",
+          edit: "Sua loi nhan",
+        }
+      : {
+          title: "Personal Sentiment",
+          noteLabel: "Handwritten Note",
+          delete: "Delete note",
+          writePlaceholder: "Write your note here",
+          signature: "Signature",
+          save: "Save Note",
+          cancel: "Cancel",
+          emptyTitle: "No personal note yet",
+          emptyDesc:
+            "Add a note here if you want to keep a personal message in your local cart before checkout.",
+          edit: "Edit Message",
+        };
 
   const handleCancel = () => {
     setDraft(createEmptyNote());
@@ -55,7 +86,7 @@ export function CartNoteCard({
         className="mb-8 text-[24px] leading-[32px] text-[var(--color-cart-ink)]"
         style={{ fontFamily: "var(--font-cormorant)" }}
       >
-        Personal Sentiment
+        {copy.title}
       </h2>
       <div className="relative overflow-hidden rounded-sm border border-[#eee6db] bg-[#fdfbf7] px-12 py-12">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(201,166,148,0.05),transparent_45%)]" />
@@ -65,14 +96,14 @@ export function CartNoteCard({
               className="text-[10px] uppercase leading-[15px] tracking-[2px] text-[var(--color-cart-gold)]"
               style={{ fontFamily: "var(--font-inter)" }}
             >
-              Handwritten Note
+              {copy.noteLabel}
             </p>
             {note ? (
               <button
                 type="button"
                 onClick={onClear}
                 className="p-1 text-[var(--color-cart-danger)] transition hover:bg-[rgba(163,43,43,0.08)]"
-                aria-label="Delete note"
+                aria-label={copy.delete}
               >
                 <Trash2 className="h-8 w-8" />
               </button>
@@ -91,7 +122,7 @@ export function CartNoteCard({
                 rows={4}
                 className="min-h-40 w-full resize-none rounded-[24px] border border-[rgba(138,109,93,0.15)] bg-white/80 px-6 py-5 text-[18px] leading-8 text-[var(--color-cart-ink)] outline-none transition focus:border-[var(--color-cart-gold)]"
                 style={{ fontFamily: "var(--font-inter)" }}
-                placeholder="Write your note here"
+                placeholder={copy.writePlaceholder}
               />
               <input
                 type="text"
@@ -104,7 +135,7 @@ export function CartNoteCard({
                 }
                 className="w-full rounded-full border border-[rgba(138,109,93,0.15)] bg-white/80 px-5 py-4 text-[15px] text-[var(--color-cart-ink)] outline-none transition focus:border-[var(--color-cart-gold)]"
                 style={{ fontFamily: "var(--font-inter)" }}
-                placeholder="Signature"
+                placeholder={copy.signature}
               />
               <div className="flex flex-wrap gap-3">
                 <button
@@ -113,7 +144,7 @@ export function CartNoteCard({
                   className="rounded-full bg-[var(--color-cart-warm)] px-6 py-3 text-[11px] uppercase tracking-[1.8px] text-white transition hover:bg-[#775f51]"
                   style={{ fontFamily: "var(--font-inter)" }}
                 >
-                  Save Note
+                  {copy.save}
                 </button>
                 <button
                   type="button"
@@ -121,7 +152,7 @@ export function CartNoteCard({
                   className="rounded-full border border-[rgba(201,166,148,0.4)] px-6 py-3 text-[11px] uppercase tracking-[1.8px] text-[var(--color-cart-ink)] transition hover:bg-[rgba(201,166,148,0.08)]"
                   style={{ fontFamily: "var(--font-inter)" }}
                 >
-                  Cancel
+                  {copy.cancel}
                 </button>
               </div>
             </div>
@@ -148,14 +179,13 @@ export function CartNoteCard({
                     className="text-[28px] leading-[1.2] text-[#4a4542]"
                     style={{ fontFamily: "var(--font-cormorant)" }}
                   >
-                    No personal note yet
+                    {copy.emptyTitle}
                   </p>
                   <p
                     className="text-[14px] leading-7 text-[rgba(74,69,66,0.72)]"
                     style={{ fontFamily: "var(--font-inter)" }}
                   >
-                    Add a note here if you want to keep a personal message in
-                    your local cart before checkout.
+                    {copy.emptyDesc}
                   </p>
                 </div>
               )}
@@ -165,7 +195,7 @@ export function CartNoteCard({
                 className="mt-8 border-b border-[rgba(201,166,148,0.4)] pb-1 text-[10px] uppercase leading-[15px] tracking-[2px] text-[var(--color-cart-ink)] transition hover:border-[var(--color-cart-gold)] hover:text-[var(--color-cart-gold)]"
                 style={{ fontFamily: "var(--font-inter)" }}
               >
-                Edit Message
+                {copy.edit}
               </button>
             </div>
           )}

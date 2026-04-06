@@ -2,6 +2,7 @@ export { ProfilePageContent } from "./ProfilePageContent";
 export { ProfileFavoritesPageContent } from "./ProfileFavoritesPageContent";
 export { ProfileSettingsPageContent } from "./ProfileSettingsPageContent";
 export { ProfileSecuritySettingsPageContent } from "./ProfileSecuritySettingsPageContent";
+export { ProfileAddressesPageContent } from "./ProfileAddressesPageContent";
 export { ProfileHeader } from "./ProfileHeader";
 export { ProfileTabs } from "./ProfileTabs";
 export { ProfileOrdersSection } from "./ProfileOrdersSection";
@@ -15,3 +16,5 @@ export { ProfileNotificationsSettingsPageContent } from "./ProfileNotificationsS
 export { ProfileNotificationsSettingsForm } from "./ProfileNotificationsSettingsForm";
 export { ProfilePreferencesSettingsPageContent } from "./ProfilePreferencesSettingsPageContent";
 export { ProfilePreferencesSettingsForm } from "./ProfilePreferencesSettingsForm";
+
+export { BloomRewardsModal } from "./BloomRewardsModal";

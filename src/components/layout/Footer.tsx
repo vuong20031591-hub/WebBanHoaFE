@@ -1,109 +1,121 @@
+"use client";
+
 import Link from "next/link";
-import { Flower2, Mail, Phone, MapPin, Facebook } from "lucide-react";
+import { Facebook, Flower2, Mail, MapPin, Phone } from "lucide-react";
+import { useLocale } from "@/src/contexts";
 
 export function Footer() {
+  const { t } = useLocale();
+
   return (
-    <footer className="bg-white border-t border-[#eee4e1]">
-      <div className="max-w-[1280px] mx-auto px-[160px] pt-20 pb-6">
-        <div className="flex gap-16 mb-16">
-          <div className="w-[192px] flex flex-col gap-8 shrink-0">
-            <div className="flex items-center gap-3 h-14">
-              <Flower2 className="text-[#d0bb95] w-6 h-6 shrink-0" />
+    <footer className="border-t border-[#f0e5de] bg-white">
+      <div className="mx-auto max-w-[1280px] px-6 pb-8 pt-20 sm:px-8 lg:px-10">
+        <div className="grid gap-14 lg:grid-cols-[minmax(0,1.25fr)_0.8fr_0.8fr_1fr]">
+          <div className="max-w-[280px]">
+            <div className="flex items-center gap-3">
+              <Flower2 className="h-6 w-6 text-[#d0bb95]" />
               <span
-                className="text-[#2d2a26] text-[20px] font-medium"
+                className="text-[20px] font-medium text-[#2d2a26]"
                 style={{ fontFamily: "var(--font-noto-serif)" }}
               >
                 Floral Boutique
               </span>
             </div>
+
             <p
-              className="text-[#5c6b5e] text-[14px] font-light leading-[22.75px]"
+              className="mt-8 text-[14px] font-light leading-7 text-[#7b6d64]"
               style={{ fontFamily: "var(--font-inter)" }}
             >
-              Redefining the floral experience with curated aesthetics and
-              sustainable practices. Hand-crafted in our local studio.
+              {t("footer.tagline")}
             </p>
-            <div className="flex gap-5">
-              <button className="w-11 h-11 bg-[#f7f3ed] rounded-full flex items-center justify-center shadow-sm hover:bg-[#ece4da] transition-colors">
-                <Facebook className="w-5 h-5 text-[#5c6b5e]" />
-              </button>
+
+            <div className="mt-8 flex gap-4">
+              <Link
+                href="https://www.facebook.com/le.ho.minh.quan.2024?locale=vi_VN"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex h-11 w-11 items-center justify-center rounded-full bg-[#f8f2ec] text-[#8b776b] transition-colors hover:bg-[#eee2d8]"
+              >
+                <Facebook className="h-5 w-5" />
+              </Link>
             </div>
           </div>
 
-          <div className="flex flex-col gap-6 w-[192px]">
+          <div>
             <p
-              className="text-[#d0bb95] text-[10px] font-bold tracking-[2px] uppercase"
-              style={{ fontFamily: "var(--font-noto-serif)" }}
+              className="text-[10px] font-semibold uppercase tracking-[0.32em] text-[#d0bb95]"
+              style={{ fontFamily: "var(--font-inter)" }}
             >
-              SHOP
+              {t("footer.shop")}
             </p>
-            <div className="flex flex-col gap-4">
-              {["All Flowers", "Best Sellers", "Subscriptions", "Gifts"].map((t) => (
+            <div className="mt-6 flex flex-col gap-4">
+              {[
+                { label: t("footer.allFlowers"), href: "/products" },
+                { label: t("nav.categories"), href: "/products?view=categories" },
+                { label: t("nav.latest"), href: "/products?sort=latest" },
+                { label: t("footer.gifts"), href: "/products" },
+              ].map((item) => (
                 <Link
-                  key={t}
-                  href="#"
-                  className="text-[#5c6b5e] text-[14px] font-light hover:text-[#2d2a26] transition-colors"
+                  key={`${item.href}-${item.label}`}
+                  href={item.href}
+                  className="text-[14px] font-light text-[#7b6d64] transition-colors hover:text-[#2d2a26]"
                   style={{ fontFamily: "var(--font-inter)" }}
                 >
-                  {t}
+                  {item.label}
                 </Link>
               ))}
             </div>
           </div>
 
-          <div className="flex flex-col gap-6 w-[192px]">
+          <div>
             <p
-              className="text-[#d0bb95] text-[10px] font-bold tracking-[2px] uppercase"
-              style={{ fontFamily: "var(--font-noto-serif)" }}
+              className="text-[10px] font-semibold uppercase tracking-[0.32em] text-[#d0bb95]"
+              style={{ fontFamily: "var(--font-inter)" }}
             >
-              SERVICES
+              {t("footer.services")}
             </p>
-            <div className="flex flex-col gap-4">
-              {["Weddings", "Events", "Corporate", "Custom Designs"].map((t) => (
+            <div className="mt-6 flex flex-col gap-4">
+              {[
+                { label: t("footer.weddings"), href: "/events#weddings" },
+                { label: t("footer.occasions"), href: "/events#occasions" },
+                { label: t("footer.corporate"), href: "/events#corporate" },
+                { label: t("nav.ourStory"), href: "/our-story" },
+              ].map((item) => (
                 <Link
-                  key={t}
-                  href="#"
-                  className="text-[#5c6b5e] text-[14px] font-light hover:text-[#2d2a26] transition-colors"
+                  key={`${item.href}-${item.label}`}
+                  href={item.href}
+                  className="text-[14px] font-light text-[#7b6d64] transition-colors hover:text-[#2d2a26]"
                   style={{ fontFamily: "var(--font-inter)" }}
                 >
-                  {t}
+                  {item.label}
                 </Link>
               ))}
             </div>
           </div>
 
-          <div className="flex flex-col gap-6 w-[203px]">
+          <div>
             <p
-              className="text-[#d0bb95] text-[10px] font-bold tracking-[2px] uppercase"
-              style={{ fontFamily: "var(--font-noto-serif)" }}
+              className="text-[10px] font-semibold uppercase tracking-[0.32em] text-[#d0bb95]"
+              style={{ fontFamily: "var(--font-inter)" }}
             >
-              CONTACT
+              {t("footer.contact")}
             </p>
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center gap-3">
-                <Mail className="w-5 h-5 text-[#5c6b5e] shrink-0" />
-                <span
-                  className="text-[#5c6b5e] text-[14px] font-light"
-                  style={{ fontFamily: "var(--font-inter)" }}
-                >
+            <div className="mt-6 flex flex-col gap-5">
+              <div className="flex items-center gap-3 text-[#7b6d64]">
+                <Mail className="h-5 w-5 shrink-0" />
+                <span className="text-[14px] font-light" style={{ fontFamily: "var(--font-inter)" }}>
                   hello@floralboutique.com
                 </span>
               </div>
-              <div className="flex items-center gap-3">
-                <MapPin className="w-5 h-5 text-[#5c6b5e] shrink-0" />
-                <span
-                  className="text-[#5c6b5e] text-[14px] font-light"
-                  style={{ fontFamily: "var(--font-inter)" }}
-                >
-                  123 Bloom Street, NY
+              <div className="flex items-center gap-3 text-[#7b6d64]">
+                <MapPin className="h-5 w-5 shrink-0" />
+                <span className="text-[14px] font-light" style={{ fontFamily: "var(--font-inter)" }}>
+                  {t("footer.address")}
                 </span>
               </div>
-              <div className="flex items-center gap-3">
-                <Phone className="w-5 h-5 text-[#5c6b5e] shrink-0" />
-                <span
-                  className="text-[#5c6b5e] text-[14px] font-light"
-                  style={{ fontFamily: "var(--font-inter)" }}
-                >
+              <div className="flex items-center gap-3 text-[#7b6d64]">
+                <Phone className="h-5 w-5 shrink-0" />
+                <span className="text-[14px] font-light" style={{ fontFamily: "var(--font-inter)" }}>
                   +1 (555) 000-1111
                 </span>
               </div>
@@ -111,22 +123,23 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="border-t border-[#eee4e1] pt-6 flex items-center justify-between">
-          <p
-            className="text-[rgba(92,107,94,0.7)] text-[11px] font-light tracking-[0.275px]"
-            style={{ fontFamily: "var(--font-inter)" }}
-          >
-            © 2026 Floral Boutique. All rights reserved.
+        <div className="mt-16 flex flex-col gap-5 border-t border-[#f0e5de] pt-6 text-[11px] text-[#a3948a] sm:flex-row sm:items-center sm:justify-between">
+          <p style={{ fontFamily: "var(--font-inter)" }}>
+            {t("footer.rights")}
           </p>
-          <div className="flex gap-10">
-            {["Privacy Policy", "Terms of Service", "Shipping Info"].map((t) => (
+          <div className="flex flex-wrap gap-6">
+            {[
+              { label: t("footer.privacy"), href: "/privacy-policy" },
+              { label: t("footer.terms"), href: "/terms-of-service" },
+              { label: t("footer.shipping"), href: "/shipping-info" },
+            ].map((item) => (
               <Link
-                key={t}
-                href="#"
-                className="text-[rgba(92,107,94,0.7)] text-[11px] font-light tracking-[0.275px] hover:text-[#5c6b5e] transition-colors"
+                key={`${item.href}-${item.label}`}
+                href={item.href}
+                className="transition-colors hover:text-[#7b6d64]"
                 style={{ fontFamily: "var(--font-inter)" }}
               >
-                {t}
+                {item.label}
               </Link>
             ))}
           </div>

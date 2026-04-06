@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import { Navbar, Footer } from "@/components/layout";
 import { useAuth } from "@/src/contexts/AuthContext";
+import { useLocale } from "@/src/contexts";
+import type { AuthUser } from "@/lib/auth/types";
 
 /* ─────────────────────────────────────────────
    Asset URLs từ Figma MCP
@@ -47,20 +49,69 @@ function GoogleIcon() {
   );
 }
 
+function getPostLoginPath(user: AuthUser | null | undefined) {
+  if (!user) {
+    return "/";
+  }
+
+  return user.role?.toUpperCase() === "ADMIN" ? "/admin" : "/";
+}
+
 /* ─────────────────────────────────────────────
    Sign In Form
 ───────────────────────────────────────────── */
 function SignInFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { signIn } = useAuth();
+  const { locale } = useLocale();
+  const { user, loading: authLoading, signIn, signInWithGoogle } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+
+  const copy =
+    locale === "vi"
+      ? {
+          title: "Đăng nhập",
+          emailLabel: "Địa chỉ email",
+          emailPlaceholder: "hotmail@gmail.com",
+          passwordLabel: "Mật khẩu",
+          rememberMe: "Ghi nhớ tôi",
+          forgotPassword: "Quên mật khẩu?",
+          submit: "Đăng nhập",
+          submitting: "Đang đăng nhập...",
+          divider: "Hoặc đăng nhập với",
+          redirecting: "Đang chuyển hướng...",
+          noAccount: "Bạn chưa có tài khoản?",
+          signUp: "Đăng ký",
+          loginFailed: "Đăng nhập thất bại",
+          googleLoginFailed: "Đăng nhập Google thất bại",
+          loading: "Đang tải...",
+          imageAlt: "Bó hoa nghệ thuật",
+        }
+      : {
+          title: "Sign In",
+          emailLabel: "Email Address",
+          emailPlaceholder: "hotmail@gmail.com",
+          passwordLabel: "Password",
+          rememberMe: "Remember me",
+          forgotPassword: "Forgot password?",
+          submit: "Sign In",
+          submitting: "Signing In...",
+          divider: "Or sign in with",
+          redirecting: "Redirecting...",
+          noAccount: "Don't have an account?",
+          signUp: "Sign up",
+          loginFailed: "Login failed",
+          googleLoginFailed: "Google login failed",
+          loading: "Loading...",
+          imageAlt: "Floral arrangement",
+        };
 
   useEffect(() => {
     const message = searchParams.get("message");
@@ -68,6 +119,12 @@ function SignInFormContent() {
       setSuccessMessage(message);
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      router.replace(getPostLoginPath(user));
+    }
+  }, [authLoading, user, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,12 +134,26 @@ function SignInFormContent() {
     setLoading(true);
     try {
       await signIn({ email, password }, rememberMe);
-      router.push("/");
     } catch (err) {
       const error = err as { response?: { data?: { message?: string } }; message?: string };
-      setError(error.response?.data?.message || error.message || "Login failed");
+      setError(error.response?.data?.message || error.message || copy.loginFailed);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setError("");
+    setSuccessMessage("");
+    setGoogleLoading(true);
+
+    try {
+      await signInWithGoogle();
+    } catch (err) {
+      const error = err as { message?: string };
+      setError(error.message || copy.googleLoginFailed);
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -104,7 +175,7 @@ function SignInFormContent() {
         className="text-[#0a0a0a] text-[29px] font-medium leading-[36px] mb-8"
         style={{ fontFamily: "var(--font-inter)" }}
       >
-        Sign In
+        {copy.title}
       </h1>
 
       <form onSubmit={handleSubmit} className="w-full flex flex-col gap-5">
@@ -125,7 +196,7 @@ function SignInFormContent() {
             className="text-[#364153] text-[13px] font-normal"
             style={{ fontFamily: "var(--font-inter)" }}
           >
-            Email Address
+            {copy.emailLabel}
           </label>
           <div className="relative">
             <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
@@ -133,7 +204,7 @@ function SignInFormContent() {
             </div>
             <input
               type="email"
-              placeholder="hotmail@gmail.com"
+              placeholder={copy.emailPlaceholder}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full h-[50px] pl-[48px] pr-4 border border-[#d1d5dc] rounded-[14px] text-[15px] text-[#0a0a0a] placeholder-[rgba(10,10,10,0.4)] outline-none focus:border-[#d0bb95] focus:ring-1 focus:ring-[rgba(208,187,149,0.3)] transition-colors"
@@ -148,7 +219,7 @@ function SignInFormContent() {
             className="text-[#364153] text-[13px] font-normal"
             style={{ fontFamily: "var(--font-inter)" }}
           >
-            Password
+            {copy.passwordLabel}
           </label>
           <div className="relative">
             <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
@@ -208,7 +279,7 @@ function SignInFormContent() {
               className="text-[#4a5565] text-[13px]"
               style={{ fontFamily: "var(--font-inter)" }}
             >
-              Remember me
+              {copy.rememberMe}
             </span>
           </label>
           <Link
@@ -216,7 +287,7 @@ function SignInFormContent() {
             className="text-[#364153] text-[13px] hover:text-[#d0bb95] transition-colors"
             style={{ fontFamily: "var(--font-inter)" }}
           >
-            Forgot password?
+            {copy.forgotPassword}
           </Link>
         </div>
 
@@ -227,7 +298,7 @@ function SignInFormContent() {
           className="w-full h-12 bg-[#d0bb95] text-white text-[15px] font-normal rounded-[14px] shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)] hover:bg-[#c2a571] transition-colors mt-1 disabled:opacity-50 disabled:cursor-not-allowed"
           style={{ fontFamily: "var(--font-inter)" }}
         >
-          {loading ? "Signing In..." : "Sign In"}
+          {loading ? copy.submitting : copy.submit}
         </button>
       </form>
 
@@ -238,31 +309,24 @@ function SignInFormContent() {
           className="text-[#6a7282] text-[13px]"
           style={{ fontFamily: "var(--font-inter)" }}
         >
-          Or sign in with
+          {copy.divider}
         </span>
         <div className="flex-1 h-px bg-[#d1d5dc]" />
       </div>
 
       {/* Social Buttons */}
-      <div className="w-full flex gap-3">
+      <div className="w-full">
         <button
-          className="flex-1 h-[46px] border border-[#d1d5dc] rounded-[14px] flex items-center justify-center gap-2 hover:bg-[#f9f9f9] transition-colors"
+          type="button"
+          onClick={handleGoogleSignIn}
+          disabled={googleLoading}
+          className="w-full h-[46px] border border-[#d1d5dc] rounded-[14px] flex items-center justify-center gap-2 hover:bg-[#f9f9f9] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           style={{ fontFamily: "var(--font-inter)" }}
         >
           <GoogleIcon />
-          <span className="text-[#0a0a0a] text-[15px]">Google</span>
-        </button>
-        <button
-          className="flex-1 h-[46px] border border-[#d1d5dc] rounded-[14px] flex items-center justify-center gap-2 hover:bg-[#f9f9f9] transition-colors"
-          style={{ fontFamily: "var(--font-inter)" }}
-        >
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <path
-              d="M20 10C20 4.477 15.523 0 10 0S0 4.477 0 10c0 4.991 3.657 9.128 8.438 9.878V12.89H5.898V10h2.54V7.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V10h2.773l-.443 2.89h-2.33v6.988C16.343 19.128 20 14.991 20 10z"
-              fill="#1877F2"
-            />
-          </svg>
-          <span className="text-[#0a0a0a] text-[15px]">Facebook</span>
+          <span className="text-[#0a0a0a] text-[15px]">
+            {googleLoading ? copy.redirecting : "Google"}
+          </span>
         </button>
       </div>
 
@@ -271,12 +335,12 @@ function SignInFormContent() {
         className="mt-6 text-[#4a5565] text-[15px]"
         style={{ fontFamily: "var(--font-inter)" }}
       >
-        Don&apos;t have an account?{" "}
+        {copy.noAccount}{" "}
         <Link
           href="/signup"
           className="text-[#d0bb95] font-bold hover:text-[#c2a571] transition-colors"
         >
-          Sign up
+          {copy.signUp}
         </Link>
       </p>
     </div>
@@ -284,8 +348,11 @@ function SignInFormContent() {
 }
 
 function SignInForm() {
+  const { locale } = useLocale();
+  const loadingText = locale === "vi" ? "Đang tải..." : "Loading...";
+
   return (
-    <Suspense fallback={<div className="flex flex-col items-center w-full"><div className="animate-pulse">Loading...</div></div>}>
+    <Suspense fallback={<div className="flex flex-col items-center w-full"><div className="animate-pulse">{loadingText}</div></div>}>
       <SignInFormContent />
     </Suspense>
   );
@@ -295,6 +362,9 @@ function SignInForm() {
    Page
 ───────────────────────────────────────────── */
 export default function SignInPage() {
+  const { locale } = useLocale();
+  const signInImageAlt = locale === "vi" ? "Bó hoa nghệ thuật" : "Floral arrangement";
+
   return (
     <div className="bg-white min-h-screen flex flex-col">
       <Navbar />
@@ -311,7 +381,7 @@ export default function SignInPage() {
           <div className="relative w-[360px] h-[440px] shrink-0 rounded-[24px] overflow-hidden shadow-[0px_25px_50px_-12px_rgba(0,0,0,0.25)]">
             <Image
               src={IMG_SIGNIN_FLOWER}
-              alt="Floral arrangement"
+              alt={signInImageAlt}
               fill
               sizes="360px"
               className="object-cover"
