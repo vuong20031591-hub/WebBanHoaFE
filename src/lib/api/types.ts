@@ -69,6 +69,13 @@ export interface AdminProductUpsertRequest {
   categoryId: number;
 }
 
+export interface UploadMediaResponse {
+  key: string;
+  publicUrl: string;
+  size: number;
+  contentType: string;
+}
+
 export interface CategoryDTO {
   id: number;
   name: string;

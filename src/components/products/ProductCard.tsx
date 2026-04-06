@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Heart, Plus } from "lucide-react";
@@ -9,6 +8,7 @@ import { createCartItem, useCartStore } from "@/lib/cart";
 import { formatCurrency } from "@/lib/currency";
 import { DEFAULT_PRODUCT_IMAGE } from "@/lib/mappers/product";
 import { useFavoritesStore } from "@/lib/favorites";
+import { SafeImage } from "@/components/common/SafeImage";
 import { useAuth, useLocale } from "@/src/contexts";
 
 interface ProductCardProps {
@@ -46,7 +46,7 @@ export function ProductCard({ product }: ProductCardProps) {
     <div className="bg-[rgba(255,255,255,0.4)] backdrop-blur-sm rounded-[32px] overflow-hidden w-full max-w-[360px] mx-auto shadow-[inset_0px_0.8px_0px_0px_rgba(255,255,255,0.6),inset_0px_-0.8px_0px_0px_rgba(255,255,255,0.6)]">
       <Link href={`/products/${product.id}`} className="block relative mx-[20.8px] mt-[20.8px] h-[300px] sm:h-[340px] lg:h-[360px]">
         <div className="relative w-full h-full rounded-tl-[200px] rounded-tr-[200px] rounded-bl-[20px] rounded-br-[20px] overflow-hidden shadow-sm bg-[#f7f3ed]">
-          <Image
+          <SafeImage
             src={safeImage}
             alt={product.name}
             fill

@@ -126,7 +126,7 @@ function getInitials(value: string): string {
 function mapLoadErrorMessage(loadError: unknown): string {
   if (isApiError(loadError)) {
     if (!loadError.status) {
-      return "Cannot connect to backend. Please ensure BE is running on http://localhost:8080.";
+      return "Cannot connect to backend. Please ensure BE is running on http://127.0.0.1:8080 (or http://localhost:8080).";
     }
     return loadError.message;
   }

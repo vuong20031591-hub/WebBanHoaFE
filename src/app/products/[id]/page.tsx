@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
@@ -18,6 +17,7 @@ import { formatCurrency } from "@/lib/currency";
 import { isApiError, productsApi } from "@/lib/api";
 import { mapProductDTOsToProducts, mapProductDetailDTOToProduct } from "@/lib/mappers";
 import { DEFAULT_PRODUCT_IMAGE } from "@/lib/mappers/product";
+import { SafeImage } from "@/components/common/SafeImage";
 import { Navbar, Footer } from "@/components/layout";
 import { Product } from "@/lib/products";
 import { useAuth, useLocale } from "@/src/contexts";
@@ -43,7 +43,7 @@ function RelatedProductCard({ product, locale }: { product: Product; locale: "en
   return (
     <Link href={`/products/${product.id}`} className="flex flex-col gap-6 group">
       <div className="bg-[rgba(255,255,255,0.4)] rounded-tl-[1000px] rounded-tr-[1000px] overflow-hidden relative w-full aspect-[3/4] shrink-0">
-        <Image
+        <SafeImage
           src={safeImage}
           alt={product.name}
           fill
@@ -304,7 +304,7 @@ function ProductDetailContent() {
             <div className="flex-1 flex flex-col gap-8 min-w-0">
               <div className="bg-[#f3f4f6] border border-[rgba(255,255,255,0.5)] rounded-tl-[1000px] rounded-tr-[1000px] overflow-hidden relative w-full shadow-sm">
                 <div className="relative w-full" style={{ paddingBottom: "115%" }}>
-                  <Image
+                  <SafeImage
                     src={images[activeImg]}
                     alt={product.name}
                     fill
@@ -327,7 +327,7 @@ function ProductDetailContent() {
                     }`}
                     style={{ paddingBottom: "36%" }}
                   >
-                    <Image
+                    <SafeImage
                       src={src}
                       alt={`View ${index + 1}`}
                       fill

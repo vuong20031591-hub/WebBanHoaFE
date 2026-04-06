@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
@@ -18,7 +17,15 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { adminOrdersApi, adminProductsApi, categoriesApi, isApiError, productsApi } from "@/lib/api";
+import {
+  adminMediaApi,
+  adminOrdersApi,
+  adminProductsApi,
+  categoriesApi,
+  isApiError,
+  productsApi,
+} from "@/lib/api";
+import { SafeImage } from "@/components/common/SafeImage";
 import type {
   AdminProductUpsertRequest,
   CategoryDTO,
@@ -178,9 +185,16 @@ function ProductCreateModal({
   categories,
   form,
   submitError,
+  imageUploadError,
+  selectedImageName,
   submitting,
+  uploadingImage,
   onClose,
   onChange,
+  onSelectImageFile,
+  onUploadImage,
+  canProcessImageUrl,
+  onProcessImageUrl,
   onSubmit,
 }: {
   mode: "create" | "edit";
@@ -188,9 +202,16 @@ function ProductCreateModal({
   categories: CategoryDTO[];
   form: ProductFormState;
   submitError: string | null;
+  imageUploadError: string | null;
+  selectedImageName: string | null;
   submitting: boolean;
+  uploadingImage: boolean;
   onClose: () => void;
   onChange: (field: keyof ProductFormState, value: string) => void;
+  onSelectImageFile: (file: File | null) => void;
+  onUploadImage: () => void;
+  canProcessImageUrl: boolean;
+  onProcessImageUrl: () => void;
   onSubmit: () => void;
 }) {
   if (!open) {
@@ -237,6 +258,9 @@ function ProductCreateModal({
               className="h-11 rounded-[14px] border border-[#e4ddd4] bg-white px-4 outline-none transition-colors focus:border-[#8d6030]"
               placeholder="Midnight Dahlia"
             />
+            <p className="text-[11px] text-[#8a8076]">
+              Neu nhap ca URL va chon file cung luc, he thong se uu tien file upload.
+            </p>
           </label>
 
           <label className="grid gap-2 text-[12px] text-[#5f564d]">
@@ -281,12 +305,51 @@ function ProductCreateModal({
 
           <label className="grid gap-2 text-[12px] text-[#5f564d] md:col-span-2">
             Image URL or local path
-            <input
-              value={form.image}
-              onChange={(event) => onChange("image", event.target.value)}
-              className="h-11 rounded-[14px] border border-[#e4ddd4] bg-white px-4 outline-none transition-colors focus:border-[#8d6030]"
-              placeholder="/images/inventory/midnight-dahlia.jpg"
-            />
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <input
+                value={form.image}
+                onChange={(event) => onChange("image", event.target.value)}
+                className="h-11 flex-1 rounded-[14px] border border-[#e4ddd4] bg-white px-4 outline-none transition-colors focus:border-[#8d6030]"
+                placeholder="/images/inventory/midnight-dahlia.jpg"
+              />
+              <button
+                type="button"
+                onClick={onProcessImageUrl}
+                disabled={uploadingImage || !canProcessImageUrl}
+                className="inline-flex h-11 items-center justify-center rounded-full border border-[#ddd2c6] px-4 text-[11px] font-medium text-[#6a5c4e] transition-colors hover:bg-[#f3eee8] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {uploadingImage ? "Processing..." : "Process URL"}
+              </button>
+            </div>
+            <p className="text-[11px] text-[#8a8076]">
+              Dán link ảnh ngoài để backend tải về, xử lý, rồi đổi sang CDN URL của bạn.
+            </p>
+          </label>
+
+          <label className="grid gap-2 text-[12px] text-[#5f564d] md:col-span-2">
+            Upload image file to CDN
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={(event) => onSelectImageFile(event.target.files?.[0] ?? null)}
+                className="h-11 flex-1 rounded-[14px] border border-[#e4ddd4] bg-white px-3 py-2 text-[11px] outline-none transition-colors file:mr-3 file:rounded-full file:border-0 file:bg-[#ede6dd] file:px-3 file:py-1 file:text-[11px] file:text-[#6a5c4e] hover:file:bg-[#e5dbcf] focus:border-[#8d6030]"
+              />
+              <button
+                type="button"
+                onClick={onUploadImage}
+                disabled={uploadingImage || !selectedImageName}
+                className="inline-flex h-11 items-center justify-center rounded-full border border-[#ddd2c6] px-4 text-[11px] font-medium text-[#6a5c4e] transition-colors hover:bg-[#f3eee8] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {uploadingImage ? "Uploading..." : "Upload image"}
+              </button>
+            </div>
+            <p className="text-[11px] text-[#8a8076]">
+              Backend will resize/compress the file, upload to storage, then return CDN URL.
+            </p>
+            {selectedImageName ? (
+              <p className="text-[11px] text-[#5f564d]">Selected file: {selectedImageName}</p>
+            ) : null}
           </label>
 
           <label className="grid gap-2 text-[12px] text-[#5f564d] md:col-span-2">
@@ -303,6 +366,12 @@ function ProductCreateModal({
         {submitError ? (
           <div className="mt-4 rounded-[16px] border border-[#efd0cc] bg-[#fbefec] px-4 py-3 text-[13px] text-[#8f3d35]">
             {submitError}
+          </div>
+        ) : null}
+
+        {imageUploadError ? (
+          <div className="mt-4 rounded-[16px] border border-[#efd0cc] bg-[#fbefec] px-4 py-3 text-[13px] text-[#8f3d35]">
+            {imageUploadError}
           </div>
         ) : null}
 
@@ -389,7 +458,7 @@ function ProductDetailModal({
           ) : (
             <div className="grid gap-5 md:grid-cols-[260px_minmax(0,1fr)]">
               <div className="relative h-[230px] overflow-hidden rounded-[18px] bg-[#ece7e1]">
-                <Image
+                <SafeImage
                   src={resolveProductImage(product.image)}
                   alt={product.name}
                   fill
@@ -533,6 +602,9 @@ export function AdminInventoryPageContent() {
   const [editingProductId, setEditingProductId] = useState<number | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [productForm, setProductForm] = useState<ProductFormState>(INITIAL_PRODUCT_FORM);
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [imageUploadError, setImageUploadError] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editLoadingProductId, setEditLoadingProductId] = useState<number | null>(null);
@@ -554,6 +626,46 @@ export function AdminInventoryPageContent() {
   const [currentProductPage, setCurrentProductPage] = useState(1);
 
   const isAdmin = user?.role?.toUpperCase() === "ADMIN";
+  const mediaBaseUrl = (process.env.NEXT_PUBLIC_MEDIA_BASE_URL || "").trim();
+
+  const isHttpUrl = (value: string): boolean => /^https?:\/\//i.test(value);
+
+  const isLocalMediaUrl = (value: string): boolean => {
+    if (!isHttpUrl(value)) {
+      return false;
+    }
+
+    try {
+      const url = new URL(value);
+      const hostname = url.hostname.toLowerCase();
+
+      if (["localhost", "127.0.0.1", "0.0.0.0", "::1"].includes(hostname)) {
+        return true;
+      }
+
+      return url.pathname.startsWith("/media/");
+    } catch {
+      return false;
+    }
+  };
+
+  const isManagedCdnUrl = (value: string): boolean => {
+    const normalized = value.trim();
+    if (!normalized) {
+      return false;
+    }
+
+    if (normalized.includes(".r2.cloudflarestorage.com/")) {
+      return true;
+    }
+
+    return mediaBaseUrl ? normalized.startsWith(mediaBaseUrl) : false;
+  };
+
+  const shouldProcessRemoteImageUrl = (value: string): boolean => {
+    const normalized = value.trim();
+    return isHttpUrl(normalized) && !isManagedCdnUrl(normalized) && !isLocalMediaUrl(normalized);
+  };
 
   const mapApiMessage = (value: unknown, fallback: string): string => {
     if (isApiError(value)) {
@@ -767,15 +879,21 @@ export function AdminInventoryPageContent() {
     setModalMode("create");
     setEditingProductId(null);
     setProductForm(INITIAL_PRODUCT_FORM);
+    setSelectedImageFile(null);
+    setImageUploadError(null);
+    setIsUploadingImage(false);
     setSubmitError(null);
   };
 
   const openCreateModal = () => {
     setActionError(null);
     setSubmitError(null);
+    setImageUploadError(null);
+    setIsUploadingImage(false);
     setModalMode("create");
     setEditingProductId(null);
     setProductForm(INITIAL_PRODUCT_FORM);
+    setSelectedImageFile(null);
     setIsCreateModalOpen(true);
   };
 
@@ -821,6 +939,9 @@ export function AdminInventoryPageContent() {
       setModalMode("edit");
       setEditingProductId(productId);
       setProductForm(toProductFormState(detail));
+      setSelectedImageFile(null);
+      setImageUploadError(null);
+      setIsUploadingImage(false);
       setIsCreateModalOpen(true);
     } catch (editLoadError) {
       setActionError(mapApiMessage(editLoadError, "Unable to open edit form right now."));
@@ -861,9 +982,35 @@ export function AdminInventoryPageContent() {
 
     setIsSubmitting(true);
     setSubmitError(null);
+    setImageUploadError(null);
     setActionError(null);
 
+    let failedAtUploadStage = false;
+
     try {
+      if (selectedImageFile) {
+        failedAtUploadStage = true;
+        setIsUploadingImage(true);
+        const uploaded = await adminMediaApi.uploadProductImage(selectedImageFile);
+        payload.image = uploaded.publicUrl;
+        setProductForm((current) => ({
+          ...current,
+          image: uploaded.publicUrl,
+        }));
+        setSelectedImageFile(null);
+      } else if (payload.image && shouldProcessRemoteImageUrl(payload.image)) {
+        failedAtUploadStage = true;
+        setIsUploadingImage(true);
+        const uploaded = await adminMediaApi.uploadProductImageFromUrl(payload.image);
+        payload.image = uploaded.publicUrl;
+        setProductForm((current) => ({
+          ...current,
+          image: uploaded.publicUrl,
+        }));
+      }
+
+      failedAtUploadStage = false;
+
       const savedProduct =
         modalMode === "create"
           ? await adminProductsApi.createProduct(payload)
@@ -878,9 +1025,79 @@ export function AdminInventoryPageContent() {
 
       closeCreateModal();
     } catch (submitProductError) {
-      setSubmitError(mapApiMessage(submitProductError, "Unable to save product right now."));
+      const message = mapApiMessage(submitProductError, "Unable to save product right now.");
+      if (failedAtUploadStage) {
+        setImageUploadError(message);
+      } else {
+        setSubmitError(message);
+      }
     } finally {
+      setIsUploadingImage(false);
       setIsSubmitting(false);
+    }
+  };
+
+  const uploadSelectedImage = async () => {
+    if (!selectedImageFile) {
+      setImageUploadError("Please choose an image file before upload.");
+      return;
+    }
+
+    setIsUploadingImage(true);
+    setImageUploadError(null);
+    setSubmitError(null);
+
+    try {
+      const uploaded = await adminMediaApi.uploadProductImage(selectedImageFile);
+      setProductForm((current) => ({
+        ...current,
+        image: uploaded.publicUrl,
+      }));
+      setSelectedImageFile(null);
+    } catch (uploadError) {
+      setImageUploadError(mapApiMessage(uploadError, "Unable to upload image right now."));
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
+  const processImageUrlInput = async () => {
+    const imageUrl = productForm.image.trim();
+
+    if (!imageUrl) {
+      setImageUploadError("Please enter an image URL before processing.");
+      return;
+    }
+
+    if (!isHttpUrl(imageUrl)) {
+      setImageUploadError("Only http/https image URLs are supported for URL processing.");
+      return;
+    }
+
+    if (isLocalMediaUrl(imageUrl)) {
+      setImageUploadError("Local media URLs are already usable and do not need to be processed again.");
+      return;
+    }
+
+    if (isManagedCdnUrl(imageUrl)) {
+      setImageUploadError("This URL is already from your CDN.");
+      return;
+    }
+
+    setIsUploadingImage(true);
+    setImageUploadError(null);
+    setSubmitError(null);
+
+    try {
+      const uploaded = await adminMediaApi.uploadProductImageFromUrl(imageUrl);
+      setProductForm((current) => ({
+        ...current,
+        image: uploaded.publicUrl,
+      }));
+    } catch (uploadError) {
+      setImageUploadError(mapApiMessage(uploadError, "Unable to process image URL right now."));
+    } finally {
+      setIsUploadingImage(false);
     }
   };
 
@@ -1013,9 +1230,23 @@ export function AdminInventoryPageContent() {
         categories={categories}
         form={productForm}
         submitError={submitError}
+        imageUploadError={imageUploadError}
+        selectedImageName={selectedImageFile?.name ?? null}
         submitting={isSubmitting}
+        uploadingImage={isUploadingImage}
         onClose={closeCreateModal}
         onChange={updateProductForm}
+        onSelectImageFile={(file) => {
+          setSelectedImageFile(file);
+          setImageUploadError(null);
+        }}
+        onUploadImage={() => {
+          void uploadSelectedImage();
+        }}
+        canProcessImageUrl={shouldProcessRemoteImageUrl(productForm.image)}
+        onProcessImageUrl={() => {
+          void processImageUrlInput();
+        }}
         onSubmit={() => {
           void submitProduct();
         }}
@@ -1230,7 +1461,7 @@ export function AdminInventoryPageContent() {
                       return (
                         <article key={product.id}>
                           <div className="relative h-[205px] overflow-hidden rounded-[22px] bg-[#ece7e1]">
-                            <Image
+                            <SafeImage
                               src={image}
                               alt={product.name}
                               fill

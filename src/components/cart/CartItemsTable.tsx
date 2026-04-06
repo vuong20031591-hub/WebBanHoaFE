@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { Minus, Plus, ShoppingBag, AlertCircle, RefreshCw } from "lucide-react";
 import { CartItem, useCartStore } from "@/lib/cart";
@@ -8,6 +7,7 @@ import { formatCurrency } from "@/lib/currency";
 import { useLocale } from "@/src/contexts";
 import { getCartItemVariant } from "./constants";
 import { DEFAULT_PRODUCT_IMAGE } from "@/lib/mappers/product";
+import { SafeImage } from "@/components/common/SafeImage";
 
 interface CartItemsTableProps {
   isHydrating: boolean;
@@ -152,7 +152,7 @@ export function CartItemsTable({
               >
                 <div className="flex gap-4 pl-1 sm:gap-8">
                   <div className="relative h-32 w-24 overflow-hidden rounded-tl-[80px] rounded-tr-[80px] rounded-bl-[8px] rounded-br-[8px] bg-white">
-                    <Image
+                    <SafeImage
                       src={item.productImage || DEFAULT_PRODUCT_IMAGE}
                       alt={item.productName}
                       fill

@@ -13,8 +13,36 @@ import type {
   UpdateProfileRequest,
 } from "./types";
 
+function normalizeLoopbackApiBaseUrl(url: string): string {
+  if (typeof window === "undefined") {
+    return url;
+  }
+
+  try {
+    const parsed = new URL(url);
+    const browserHost = window.location.hostname;
+
+    if (browserHost === "127.0.0.1" && parsed.hostname === "localhost") {
+      parsed.hostname = "127.0.0.1";
+    }
+
+    if (browserHost === "localhost" && parsed.hostname === "127.0.0.1") {
+      parsed.hostname = "localhost";
+    }
+
+    return parsed.toString().replace(/\/$/, "");
+  } catch {
+    return url;
+  }
+}
+
+const PUBLIC_API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8080";
+
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
+  typeof window === "undefined"
+    ? process.env.INTERNAL_API_BASE_URL || PUBLIC_API_BASE_URL
+    : normalizeLoopbackApiBaseUrl(PUBLIC_API_BASE_URL);
 
 const authClient = axios.create({
   baseURL: API_BASE_URL,
