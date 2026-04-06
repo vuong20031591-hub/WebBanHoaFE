@@ -59,6 +59,10 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
+        hostname: "api.floralboutique.eu.cc",
+      },
+      {
+        protocol: "https",
         hostname: "**.r2.cloudflarestorage.com",
       },
       ...(mediaRemotePattern ? [mediaRemotePattern] : []),
