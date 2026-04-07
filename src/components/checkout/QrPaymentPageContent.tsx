@@ -9,6 +9,7 @@ import { Clock3, ExternalLink, ShieldCheck } from "lucide-react";
 import { Footer, Navbar } from "@/components/layout";
 import { formatCurrency } from "@/lib/currency";
 import { isApiError, ordersApi, paymentsApi } from "@/lib/api";
+import { getToken } from "@/lib/auth/storage";
 import {
   formatOrderStatus,
   loadOrderProducts,
@@ -38,6 +39,35 @@ function getInlineQrImage(checkout: PaymentCheckoutDTO | null): string | null {
   }
 
   return checkout.checkoutUrl?.startsWith("data:image/") ? checkout.checkoutUrl : null;
+}
+
+function normalizeLoopbackApiBaseUrl(url: string): string {
+  if (typeof window === "undefined") {
+    return url;
+  }
+
+  try {
+    const parsed = new URL(url);
+    const browserHost = window.location.hostname;
+
+    if (browserHost === "127.0.0.1" && parsed.hostname === "localhost") {
+      parsed.hostname = "127.0.0.1";
+    }
+
+    if (browserHost === "localhost" && parsed.hostname === "127.0.0.1") {
+      parsed.hostname = "localhost";
+    }
+
+    return parsed.toString().replace(/\/$/, "");
+  } catch {
+    return url;
+  }
+}
+
+function getPaymentsApiBaseUrl(): string {
+  const configuredBaseUrl =
+    process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8080";
+  return normalizeLoopbackApiBaseUrl(configuredBaseUrl);
 }
 
 function QrStateCard({
@@ -348,6 +378,97 @@ export function QrPaymentPageContent() {
       window.clearInterval(timerId);
     };
   }, [checkout, remainingSeconds]);
+
+  useEffect(() => {
+    if (!user || orderId <= 0 || paymentCompleted) {
+      return;
+    }
+
+    const token = getToken();
+    if (!token) {
+      return;
+    }
+
+    const abortController = new AbortController();
+    let active = true;
+
+    const subscribePaymentEvents = async () => {
+      try {
+        const response = await fetch(
+          `${getPaymentsApiBaseUrl()}/api/payments/orders/${orderId}/events`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: "text/event-stream",
+            },
+            cache: "no-store",
+            signal: abortController.signal,
+          }
+        );
+
+        if (!response.ok || !response.body) {
+          return;
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (active) {
+          const { done, value } = await reader.read();
+          if (done) {
+            break;
+          }
+
+          buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, "\n");
+          let delimiterIndex = buffer.indexOf("\n\n");
+
+          while (delimiterIndex !== -1) {
+            const eventPayload = buffer.slice(0, delimiterIndex);
+            buffer = buffer.slice(delimiterIndex + 2);
+
+            const dataLine = eventPayload
+              .split("\n")
+              .find((line) => line.startsWith("data:"));
+
+            if (dataLine) {
+              const rawData = dataLine.slice(5).trim();
+              if (rawData) {
+                try {
+                  const parsed = JSON.parse(rawData) as {
+                    status?: string;
+                    orderId?: number;
+                  };
+
+                  if (parsed.status === "PAID" && parsed.orderId === orderId) {
+                    await refreshPaymentStatus();
+                    return;
+                  }
+                } catch {
+                  if (rawData === "PAID") {
+                    await refreshPaymentStatus();
+                    return;
+                  }
+                }
+              }
+            }
+
+            delimiterIndex = buffer.indexOf("\n\n");
+          }
+        }
+      } catch {
+        // Polling fallback continues to handle payment state updates.
+      }
+    };
+
+    void subscribePaymentEvents();
+
+    return () => {
+      active = false;
+      abortController.abort();
+    };
+  }, [orderId, paymentCompleted, refreshPaymentStatus, user]);
 
   useEffect(() => {
     if (!user || orderId <= 0 || paymentCompleted) {
