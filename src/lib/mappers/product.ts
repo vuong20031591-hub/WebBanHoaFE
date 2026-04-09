@@ -2,11 +2,26 @@ import { ProductDTO, ProductDetailDTO } from "../api/types";
 import { Product } from "../products/types";
 
 export const DEFAULT_PRODUCT_IMAGE = "/images/hero-main.png";
+
+const mediaBaseUrl = process.env.NEXT_PUBLIC_MEDIA_BASE_URL?.trim() || "";
+const mediaBaseHostname = (() => {
+  if (!mediaBaseUrl) {
+    return null;
+  }
+
+  try {
+    return new URL(mediaBaseUrl).hostname;
+  } catch {
+    return null;
+  }
+})();
+
 const ALLOWED_REMOTE_IMAGE_HOSTS = new Set([
   "images.unsplash.com",
   "picsum.photos",
   "localhost",
   "127.0.0.1",
+  ...(mediaBaseHostname ? [mediaBaseHostname] : []),
 ]);
 const ALLOWED_REMOTE_IMAGE_HOST_SUFFIXES = [".r2.cloudflarestorage.com"];
 

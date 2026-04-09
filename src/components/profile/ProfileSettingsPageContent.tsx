@@ -21,6 +21,7 @@ export function ProfileSettingsPageContent() {
   const { t } = useLocale();
   const [primaryAddress, setPrimaryAddress] = useState<string>("");
   const [loadingAddress, setLoadingAddress] = useState(true);
+  const fallbackAvatar = "/images/hero-main.png";
 
   const settingsNavigation: ProfileSettingsNavItem[] = [
     {
@@ -100,12 +101,18 @@ export function ProfileSettingsPageContent() {
   }, [loadPrimaryAddress, user]);
 
   const accountInfo = {
-    photo: "/images/hero-main.png",
-    changePhotoLabel: t("profile.settings.photoUpdateSoon"),
+    photo: user?.avatarUrl?.trim() || fallbackAvatar,
+    changePhotoLabel: t("profile.account.changePhoto"),
     fullName: user?.fullName?.trim() || t("profile.settings.fallbackName"),
     email: user?.email?.trim() || t("profile.settings.noEmailFound"),
     phone: user?.phone?.trim() || "",
     address: loadingAddress ? t("profile.settings.loadingAddress") : primaryAddress,
+  };
+
+  const handleUploadAvatar = async (file: File): Promise<string> => {
+    const updatedUser = await authApi.uploadAvatar(file);
+    await refreshUser();
+    return updatedUser.avatarUrl?.trim() || accountInfo.photo;
   };
 
   const handleSaveSettings = async (payload: SaveProfileSettingsPayload) => {
@@ -251,7 +258,7 @@ export function ProfileSettingsPageContent() {
                   rewards={rewardsCard}
                 />
                 <ProfileSettingsForm
-                  key={`${user.id}-${user.phone}-${primaryAddress}`}
+                  key={`${user.id}-${user.phone}-${primaryAddress}-${user.avatarUrl ?? ""}`}
                   accountInfo={accountInfo}
                   communicationTitle={t("profile.settings.notificationsTitle")}
                   communicationSubtitle={t("profile.settings.notificationsSubtitle")}
@@ -259,6 +266,7 @@ export function ProfileSettingsPageContent() {
                   cancelLabel={t("profile.settings.cancel")}
                   saveLabel={t("profile.settings.saveChanges")}
                   manageNotificationsHref="/profile/settings/notifications"
+                  onUploadAvatar={handleUploadAvatar}
                   onSave={handleSaveSettings}
                 />
               </div>

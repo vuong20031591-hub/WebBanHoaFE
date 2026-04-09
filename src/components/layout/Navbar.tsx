@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState, useSyncExternalStore, useEffect, useRef } from "react";
 import { Flower2, Search, ShoppingCart, User } from "lucide-react";
 import { useCartStore } from "@/lib/cart";
+import { SafeImage } from "@/components/common/SafeImage";
 import { useAuth, useLocale } from "@/src/contexts";
 
 interface ProductSuggestion {
@@ -29,6 +30,7 @@ export function Navbar() {
   const router = useRouter();
   const { user, signOut } = useAuth();
   const { t } = useLocale();
+  const userAvatarUrl = user?.avatarUrl?.trim() || "";
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [suggestions, setSuggestions] = useState<ProductSuggestion[]>([]);
@@ -247,8 +249,22 @@ export function Navbar() {
           <Link
             href="/profile"
             className="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-[#f5f0eb]"
+            aria-label={t("profile.nav.account")}
           >
-            <User className="h-5 w-5 text-[#2d2a26]" />
+            {user && userAvatarUrl ? (
+              <span className="relative block h-8 w-8 overflow-hidden rounded-full">
+                <SafeImage
+                  src={userAvatarUrl}
+                  alt={user.fullName || "Avatar"}
+                  fill
+                  fallbackSrc="/images/hero-main.png"
+                  sizes="32px"
+                  className="object-cover"
+                />
+              </span>
+            ) : (
+              <User className="h-5 w-5 text-[#2d2a26]" />
+            )}
           </Link>
 
           {user ? (

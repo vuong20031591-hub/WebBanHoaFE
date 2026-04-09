@@ -1,117 +1,62 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useState, type ChangeEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   ClipboardList,
+  Eye,
   LayoutDashboard,
   Package2,
+  Pencil,
   Search,
   Settings,
+  Trash2,
   UserPlus,
   Users,
+  X,
 } from "lucide-react";
-import { adminOrdersApi, isApiError } from "@/lib/api";
-import type { OrderDTO } from "@/lib/api/types";
+import { adminUsersApi, isApiError } from "@/lib/api";
+import type {
+  AdminCreateUserRequest,
+  AdminUpdateUserRequest,
+  AdminUserDTO,
+} from "@/lib/api/types";
+import { SafeImage } from "@/components/common/SafeImage";
 import { Navbar } from "@/src/components/layout";
 import { useAuth } from "@/src/contexts";
 
-type Tier = "Gold" | "Silver" | "Bronze" | "New";
-type TierFilter = Tier | "All";
-type SortBy = "totalSpend" | "lastOrderDate" | "fullName" | "orders";
+type RoleFilter = "ALL" | "USER" | "ADMIN";
+type RoleOption = "USER" | "ADMIN";
 
-interface Customer {
-  id: number;
-  fullName: string;
+type UserFormState = {
   email: string;
-  initials: string;
-  avatar: string;
-  tier: Tier;
-  totalSpend: number;
-  totalOrders: number;
-  lastOrderDate: string;
-  lastOrderItem: string;
-  lastOrderStatus: string;
+  fullName: string;
+  phone: string;
+  role: RoleOption;
+  password: string;
+  avatarUrl: string;
+};
+
+const PAGE_SIZE = 8;
+const ADMIN_API_MAX_PAGE_SIZE = 100;
+const DEFAULT_AVATAR = "/images/hero-main.png";
+
+function normalizeRole(role: string): RoleOption {
+  return role?.toUpperCase() === "ADMIN" ? "ADMIN" : "USER";
 }
 
-interface CustomersCacheEntry {
-  userId: string;
-  expiresAt: number;
-  customers: Customer[];
+function sortUsers(list: AdminUserDTO[]): AdminUserDTO[] {
+  return [...list].sort((a, b) => a.fullName.localeCompare(b.fullName));
 }
 
-const PAGE_SIZE = 4;
-const CUSTOMERS_CACHE_TTL_MS = 60_000;
-let customersCache: CustomersCacheEntry | null = null;
-const TIER_TABS: TierFilter[] = ["All", "Gold", "Silver", "Bronze", "New"];
-const SORT_OPTIONS: { value: SortBy; label: string }[] = [
-  { value: "totalSpend", label: "Total Spend" },
-  { value: "lastOrderDate", label: "Last Order" },
-  { value: "orders", label: "Orders" },
-  { value: "fullName", label: "Name" },
-];
-const AVATARS = [
-  "/images/avatar-eleanor-vance.png",
-  "/images/avatar-julian-thorne.png",
-  "/images/avatar-beatrice-lowe.png",
-  "/images/avatar-silas-vane.png",
-];
-
-function formatCurrency(n: number) {
-  return new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: "VND",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(n);
-}
-
-function formatDate(d: string) {
-  const date = new Date(d);
-  if (Number.isNaN(date.getTime())) {
-    return "-";
+function mapLoadErrorMessage(loadError: unknown): string {
+  if (isApiError(loadError)) {
+    if (!loadError.status) {
+      return "Cannot connect to backend. Please ensure BE is running on http://127.0.0.1:8080 (or http://localhost:8080).";
+    }
+    return loadError.message;
   }
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(date);
-}
-
-function toTier(totalSpend: number, totalOrders: number): Tier {
-  if (totalSpend >= 20_000_000 || totalOrders >= 30) {
-    return "Gold";
-  }
-  if (totalSpend >= 8_000_000 || totalOrders >= 15) {
-    return "Silver";
-  }
-  if (totalSpend >= 2_000_000 || totalOrders >= 5) {
-    return "Bronze";
-  }
-  return "New";
-}
-
-function formatCustomerLabel(userId: string): string {
-  if (!userId) {
-    return "Unknown Customer";
-  }
-  if (userId.includes("@")) {
-    const [namePart] = userId.split("@");
-    return namePart
-      .split(/[._-]+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
-      .join(" ");
-  }
-  if (userId.length <= 14) {
-    return `Customer ${userId}`;
-  }
-  return `Customer ${userId.slice(0, 6)}...${userId.slice(-4)}`;
+  return "Unable to load users right now.";
 }
 
 function getInitials(value: string): string {
@@ -121,107 +66,6 @@ function getInitials(value: string): string {
     .slice(0, 2)
     .map((chunk) => chunk.charAt(0).toUpperCase())
     .join("");
-}
-
-function mapLoadErrorMessage(loadError: unknown): string {
-  if (isApiError(loadError)) {
-    if (!loadError.status) {
-      return "Cannot connect to backend. Please ensure BE is running on http://localhost:8080.";
-    }
-    return loadError.message;
-  }
-  return "Unable to load customers right now.";
-}
-
-function toCustomers(orders: OrderDTO[]): Customer[] {
-  const grouped = new Map<
-    string,
-    {
-      userId: string;
-      fullName: string | null;
-      email: string | null;
-      totalSpend: number;
-      totalOrders: number;
-      lastOrderDate: string;
-      lastOrderItem: string;
-      lastOrderStatus: string;
-    }
-  >();
-
-  for (const order of orders) {
-    const orderUserId = order.userId || "unknown";
-    const orderEmail = order.userEmail?.trim() ? order.userEmail.trim() : null;
-    const orderFullName = order.userFullName?.trim() ? order.userFullName.trim() : null;
-    const key = (orderEmail ?? orderUserId).toLowerCase();
-    const row = grouped.get(key);
-    const firstItem = order.items[0]?.productName ?? "No product";
-    const orderDate = new Date(order.createdAt).getTime();
-
-    if (!row) {
-      grouped.set(key, {
-        userId: orderUserId,
-        fullName: orderFullName,
-        email: orderEmail,
-        totalSpend: order.status === "CANCELLED" ? 0 : order.totalAmount,
-        totalOrders: 1,
-        lastOrderDate: order.createdAt,
-        lastOrderItem: firstItem,
-        lastOrderStatus: order.status,
-      });
-      continue;
-    }
-
-    row.totalOrders += 1;
-    if (order.status !== "CANCELLED") {
-      row.totalSpend += order.totalAmount;
-    }
-    if (!row.fullName && orderFullName) {
-      row.fullName = orderFullName;
-    }
-    if (!row.email && orderEmail) {
-      row.email = orderEmail;
-    }
-
-    const currentLastDate = new Date(row.lastOrderDate).getTime();
-    if (orderDate >= currentLastDate) {
-      row.lastOrderDate = order.createdAt;
-      row.lastOrderItem = firstItem;
-      row.lastOrderStatus = order.status;
-    }
-  }
-
-  return Array.from(grouped.values()).map((value, index) => {
-    const fullName = value.fullName || formatCustomerLabel(value.userId);
-    const email =
-      value.email || (value.userId.includes("@") ? value.userId : `${value.userId}@customer.local`);
-    return {
-      id: index + 1,
-      fullName,
-      email,
-      initials: getInitials(fullName),
-      avatar: AVATARS[index % AVATARS.length],
-      tier: toTier(value.totalSpend, value.totalOrders),
-      totalSpend: value.totalSpend,
-      totalOrders: value.totalOrders,
-      lastOrderDate: value.lastOrderDate,
-      lastOrderItem: value.lastOrderItem,
-      lastOrderStatus: value.lastOrderStatus,
-    };
-  });
-}
-
-function TierBadge({ tier }: { tier: Tier }) {
-  const styles: Record<Tier, string> = {
-    Gold: "bg-[#ffd1a44d] text-[#7d562d]",
-    Silver: "bg-[#e4e2de] text-[#78716c]",
-    Bronze: "bg-[#d2e5c866] text-[#566750]",
-    New: "bg-[#efd4c6] text-[#6e5a4f]",
-  };
-  return (
-    <span className={`inline-flex rounded-full px-3 py-1.5 text-[11px] font-bold tracking-[0.6px] ${styles[tier]}`}>
-      {tier} Tier
-    </span>
-  );
 }
 
 function AccessStateCard({
@@ -251,17 +95,283 @@ function AccessStateCard({
   );
 }
 
+function UserFormModal({
+  open,
+  mode,
+  saving,
+  error,
+  initialUser,
+  onClose,
+  onSubmit,
+}: {
+  open: boolean;
+  mode: "create" | "edit";
+  saving: boolean;
+  error: string | null;
+  initialUser: AdminUserDTO | null;
+  onClose: () => void;
+  onSubmit: (payload: AdminCreateUserRequest | AdminUpdateUserRequest) => Promise<void>;
+}) {
+  const [form, setForm] = useState<UserFormState>(() => {
+    if (mode === "edit" && initialUser) {
+      return {
+        email: initialUser.email ?? "",
+        fullName: initialUser.fullName ?? "",
+        phone: initialUser.phone ?? "",
+        role: normalizeRole(initialUser.role),
+        password: "",
+        avatarUrl: initialUser.avatarUrl?.trim() || "",
+      };
+    }
+
+    return {
+      email: "",
+      fullName: "",
+      phone: "",
+      role: "USER",
+      password: "",
+      avatarUrl: "",
+    };
+  });
+
+  if (!open) {
+    return null;
+  }
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (mode === "create") {
+      void onSubmit({
+        email: form.email.trim(),
+        fullName: form.fullName.trim(),
+        phone: form.phone.trim(),
+        password: form.password,
+        role: form.role,
+        avatarUrl: form.avatarUrl.trim() || null,
+      });
+      return;
+    }
+
+    void onSubmit({
+      email: form.email.trim(),
+      fullName: form.fullName.trim(),
+      phone: form.phone.trim(),
+      role: form.role,
+      avatarUrl: form.avatarUrl.trim() || null,
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-[rgba(20,18,16,0.45)] p-4">
+      <div className="w-full max-w-[620px] rounded-[24px] border border-[#ece2d8] bg-[#fbfaf8] p-6 shadow-xl md:p-8">
+        <div className="mb-5 flex items-center justify-between">
+          <h2
+            className="text-[28px] leading-[1.1] text-[#2d2a26]"
+            style={{ fontFamily: "var(--font-noto-serif)" }}
+          >
+            {mode === "create" ? "Add User" : "Edit User"}
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full p-2 text-[#8d8177] transition-colors hover:bg-[#f2ede7]"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="grid gap-2 text-[12px] text-[#5f564d]">
+              Full name
+              <input
+                value={form.fullName}
+                onChange={(event) => setForm((current) => ({ ...current, fullName: event.target.value }))}
+                required
+                className="h-11 rounded-[14px] border border-[#e4ddd4] bg-white px-4 outline-none transition-colors focus:border-[#8d6030]"
+                placeholder="Customer name"
+              />
+            </label>
+
+            <label className="grid gap-2 text-[12px] text-[#5f564d]">
+              Email
+              <input
+                type="email"
+                value={form.email}
+                onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
+                required
+                className="h-11 rounded-[14px] border border-[#e4ddd4] bg-white px-4 outline-none transition-colors focus:border-[#8d6030]"
+                placeholder="user@example.com"
+              />
+            </label>
+
+            <label className="grid gap-2 text-[12px] text-[#5f564d]">
+              Phone
+              <input
+                value={form.phone}
+                onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))}
+                required
+                className="h-11 rounded-[14px] border border-[#e4ddd4] bg-white px-4 outline-none transition-colors focus:border-[#8d6030]"
+                placeholder="0901234567"
+              />
+            </label>
+
+            <label className="grid gap-2 text-[12px] text-[#5f564d]">
+              Role
+              <select
+                value={form.role}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    role: event.target.value === "ADMIN" ? "ADMIN" : "USER",
+                  }))
+                }
+                className="h-11 rounded-[14px] border border-[#e4ddd4] bg-white px-4 outline-none transition-colors focus:border-[#8d6030]"
+              >
+                <option value="USER">USER</option>
+                <option value="ADMIN">ADMIN</option>
+              </select>
+            </label>
+
+            {mode === "create" ? (
+              <label className="grid gap-2 text-[12px] text-[#5f564d] md:col-span-2">
+                Password
+                <input
+                  type="password"
+                  value={form.password}
+                  onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
+                  required
+                  className="h-11 rounded-[14px] border border-[#e4ddd4] bg-white px-4 outline-none transition-colors focus:border-[#8d6030]"
+                  placeholder="At least 8 chars, 1 uppercase, 1 special"
+                />
+              </label>
+            ) : null}
+
+            <label className="grid gap-2 text-[12px] text-[#5f564d] md:col-span-2">
+              Avatar URL (optional)
+              <input
+                value={form.avatarUrl}
+                onChange={(event) => setForm((current) => ({ ...current, avatarUrl: event.target.value }))}
+                className="h-11 rounded-[14px] border border-[#e4ddd4] bg-white px-4 outline-none transition-colors focus:border-[#8d6030]"
+                placeholder="https://..."
+              />
+            </label>
+          </div>
+
+          {error ? (
+            <div className="rounded-[14px] border border-[#efd0cc] bg-[#fbefec] px-4 py-3 text-[13px] text-[#8f3d35]">
+              {error}
+            </div>
+          ) : null}
+
+          <div className="flex justify-end gap-3 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex h-11 items-center justify-center rounded-full border border-[#ddd2c6] px-5 text-[12px] font-medium text-[#6a5c4e] transition-colors hover:bg-[#f3eee8]"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="inline-flex h-11 items-center justify-center rounded-full bg-[#8d6030] px-6 text-[12px] font-semibold uppercase tracking-[0.6px] text-white transition-colors hover:bg-[#754f28] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {saving ? "Saving..." : mode === "create" ? "Create" : "Save"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function UserViewModal({
+  user,
+  onClose,
+}: {
+  user: AdminUserDTO | null;
+  onClose: () => void;
+}) {
+  if (!user) {
+    return null;
+  }
+
+  return (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-[rgba(20,18,16,0.45)] p-4">
+      <div className="w-full max-w-[560px] rounded-[24px] border border-[#ece2d8] bg-[#fbfaf8] p-6 shadow-xl md:p-8">
+        <div className="mb-5 flex items-center justify-between">
+          <h2
+            className="text-[28px] leading-[1.1] text-[#2d2a26]"
+            style={{ fontFamily: "var(--font-noto-serif)" }}
+          >
+            User Detail
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full p-2 text-[#8d8177] transition-colors hover:bg-[#f2ede7]"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="grid gap-5">
+          <div className="flex items-center gap-4 rounded-[16px] border border-[#e9dfd4] bg-white px-4 py-4">
+            <span className="relative block h-16 w-16 overflow-hidden rounded-full bg-[#eee6dd]">
+              <SafeImage
+                src={user.avatarUrl?.trim() || DEFAULT_AVATAR}
+                alt={user.fullName}
+                fill
+                fallbackSrc={DEFAULT_AVATAR}
+                sizes="64px"
+                className="object-cover"
+              />
+            </span>
+            <div>
+              <p className="text-[20px] font-semibold text-[#2d2a26]">{user.fullName}</p>
+              <p className="text-[13px] text-[#7a7068]">ID: {user.id}</p>
+            </div>
+          </div>
+
+          <div className="grid gap-3 rounded-[16px] border border-[#e9dfd4] bg-white px-4 py-4 text-[13px] text-[#4f463e]">
+            <p>
+              <span className="font-semibold">Email:</span> {user.email}
+            </p>
+            <p>
+              <span className="font-semibold">Phone:</span> {user.phone}
+            </p>
+            <p>
+              <span className="font-semibold">Role:</span> {normalizeRole(user.role)}
+            </p>
+            <p className="break-all">
+              <span className="font-semibold">Avatar URL:</span> {user.avatarUrl?.trim() || "-"}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminCustomersPage() {
   const { user, loading: authLoading } = useAuth();
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [users, setUsers] = useState<AdminUserDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [reloadToken, setReloadToken] = useState(0);
-  const [tierFilter, setTierFilter] = useState<TierFilter>("All");
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState<SortBy>("totalSpend");
-  const [sortOpen, setSortOpen] = useState(false);
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>("ALL");
   const [page, setPage] = useState(0);
+  const [reloadToken, setReloadToken] = useState(0);
+
+  const [selectedUser, setSelectedUser] = useState<AdminUserDTO | null>(null);
+  const [editingUser, setEditingUser] = useState<AdminUserDTO | null>(null);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const isAdmin = user?.role?.toUpperCase() === "ADMIN";
 
@@ -275,52 +385,32 @@ export default function AdminCustomersPage() {
       return;
     }
 
-    const currentUserId = String(user.id);
-    const now = Date.now();
-    const hasWarmCache = customersCache?.userId === currentUserId;
-    const cacheHit =
-      hasWarmCache &&
-      typeof customersCache?.expiresAt === "number" &&
-      customersCache.expiresAt > now;
-
-    if (hasWarmCache && customersCache) {
-      setCustomers(customersCache.customers);
-      setLoading(false);
-      setError(null);
-    }
-
-    if (cacheHit && reloadToken === 0) {
-      return;
-    }
-
     let active = true;
 
-    const load = async () => {
+    const loadUsers = async () => {
       try {
-        if (!hasWarmCache) {
-          setLoading(true);
-        }
+        setLoading(true);
         setError(null);
+        const allUsers: AdminUserDTO[] = [];
+        let currentPage = 0;
+        let totalPages = 1;
 
-        const response = await adminOrdersApi.getOrders({
-          includeUserProfile: true,
-          page: 0,
-          size: 400,
-          sortBy: "createdAt",
-          sortDir: "DESC",
-        });
+        while (currentPage < totalPages) {
+          const response = await adminUsersApi.getUsers({
+            page: currentPage,
+            size: ADMIN_API_MAX_PAGE_SIZE,
+          });
+
+          allUsers.push(...response.content);
+          totalPages = Math.max(1, response.totalPages ?? 1);
+          currentPage += 1;
+        }
 
         if (!active) {
           return;
         }
 
-        const nextCustomers = toCustomers(response.content);
-        setCustomers(nextCustomers);
-        customersCache = {
-          userId: currentUserId,
-          expiresAt: Date.now() + CUSTOMERS_CACHE_TTL_MS,
-          customers: nextCustomers,
-        };
+        setUsers(sortUsers(allUsers));
       } catch (loadError) {
         if (active) {
           setError(mapLoadErrorMessage(loadError));
@@ -332,52 +422,101 @@ export default function AdminCustomersPage() {
       }
     };
 
-    void load();
+    void loadUsers();
 
     return () => {
       active = false;
     };
   }, [authLoading, isAdmin, reloadToken, user]);
 
-  const filtered = useMemo(() => {
-    let list = [...customers];
-    if (tierFilter !== "All") {
-      list = list.filter((c) => c.tier === tierFilter);
-    }
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      list = list.filter((c) => c.fullName.toLowerCase().includes(q) || c.email.toLowerCase().includes(q));
-    }
-    list.sort((a, b) => {
-      if (sortBy === "totalSpend") {
-        return b.totalSpend - a.totalSpend;
+  const filteredUsers = useMemo(() => {
+    const lowered = search.trim().toLowerCase();
+
+    return users.filter((item) => {
+      const roleMatches = roleFilter === "ALL" || normalizeRole(item.role) === roleFilter;
+      if (!roleMatches) {
+        return false;
       }
-      if (sortBy === "lastOrderDate") {
-        return b.lastOrderDate.localeCompare(a.lastOrderDate);
+
+      if (!lowered) {
+        return true;
       }
-      if (sortBy === "orders") {
-        return b.totalOrders - a.totalOrders;
-      }
-      return a.fullName.localeCompare(b.fullName);
+
+      return (
+        item.fullName.toLowerCase().includes(lowered) ||
+        item.email.toLowerCase().includes(lowered) ||
+        item.phone.toLowerCase().includes(lowered)
+      );
     });
-    return list;
-  }, [customers, search, sortBy, tierFilter]);
+  }, [roleFilter, search, users]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages - 1);
-  const rows = filtered.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE);
+  const rows = filteredUsers.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE);
 
-  const goldCount = customers.filter((c) => c.tier === "Gold").length;
-  const silverCount = customers.filter((c) => c.tier === "Silver").length;
-
-  const handleTierChange = (t: TierFilter) => {
-    setTierFilter(t);
-    setPage(0);
+  const closeModals = () => {
+    setIsCreateOpen(false);
+    setEditingUser(null);
+    setSelectedUser(null);
+    setActionError(null);
   };
 
-  const handleSearch = (e: ChangeEvent<HTMLInputElement>) => {
-    setSearch(e.target.value);
-    setPage(0);
+  const refreshCurrentList = () => {
+    setReloadToken((current) => current + 1);
+  };
+
+  const handleCreateUser = async (payload: AdminCreateUserRequest | AdminUpdateUserRequest) => {
+    if ("password" in payload === false) {
+      return;
+    }
+
+    setIsSaving(true);
+    setActionError(null);
+    try {
+      const created = await adminUsersApi.createUser(payload);
+      setUsers((current) => sortUsers([...current, created]));
+      closeModals();
+    } catch (saveError) {
+      setActionError(mapLoadErrorMessage(saveError));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleUpdateUser = async (payload: AdminCreateUserRequest | AdminUpdateUserRequest) => {
+    if (!editingUser || "password" in payload) {
+      return;
+    }
+
+    setIsSaving(true);
+    setActionError(null);
+    try {
+      const updated = await adminUsersApi.updateUser(editingUser.id, payload);
+      setUsers((current) =>
+        sortUsers(current.map((item) => (item.id === updated.id ? updated : item)))
+      );
+      closeModals();
+    } catch (saveError) {
+      setActionError(mapLoadErrorMessage(saveError));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteUser = async (target: AdminUserDTO) => {
+    const shouldDelete = window.confirm(`Delete user ${target.fullName} (${target.email})?`);
+    if (!shouldDelete) {
+      return;
+    }
+
+    setActionError(null);
+    try {
+      await adminUsersApi.deleteUser(target.id);
+      setUsers((current) => current.filter((item) => item.id !== target.id));
+      setSelectedUser((current) => (current?.id === target.id ? null : current));
+    } catch (deleteError) {
+      setActionError(mapLoadErrorMessage(deleteError));
+    }
   };
 
   if (authLoading || loading) {
@@ -391,8 +530,8 @@ export default function AdminCustomersPage() {
   if (!user) {
     return (
       <AccessStateCard
-        title="Sign in to view customers"
-        description="Customer analytics is available for authenticated administrators only."
+        title="Sign in to manage users"
+        description="User management is available for authenticated administrators only."
         action={
           <Link
             href="/signin"
@@ -409,7 +548,7 @@ export default function AdminCustomersPage() {
     return (
       <AccessStateCard
         title="Admin access required"
-        description="Your account does not have permission to open customer analytics."
+        description="Your account does not have permission to open user management."
         action={
           <Link
             href="/"
@@ -449,35 +588,49 @@ export default function AdminCustomersPage() {
               );
             })}
           </nav>
+
           <div className="mt-14 hidden items-center gap-3 md:flex">
-            <div className="h-10 w-10 rounded-full bg-[#ece8e3]" />
+            <span className="relative block h-10 w-10 overflow-hidden rounded-full bg-[#ece8e3]">
+              <SafeImage
+                src={user.avatarUrl?.trim() || DEFAULT_AVATAR}
+                alt={user.fullName}
+                fill
+                fallbackSrc={DEFAULT_AVATAR}
+                sizes="40px"
+                className="object-cover"
+              />
+            </span>
             <div>
               <p className="text-[12px] font-medium text-[#3f3934]">{user.fullName}</p>
-              <p className="text-[10px] uppercase tracking-[1.2px] text-[#b2aaa2]">Head Florist</p>
+              <p className="text-[10px] uppercase tracking-[1.2px] text-[#b2aaa2]">Administrator</p>
             </div>
           </div>
         </aside>
 
         <main className="px-4 py-7 md:px-7">
-          <div className="flex items-start justify-between">
+          <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <h1
                 className="text-[48px] font-black leading-[1] text-[#1b1c1a]"
                 style={{ fontFamily: "var(--font-noto-serif)" }}
               >
-                Customers
+                User Management
               </h1>
-              <p className="mt-4 max-w-[560px] text-[18px] italic text-[#6e5a4f]">
-                Cultivating lasting relationships through the language of flowers. Manage your premium boutique accounts and loyalty tiers.
+              <p className="mt-4 max-w-[620px] text-[16px] italic text-[#6e5a4f]">
+                Avatar updates from user profiles are reflected here automatically. You can also add, view, edit, and delete users directly from admin.
               </p>
             </div>
+
             <button
               type="button"
-              className="flex cursor-not-allowed items-center gap-3 rounded-full bg-[#7d562d] px-8 py-4 text-[16px] font-bold text-white opacity-70"
-              disabled
+              onClick={() => {
+                setActionError(null);
+                setIsCreateOpen(true);
+              }}
+              className="inline-flex items-center gap-2 rounded-full bg-[#7d562d] px-6 py-3 text-[13px] font-semibold uppercase tracking-[0.8px] text-white transition-colors hover:bg-[#694925]"
             >
-              <UserPlus className="h-5 w-5" />
-              Add New Customer
+              <UserPlus className="h-4 w-4" />
+              Add User
             </button>
           </div>
 
@@ -486,7 +639,7 @@ export default function AdminCustomersPage() {
               <p>{error}</p>
               <button
                 type="button"
-                onClick={() => setReloadToken((current) => current + 1)}
+                onClick={refreshCurrentList}
                 className="mt-3 inline-flex h-9 items-center justify-center rounded-full bg-[#8d6030] px-4 text-[12px] font-medium text-white transition-colors hover:bg-[#724c25]"
               >
                 Retry
@@ -494,128 +647,143 @@ export default function AdminCustomersPage() {
             </div>
           ) : null}
 
-          <div className="mt-10 flex items-center justify-between border-b border-[#f0ece7] pb-6">
-            <div className="flex flex-wrap items-center gap-3">
-              {TIER_TABS.map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => handleTierChange(t)}
-                  className={`rounded-full px-6 py-2 text-[14px] font-medium transition-colors ${
-                    tierFilter === t
-                      ? "border border-[#7d562d1a] bg-white font-semibold text-[#7d562d]"
-                      : "bg-[#f5f3ef] text-[#78716c] hover:bg-[#ede9e3]"
-                  }`}
-                >
-                  {t === "All" ? "All Clients" : `${t} Tier`}
-                </button>
-              ))}
+          {actionError ? (
+            <div className="mt-4 rounded-[14px] border border-[#efd0cc] bg-[#fbefec] px-4 py-3 text-[13px] text-[#8f3d35]">
+              {actionError}
             </div>
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setSortOpen((o) => !o)}
-                className="flex items-center gap-2 text-[14px] font-medium text-[#a8a29e] hover:text-[#78716c]"
-              >
-                Sort by: {SORT_OPTIONS.find((o) => o.value === sortBy)?.label}
-                <ChevronDown className="h-3.5 w-3.5" />
-              </button>
-              {sortOpen && (
-                <div className="absolute right-0 top-8 z-10 w-44 rounded-[12px] border border-[#e5ddd4] bg-white py-1 shadow-md">
-                  {SORT_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => {
-                        setSortBy(opt.value);
-                        setSortOpen(false);
-                        setPage(0);
-                      }}
-                      className={`w-full px-4 py-2 text-left text-[13px] hover:bg-[#f5f3ef] ${
-                        sortBy === opt.value ? "font-semibold text-[#7d562d]" : "text-[#4f4444]"
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+          ) : null}
+
+          <div className="mt-6 grid gap-3 rounded-[16px] border border-[#ebe2d8] bg-white p-4 md:grid-cols-[minmax(0,1fr)_180px_120px] md:items-center">
+            <label className="flex items-center gap-2 rounded-full border border-[#e6ddd3] bg-[#fcfbfa] px-4 py-2">
+              <Search className="h-4 w-4 text-[#9d9185]" />
+              <input
+                value={search}
+                onChange={(event) => {
+                  setSearch(event.target.value);
+                  setPage(0);
+                }}
+                placeholder="Search by name, email, phone"
+                className="w-full bg-transparent text-[13px] text-[#2d2a26] outline-none placeholder:text-[#baaea2]"
+              />
+            </label>
+
+            <select
+              value={roleFilter}
+              onChange={(event) => {
+                const next = event.target.value.toUpperCase();
+                setRoleFilter(next === "ADMIN" ? "ADMIN" : next === "USER" ? "USER" : "ALL");
+                setPage(0);
+              }}
+              className="h-10 rounded-full border border-[#e6ddd3] bg-[#fcfbfa] px-4 text-[13px] text-[#2d2a26] outline-none"
+            >
+              <option value="ALL">All roles</option>
+              <option value="USER">USER</option>
+              <option value="ADMIN">ADMIN</option>
+            </select>
+
+            <button
+              type="button"
+              onClick={refreshCurrentList}
+              className="inline-flex h-10 items-center justify-center rounded-full border border-[#d6cbc0] px-4 text-[12px] font-medium text-[#6d5742] transition-colors hover:bg-[#f5efe8]"
+            >
+              Reload
+            </button>
           </div>
 
-          <div className="mt-4 flex items-center gap-3 rounded-[12px] border border-[#e5ddd4] bg-white px-4 py-3">
-            <Search className="h-4 w-4 text-[#a8a29e]" />
-            <input
-              type="text"
-              placeholder="Search by name or email..."
-              value={search}
-              onChange={handleSearch}
-              className="flex-1 bg-transparent text-[14px] text-[#1b1c1a] outline-none placeholder:text-[#a8a29e]"
-            />
-          </div>
-
-          <div className="mt-6 overflow-hidden rounded-[24px] bg-white">
+          <div className="mt-6 overflow-hidden rounded-[20px] border border-[#ebe2d8] bg-white">
             <div className="overflow-x-auto">
               <table className="min-w-full">
                 <thead>
-                  <tr className="bg-[#f5f3ef]">
-                    {["Client Profile", "Loyalty Status", "Total Spend", "Last Order"].map((h, i) => (
-                      <th
-                        key={h}
-                        className={`px-10 py-7 text-[18px] font-bold text-[#1b1c1a] ${i === 2 ? "text-right" : "text-left"}`}
-                        style={{ fontFamily: "var(--font-noto-serif)" }}
-                      >
-                        {h}
-                      </th>
-                    ))}
+                  <tr className="bg-[#f6f2ed]">
+                    <th className="px-6 py-4 text-left text-[12px] font-semibold uppercase tracking-[0.8px] text-[#6f6256]">User</th>
+                    <th className="px-6 py-4 text-left text-[12px] font-semibold uppercase tracking-[0.8px] text-[#6f6256]">Email</th>
+                    <th className="px-6 py-4 text-left text-[12px] font-semibold uppercase tracking-[0.8px] text-[#6f6256]">Phone</th>
+                    <th className="px-6 py-4 text-left text-[12px] font-semibold uppercase tracking-[0.8px] text-[#6f6256]">Role</th>
+                    <th className="px-6 py-4 text-right text-[12px] font-semibold uppercase tracking-[0.8px] text-[#6f6256]">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {rows.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="px-10 py-20 text-center">
-                        <Users className="mx-auto h-10 w-10 text-[#d2c3c3]" />
-                        <p className="mt-4 text-[16px] font-semibold text-[#78716c]">No clients found</p>
-                        <p className="mt-1 text-[14px] text-[#a8a29e]">Try adjusting your search or filter.</p>
+                      <td colSpan={5} className="px-6 py-14 text-center text-[14px] text-[#8a7d71]">
+                        No users found.
                       </td>
                     </tr>
                   ) : (
-                    rows.map((c, index) => (
-                      <tr key={`${c.id}-${c.email}-${index}`} className="border-t border-[#d2c3c31a] transition-colors hover:bg-[#fdfcfa]">
-                        <td className="px-10 py-8">
-                          <div className="flex items-center gap-6">
-                            <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-[8px] bg-[#e4e2de]">
-                              <Image
-                                src={c.avatar}
-                                alt={c.fullName}
+                    rows.map((item) => (
+                      <tr key={item.id} className="border-t border-[#f0e8de]">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <span className="relative block h-11 w-11 overflow-hidden rounded-full bg-[#eee6dd]">
+                              <SafeImage
+                                src={item.avatarUrl?.trim() || DEFAULT_AVATAR}
+                                alt={item.fullName}
                                 fill
-                                sizes="64px"
+                                fallbackSrc={DEFAULT_AVATAR}
+                                sizes="44px"
                                 className="object-cover"
-                                onError={(event) => {
-                                  (event.target as HTMLImageElement).style.display = "none";
-                                }}
                               />
-                              <div className="absolute inset-0 flex items-center justify-center text-[13px] font-bold text-[#6e5a4f]">
-                                {c.initials}
-                              </div>
-                            </div>
+                            </span>
                             <div>
-                              <p className="text-[20px] font-bold text-[#1b1c1a]" style={{ fontFamily: "var(--font-noto-serif)" }}>
-                                {c.fullName}
+                              <p className="text-[14px] font-semibold text-[#2d2a26]">{item.fullName}</p>
+                              <p className="text-[11px] uppercase tracking-[0.6px] text-[#9c8f83]">
+                                {getInitials(item.fullName) || "NA"}
                               </p>
-                              <p className="mt-1 text-[14px] font-medium text-[#a8a29e]">{c.email}</p>
                             </div>
                           </div>
                         </td>
-                        <td className="px-10 py-8">
-                          <TierBadge tier={c.tier} />
+                        <td className="px-6 py-4 text-[13px] text-[#4f463e]">{item.email}</td>
+                        <td className="px-6 py-4 text-[13px] text-[#4f463e]">{item.phone}</td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`inline-flex rounded-full px-3 py-1 text-[11px] font-semibold ${
+                              normalizeRole(item.role) === "ADMIN"
+                                ? "bg-[#f6dfcf] text-[#85562f]"
+                                : "bg-[#e5efe0] text-[#4f6a45]"
+                            }`}
+                          >
+                            {normalizeRole(item.role)}
+                          </span>
                         </td>
-                        <td className="px-10 py-8 text-right text-[18px] font-semibold text-[#1b1c1a]">
-                          {formatCurrency(c.totalSpend)}
-                        </td>
-                        <td className="px-10 py-8">
-                          <p className="text-[16px] font-medium text-[#1b1c1a]">{formatDate(c.lastOrderDate)}</p>
-                          <p className="mt-1 text-[12px] italic text-[#52634c]">{c.lastOrderItem}</p>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                try {
+                                  const detailed = await adminUsersApi.getUserById(item.id);
+                                  setSelectedUser(detailed);
+                                } catch {
+                                  setSelectedUser(item);
+                                }
+                              }}
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#e7ded4] text-[#6a5c4e] transition-colors hover:bg-[#f7f1ea]"
+                              aria-label={`View ${item.fullName}`}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setActionError(null);
+                                setEditingUser(item);
+                              }}
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#e7ded4] text-[#6a5c4e] transition-colors hover:bg-[#f7f1ea]"
+                              aria-label={`Edit ${item.fullName}`}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                void handleDeleteUser(item);
+                              }}
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#f0d5cf] text-[#a34f44] transition-colors hover:bg-[#fbefec]"
+                              aria-label={`Delete ${item.fullName}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -624,96 +792,61 @@ export default function AdminCustomersPage() {
               </table>
             </div>
 
-            {filtered.length > 0 && (
-              <div className="flex items-center justify-between bg-[#f5f3ef] px-10 py-6">
-                <p className="text-[14px] font-medium italic text-[#78716c]">
-                  Showing {safePage * PAGE_SIZE + 1} to {Math.min((safePage + 1) * PAGE_SIZE, filtered.length)} of {filtered.length} clients
+            {filteredUsers.length > 0 ? (
+              <div className="flex items-center justify-between border-t border-[#f0e8de] bg-[#fbf8f5] px-6 py-4 text-[12px] text-[#7f7368]">
+                <p>
+                  Showing {safePage * PAGE_SIZE + 1} to {Math.min((safePage + 1) * PAGE_SIZE, filteredUsers.length)} of {filteredUsers.length} users
                 </p>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => setPage((p) => Math.max(0, p - 1))}
+                    onClick={() => setPage((current) => Math.max(0, current - 1))}
                     disabled={safePage === 0}
-                    className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#a8a29e] hover:bg-[#f0ece7] disabled:opacity-40"
+                    className="rounded-full border border-[#ddd2c6] px-3 py-1 disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    <ChevronLeft className="h-4 w-4" />
+                    Prev
                   </button>
-                  {Array.from({ length: totalPages }).map((_, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => setPage(i)}
-                      className={`flex h-10 w-10 items-center justify-center rounded-full text-[16px] font-medium transition-colors ${
-                        i === safePage ? "bg-[#7d562d] text-white" : "text-[#78716c] hover:bg-[#f0ece7]"
-                      }`}
-                    >
-                      {i + 1}
-                    </button>
-                  ))}
+                  <span>
+                    {safePage + 1} / {totalPages}
+                  </span>
                   <button
                     type="button"
-                    onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                    onClick={() => setPage((current) => Math.min(totalPages - 1, current + 1))}
                     disabled={safePage >= totalPages - 1}
-                    className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#a8a29e] hover:bg-[#f0ece7] disabled:opacity-40"
+                    className="rounded-full border border-[#ddd2c6] px-3 py-1 disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    <ChevronRight className="h-4 w-4" />
+                    Next
                   </button>
                 </div>
               </div>
-            )}
-          </div>
-
-          <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_277px]">
-            <div className="relative overflow-hidden rounded-[24px] bg-[#d2e5c833] p-12">
-              <div className="absolute right-0 top-0 h-80 w-80 translate-x-1/3 -translate-y-1/3 rounded-full bg-[#7d562d1a]" />
-              <h2 className="text-[30px] font-black text-[#566750]" style={{ fontFamily: "var(--font-noto-serif)" }}>
-                Loyalty Growth
-              </h2>
-              <p className="mt-3 max-w-[440px] text-[16px] text-[#566750b2]">
-                Customer insights are now loaded from order data in your database.
-              </p>
-              <div className="mt-8 flex gap-12">
-                {[
-                  { value: goldCount, label: "Gold Clients" },
-                  { value: silverCount, label: "Silver Clients" },
-                  { value: customers.length, label: "Total Community" },
-                ].map((s) => (
-                  <div key={s.label}>
-                    <p className="text-[36px] font-black text-[#566750]" style={{ fontFamily: "var(--font-noto-serif)" }}>
-                      {s.value}
-                    </p>
-                    <p className="mt-1 text-[12px] font-bold uppercase tracking-[1.2px] text-[#56675080]">
-                      {s.label}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="rounded-[24px] bg-[#efd4c64d] p-10">
-              <h3 className="text-[24px] font-bold text-[#6e5b4f]" style={{ fontFamily: "var(--font-noto-serif)" }}>
-                Retention Rate
-              </h3>
-              <div className="mt-4 h-1.5 rounded-full bg-[#ffffff80]">
-                <div
-                  className="h-full rounded-full bg-[#6e5a4f]"
-                  style={{
-                    width: `${Math.min(100, Math.round((customers.filter((c) => c.totalOrders > 1).length / Math.max(1, customers.length)) * 100))}%`,
-                  }}
-                />
-              </div>
-              <p className="mt-2 text-right text-[12px] font-bold text-[#6e5a4f]">
-                {Math.min(100, Math.round((customers.filter((c) => c.totalOrders > 1).length / Math.max(1, customers.length)) * 100))}% Loyalty Retention
-              </p>
-              <div className="mt-6 rounded-[16px] bg-[#ffffff66] p-4">
-                <p className="text-[12px] font-bold uppercase tracking-[1px] text-[#6e5b4f]">Top Insight</p>
-                <p className="mt-2 text-[14px] italic text-[#6e5a4f]">
-                  &ldquo;Returning customers spend significantly more than first-time buyers.&rdquo;
-                </p>
-              </div>
-            </div>
+            ) : null}
           </div>
         </main>
       </div>
+
+      <UserFormModal
+        key={`create-${isCreateOpen ? "open" : "closed"}`}
+        open={isCreateOpen}
+        mode="create"
+        saving={isSaving}
+        error={actionError}
+        initialUser={null}
+        onClose={closeModals}
+        onSubmit={handleCreateUser}
+      />
+
+      <UserFormModal
+        key={`edit-${editingUser?.id ?? "none"}`}
+        open={Boolean(editingUser)}
+        mode="edit"
+        saving={isSaving}
+        error={actionError}
+        initialUser={editingUser}
+        onClose={closeModals}
+        onSubmit={handleUpdateUser}
+      />
+
+      <UserViewModal user={selectedUser} onClose={closeModals} />
     </div>
   );
 }

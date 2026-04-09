@@ -10,6 +10,24 @@ export interface AdminUserDTO {
   fullName: string;
   phone: string;
   role: string;
+  avatarUrl?: string | null;
+}
+
+export interface AdminCreateUserRequest {
+  email: string;
+  fullName: string;
+  phone: string;
+  password: string;
+  role: "USER" | "ADMIN";
+  avatarUrl?: string | null;
+}
+
+export interface AdminUpdateUserRequest {
+  email: string;
+  fullName: string;
+  phone: string;
+  role: "USER" | "ADMIN";
+  avatarUrl?: string | null;
 }
 
 export type CollaboratorBadge = "STAFF" | "ADMIN";
@@ -67,6 +85,13 @@ export interface AdminProductUpsertRequest {
   image?: string;
   stockQuantity: number;
   categoryId: number;
+}
+
+export interface UploadMediaResponse {
+  key: string;
+  publicUrl: string;
+  size: number;
+  contentType: string;
 }
 
 export interface CategoryDTO {
