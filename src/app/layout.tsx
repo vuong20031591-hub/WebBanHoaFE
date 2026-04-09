@@ -43,6 +43,10 @@ const montserrat = Montserrat({
 export const metadata: Metadata = {
   title: "Floral Boutique - Artistry in Every Petal",
   description: "Experience the elegance of premium floral arrangements, hand-crafted for life's most beautiful moments.",
+  icons: {
+    icon: '/favicon.svg',
+    apple: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({
