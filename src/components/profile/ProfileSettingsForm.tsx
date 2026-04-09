@@ -1,9 +1,10 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Upload } from "lucide-react";
 import { isApiError } from "@/lib/api";
+import { SafeImage } from "@/components/common/SafeImage";
 import {
   ProfileCommunicationPreference,
   ProfileSettingsAccountInfo,
@@ -23,6 +24,7 @@ interface ProfileSettingsFormProps {
   saveLabel: string;
   manageAddressesHref?: string;
   manageNotificationsHref?: string;
+  onUploadAvatar?: (file: File) => Promise<string>;
   onSave?: (payload: SaveProfileSettingsPayload) => Promise<void>;
 }
 
@@ -120,20 +122,25 @@ export function ProfileSettingsForm({
   saveLabel,
   manageAddressesHref,
   manageNotificationsHref,
+  onUploadAvatar,
   onSave,
 }: ProfileSettingsFormProps) {
   const { t } = useLocale();
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const [formState, setFormState] = useState<AccountInfoFormState>({
     fullName: accountInfo.fullName,
     email: accountInfo.email,
     phone: accountInfo.phone,
     address: accountInfo.address,
   });
+  const [avatarPreview, setAvatarPreview] = useState(accountInfo.photo);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [preferences, setPreferences] = useState(
     communicationPreferences.map((item) => ({ ...item }))
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState<SubmitMessage>(null);
+  const [avatarMessage, setAvatarMessage] = useState<SubmitMessage>(null);
   const phoneValidationMessage = formState.phone
     ? getPhoneValidationMessage(formState.phone)
     : null;
@@ -146,7 +153,8 @@ export function ProfileSettingsForm({
       phone: accountInfo.phone,
       address: accountInfo.address,
     });
-  }, [accountInfo.fullName, accountInfo.email, accountInfo.phone, accountInfo.address]);
+    setAvatarPreview(accountInfo.photo);
+  }, [accountInfo.fullName, accountInfo.email, accountInfo.phone, accountInfo.address, accountInfo.photo]);
 
   const handleCancel = () => {
     setFormState({
@@ -155,8 +163,65 @@ export function ProfileSettingsForm({
       phone: accountInfo.phone,
       address: accountInfo.address,
     });
+    setAvatarPreview(accountInfo.photo);
     setPreferences(communicationPreferences.map((item) => ({ ...item })));
     setSubmitMessage(null);
+    setAvatarMessage(null);
+  };
+
+  const handleOpenAvatarPicker = () => {
+    if (isUploadingAvatar || !onUploadAvatar) {
+      return;
+    }
+
+    avatarInputRef.current?.click();
+  };
+
+  const handleAvatarSelected = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      setAvatarMessage({
+        tone: "error",
+        text: t("profile.account.photoInvalidType"),
+      });
+      return;
+    }
+
+    if (!onUploadAvatar) {
+      setAvatarMessage({
+        tone: "error",
+        text: t("profile.account.photoUploadError"),
+      });
+      return;
+    }
+
+    setAvatarMessage(null);
+    setIsUploadingAvatar(true);
+    try {
+      const nextAvatarUrl = await onUploadAvatar(file);
+      setAvatarPreview(nextAvatarUrl || accountInfo.photo);
+      setAvatarMessage({
+        tone: "success",
+        text: t("profile.account.photoUpdated"),
+      });
+    } catch (error) {
+      setAvatarMessage({
+        tone: "error",
+        text: isApiError(error)
+          ? error.message
+          : t("profile.account.photoUploadError"),
+      });
+    } finally {
+      setIsUploadingAvatar(false);
+    }
   };
 
   const handlePreferenceToggle = (id: string) => {
@@ -240,24 +305,58 @@ export function ProfileSettingsForm({
       className="rounded-[40px] border border-white/40 bg-[rgba(255,255,255,0.4)] px-6 py-8 sm:px-8 xl:px-[49px] xl:py-[49px]"
     >
       <section id="account-info">
+        <input
+          ref={avatarInputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          className="hidden"
+          disabled={isUploadingAvatar || !onUploadAvatar}
+          onChange={handleAvatarSelected}
+        />
+
         <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
-          <div className="relative h-20 w-20 overflow-hidden rounded-full">
-            <Image
-              src={accountInfo.photo}
+          <div className="relative h-24 w-24 overflow-hidden rounded-full">
+            <SafeImage
+              src={avatarPreview}
               alt={accountInfo.fullName}
               fill
-              sizes="80px"
+              fallbackSrc="/images/hero-main.png"
+              sizes="96px"
               className="object-cover"
             />
+
+            <button
+              type="button"
+              onClick={handleOpenAvatarPicker}
+              disabled={!onUploadAvatar || isUploadingAvatar}
+              className="absolute bottom-0 right-0 inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/70 bg-[#8d6030] text-white shadow-sm transition-colors hover:bg-[#754f28] disabled:cursor-not-allowed disabled:opacity-60"
+              aria-label={t("profile.account.changePhoto")}
+              title={t("profile.account.changePhoto")}
+            >
+              <Upload className="h-4 w-4" />
+            </button>
           </div>
 
-          <button
-            type="button"
-            className="w-fit text-[12px] font-normal uppercase tracking-[1.2px] text-[#ceb994]"
-          >
-            {accountInfo.changePhotoLabel}
-          </button>
+          <p className="w-fit text-[12px] font-normal uppercase tracking-[1.2px] text-[#ceb994]">
+            {isUploadingAvatar
+              ? t("profile.account.uploadingPhoto")
+              : accountInfo.changePhotoLabel}
+          </p>
         </div>
+
+        <p className="mt-2 text-[11px] text-[rgba(92,107,94,0.8)]">
+          PNG, JPG, WebP. Bam icon tren avatar de chon va tai len anh moi.
+        </p>
+
+        {avatarMessage ? (
+          <p
+            className={`mt-3 text-[12px] ${
+              avatarMessage.tone === "success" ? "text-[#166534]" : "text-[#b91c1c]"
+            }`}
+          >
+            {avatarMessage.text}
+          </p>
+        ) : null}
 
         <div className="mt-8 grid gap-x-8 gap-y-8 lg:grid-cols-[minmax(0,371.5px)_minmax(0,371.5px)] lg:justify-between">
           <ProfileField

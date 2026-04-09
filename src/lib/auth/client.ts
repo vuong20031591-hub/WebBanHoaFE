@@ -139,6 +139,14 @@ export const authApi = {
     return response.data;
   },
 
+  async uploadAvatar(file: File): Promise<AuthUser> {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await apiClient.post<AuthUser>("/api/auth/me/avatar", formData);
+    return response.data;
+  },
+
   async changePassword(data: ChangePasswordRequest): Promise<void> {
     await apiClient.post("/api/auth/change-password", data);
   },

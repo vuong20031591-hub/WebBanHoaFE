@@ -101,6 +101,11 @@ const messages = {
     "profile.account.openAddressBook": "Open Address Book",
     "profile.account.notificationsInfo": "All email and SMS notification preferences are managed from one place in your notification settings.",
     "profile.account.manageNotifications": "Manage Notifications",
+    "profile.account.changePhoto": "Change Photo",
+    "profile.account.uploadingPhoto": "Uploading...",
+    "profile.account.photoUpdated": "Profile photo updated.",
+    "profile.account.photoUploadError": "Unable to upload photo right now.",
+    "profile.account.photoInvalidType": "Please choose an image file.",
 
     "profile.preferences.title": "Preferences Settings",
     "profile.preferences.subtitle": "Customize your shopping experience to match your personal aesthetic.",
@@ -291,6 +296,11 @@ const messages = {
     "profile.account.openAddressBook": "Mở Sổ địa chỉ",
     "profile.account.notificationsInfo": "Mọi tùy chọn thông báo email và SMS được quản lý tập trung trong trang thông báo của bạn.",
     "profile.account.manageNotifications": "Quản lý thông báo",
+    "profile.account.changePhoto": "Đổi ảnh",
+    "profile.account.uploadingPhoto": "Đang tải ảnh...",
+    "profile.account.photoUpdated": "Đã cập nhật ảnh đại diện.",
+    "profile.account.photoUploadError": "Hiện không thể tải ảnh lên.",
+    "profile.account.photoInvalidType": "Vui lòng chọn tệp hình ảnh.",
 
     "profile.preferences.title": "Cài đặt tùy chọn",
     "profile.preferences.subtitle": "Tùy chỉnh trải nghiệm mua sắm theo phong cách cá nhân của bạn.",

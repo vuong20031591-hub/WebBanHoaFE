@@ -2,9 +2,11 @@ import { clearToken, getToken } from "../auth/storage";
 import { apiClient } from "./client";
 import {
   AdminCollaboratorDTO,
+  AdminCreateUserRequest,
   AdminCreateOrderRequest,
   AdminOrderStatsDTO,
   AdminProductUpsertRequest,
+  AdminUpdateUserRequest,
   AdminUserDTO,
   CollaboratorBadge,
   OrderDTO,
@@ -249,6 +251,33 @@ export const adminUsersApi = {
       }
     );
     return data;
+  },
+
+  async getUserById(id: number): Promise<AdminUserDTO> {
+    const { data } = await apiClient.get<AdminUserDTO>(`/api/admin/users/${id}`, {
+      headers: ADMIN_HEADERS,
+    });
+    return data;
+  },
+
+  async createUser(payload: AdminCreateUserRequest): Promise<AdminUserDTO> {
+    const { data } = await apiClient.post<AdminUserDTO>("/api/admin/users", payload, {
+      headers: ADMIN_HEADERS,
+    });
+    return data;
+  },
+
+  async updateUser(id: number, payload: AdminUpdateUserRequest): Promise<AdminUserDTO> {
+    const { data } = await apiClient.put<AdminUserDTO>(`/api/admin/users/${id}`, payload, {
+      headers: ADMIN_HEADERS,
+    });
+    return data;
+  },
+
+  async deleteUser(id: number): Promise<void> {
+    await apiClient.delete(`/api/admin/users/${id}`, {
+      headers: ADMIN_HEADERS,
+    });
   },
 };
 
