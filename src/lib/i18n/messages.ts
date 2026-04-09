@@ -105,6 +105,7 @@ const messages = {
     "profile.account.uploadingPhoto": "Uploading...",
     "profile.account.photoUpdated": "Profile photo updated.",
     "profile.account.photoUploadError": "Unable to upload photo right now.",
+    "profile.account.photoUploadEndpointMissing": "Avatar upload endpoint is not available on the backend deployment yet. Please deploy the latest backend.",
     "profile.account.photoInvalidType": "Please choose an image file.",
 
     "profile.preferences.title": "Preferences Settings",
@@ -300,6 +301,7 @@ const messages = {
     "profile.account.uploadingPhoto": "Đang tải ảnh...",
     "profile.account.photoUpdated": "Đã cập nhật ảnh đại diện.",
     "profile.account.photoUploadError": "Hiện không thể tải ảnh lên.",
+    "profile.account.photoUploadEndpointMissing": "Backend triển khai hiện tại chưa có endpoint tải avatar. Vui lòng deploy BE bản mới nhất.",
     "profile.account.photoInvalidType": "Vui lòng chọn tệp hình ảnh.",
 
     "profile.preferences.title": "Cài đặt tùy chọn",
