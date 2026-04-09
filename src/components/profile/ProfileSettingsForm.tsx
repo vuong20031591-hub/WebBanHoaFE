@@ -213,11 +213,19 @@ export function ProfileSettingsForm({
         text: t("profile.account.photoUpdated"),
       });
     } catch (error) {
+      const missingAvatarEndpoint =
+        isApiError(error) &&
+        error.status === 404 &&
+        (error.message.toLowerCase().includes("resource not found") ||
+          error.message.includes("/api/auth/me/avatar"));
+
       setAvatarMessage({
         tone: "error",
-        text: isApiError(error)
-          ? error.message
-          : t("profile.account.photoUploadError"),
+        text: missingAvatarEndpoint
+          ? t("profile.account.photoUploadEndpointMissing")
+          : isApiError(error)
+            ? error.message
+            : t("profile.account.photoUploadError"),
       });
     } finally {
       setIsUploadingAvatar(false);
